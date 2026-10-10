@@ -7,17 +7,15 @@ fn generated_cutoffs_exclude_cells_with_one_attempt_below_128_bits() {
     // beta=483 candidate costing 127.995 quantum bits at this old cutoff; the
     // 169-bit table must stay below it. The retired q32 D32 compression cell
     // that the same regression covered is no longer generated.
-    for (dimension, bound, rank, old_width) in [(512, 1860, 1, 904)] {
-        let widths = sis_max_widths(
-            DEFAULT_SIS_SECURITY_POLICY,
-            SisTableDigest::CURRENT,
-            SisModulusProfileId::Q32Offset99,
-            dimension,
-            bound,
-        )
-        .unwrap();
-        assert!(widths[rank - 1] < old_width);
-    }
+    let widths = sis_max_widths(
+        DEFAULT_SIS_SECURITY_POLICY,
+        SisTableDigest::CURRENT,
+        SisModulusProfileId::Q32Offset99,
+        512,
+        1860,
+    )
+    .unwrap();
+    assert!(widths[0] < 904);
 }
 
 fn key(
