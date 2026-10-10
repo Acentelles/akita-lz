@@ -22,7 +22,6 @@ impl IncomingWidthFixture {
         // A small root with many live blocks makes two large, equal witness
         // bodies. The two consumers emit equal-length witnesses, but a wider
         // consumer adds enough producer padding to overturn its local dominance.
-        // Under the 169-bit tables this balance holds at nv15 with basis 4.
         let mut policy = policy_of::<OneHot>();
         policy.claim_ext_degree = 1;
         policy.opening_basis_range = (4, 4);
@@ -41,7 +40,7 @@ impl IncomingWidthFixture {
         };
         policy.selection_policy = crate::SelectionPolicyId::for_policy(false);
         akita_schedules::planner_support::validate_policy(&policy).unwrap();
-        let key = ScheduleLookupKey::single(PolynomialGroupLayout::singleton(15));
+        let key = ScheduleLookupKey::single(PolynomialGroupLayout::singleton(18));
         let opening_layout = key.opening_layout().unwrap();
         let opening = PlannerOpeningCandidate::coefficient_packing(0, 1, dimensions, 64)
             .unwrap()
@@ -58,8 +57,9 @@ impl IncomingWidthFixture {
         .unwrap()
         .into_iter()
         .find(|(params, _)| {
-            params.blocks().positions_per_block == 8
-                && params.outer_slice_count() == akita_params::CommitmentSliceCount::EIGHT
+            params.blocks().positions_per_block == 2
+                && params.outer_slice_count() == akita_params::CommitmentSliceCount::ONE
+                && params.inner().matrix.output_rank() == 1
         })
         .unwrap();
         let shape = Arc::new(
@@ -94,8 +94,14 @@ impl IncomingWidthFixture {
             derive_unpruned_fold_candidates_for_oracle(request, RelationSearchDomain::QuotientOnly)
                 .unwrap();
         raw.retain(|(params, _)| {
-            [512, 1024].contains(&params.blocks().positions_per_block)
-                && params.outer_slice_count() == akita_params::CommitmentSliceCount::ONE
+            matches!(
+                (
+                    params.blocks().positions_per_block,
+                    params.outer_slice_count()
+                ),
+                (2048, akita_params::CommitmentSliceCount::ONE)
+                    | (4096, akita_params::CommitmentSliceCount::TWO)
+            )
         });
         raw.sort_by_key(|(params, _)| params.blocks().positions_per_block);
         assert_eq!(raw.len(), 2);
@@ -136,7 +142,7 @@ impl IncomingWidthFixture {
         })
         .unwrap()
         .into_iter()
-        .find(|params| params.blocks().positions_per_block == 512)
+        .find(|params| params.blocks().positions_per_block == 1024)
         .unwrap();
         let (terminal, terminal_bytes) = try_terminal_direct_suffix_cost(
             &policy,
@@ -196,7 +202,7 @@ impl IncomingWidthFixture {
         let candidate = super::super::unpruned_search::prepend_root(
             &self.policy,
             &self.key,
-            1 << 15,
+            1 << 18,
             &self.producer,
             suffix,
         )
@@ -249,7 +255,7 @@ fn incoming_width_guard_preserves_the_unpruned_complete_winner() {
     let oracle_score = complete_schedule_score(policy, oracle, None).unwrap();
     assert_eq!(
         oracle.folds.to_vec()[1].params.blocks().positions_per_block,
-        512
+        2048
     );
     assert_eq!(
         unpruned[0].cost.proof_bytes(),
@@ -277,7 +283,7 @@ fn incoming_width_guard_preserves_the_unpruned_complete_winner() {
         level: 1,
         current_witness_len: shape.align(1, 1).unwrap().0,
         input_chunks: Some(shape),
-        current_lb: 2,
+        current_lb: 4,
         source_moment: None,
         dimension_ceiling: producer.role_dims(),
         topology: SuffixTopology::Direct {
@@ -313,19 +319,15 @@ fn incoming_width_guard_preserves_the_unpruned_complete_winner() {
             complete_schedule_score(policy, selected, None).unwrap(),
             oracle_score
         );
-        assert_eq!(guarded.len(), 2, "the width guard must keep both consumers");
 
         // For these single-chunk consumers, false disables only the incoming
         // width conjunct. Requiring one survivor proves every other dominance
         // condition holds, instead of merely exercising different widths.
-        // Level dominance ties on every coordinate here, and the canonical
-        // descriptor tie-break keeps the narrower consumer, which is also the
-        // complete winner. Under the 169-bit tables we found no fixture in this
-        // family that makes the unguarded frontier keep the wider consumer, so
-        // this test pins that the guard keeps both widths, not a lost winner.
         let unguarded = prune::level_candidates(&consumer_layout, false, generate()).unwrap();
         assert_eq!(unguarded.len(), 1);
-        assert_eq!(unguarded[0].params.blocks().positions_per_block, 512);
+        assert_eq!(unguarded[0].params.blocks().positions_per_block, 4096);
+        let wrong = fixture.complete(&fixture.suffix(&unguarded[0].params));
+        assert!(complete_schedule_score(policy, &wrong, None).unwrap() > oracle_score);
     }
 }
 
@@ -371,12 +373,10 @@ fn frontier_source_block_len_preserves_the_unpruned_complete_winner() {
         ParentObservableKey::new(&without_width, Some(&first.params), None).unwrap(),
         ParentObservableKey::new(&without_width, Some(&second.params), None).unwrap()
     );
-    // Under the 128-bit tables the wider successor dominated locally, so
-    // collapsing the key lost the complete winner. Under the 169-bit tables the
-    // narrower successor is cheaper locally as well, and we found no fixture in
-    // this family where the order reverses. The test therefore pins that the
-    // source width separates the two parent keys and the winner survives.
-    assert!(suffixes[0].cost.strictly_better(suffixes[1].cost));
+    assert!(
+        suffixes[1].cost.strictly_better(suffixes[0].cost),
+        "the wider successor must dominate locally when the keys are collapsed"
+    );
 
     let unpruned = suffixes
         .iter()
@@ -388,7 +388,7 @@ fn frontier_source_block_len_preserves_the_unpruned_complete_winner() {
     let oracle_score = complete_schedule_score(policy, oracle, None).unwrap();
     assert_eq!(
         oracle.cost, unpruned[0].cost,
-        "the narrower successor must win the complete schedule"
+        "predecessor padding must reverse the suffix-only ordering"
     );
     assert!(complete_schedule_score(policy, &unpruned[1], None).unwrap() > oracle_score);
 
@@ -438,16 +438,24 @@ fn frontier_source_block_len_preserves_the_unpruned_complete_winner() {
         assert_eq!(retained.len(), 2);
 
         assert_eq!(collapsed.by_parent_cost.len(), 1);
-        let collapsed_schedules = collapsed
+        let wrong = collapsed
             .by_parent_cost
             .values()
             .flat_map(frontier::ProjectedObjectiveChoices::payload_candidates)
             .map(|suffix| fixture.complete(suffix))
             .collect::<Vec<_>>();
-        let selected = select_complete_candidate(policy, &collapsed_schedules, None)
+        assert_eq!(wrong.len(), 1);
+        assert_eq!(
+            wrong[0].folds.to_vec()[1]
+                .params
+                .blocks()
+                .positions_per_block,
+            4096
+        );
+        let selected = select_complete_candidate(policy, &wrong, None)
             .unwrap()
             .unwrap();
-        assert!(complete_schedule_score(policy, selected, None).unwrap() == oracle_score);
+        assert!(complete_schedule_score(policy, selected, None).unwrap() > oracle_score);
     }
 }
 
@@ -523,7 +531,7 @@ fn memo_key_has_a_bounded_inline_size() {
 #[cfg(feature = "catalog-gen")]
 #[test]
 fn contracting_chunk_search_matches_unpruned_complete_objective() {
-    for (num_chunks, num_vars) in [(2, 20), (8, 20)] {
+    for num_chunks in [2, 8] {
         let mut policy = policy_of::<OneHot>();
         policy.witness_chunk = akita_params::ChunkedWitnessCfg {
             num_chunks,
@@ -540,7 +548,7 @@ fn contracting_chunk_search_matches_unpruned_complete_objective() {
             crate::SelectionPolicyId::for_policy(policy.recursive_setup_planning);
         policy.selective_l2_response_model = crate::SelectiveL2ResponseModelId::Disabled;
         policy.inner_basis_range.1 = policy.inner_basis_range.0;
-        let key = PolynomialGroupLayout::singleton(num_vars);
+        let key = PolynomialGroupLayout::singleton(20);
         let lookup_key = ScheduleLookupKey::single(key);
         let selected = crate::planner::find_schedule(
             &lookup_key,
