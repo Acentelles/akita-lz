@@ -67,6 +67,8 @@ jobs:
         run: cargo clippy --all --all-targets --release --no-default-features --features transcript-blake2b -- -D warnings
       - name: Clippy (response model diagnostics)
         run: cargo clippy -p akita-pcs --all-targets --release --no-default-features --features parallel,response-model-diagnostics,transcript-blake2b -- -D warnings
+      - name: Clippy (dev protocol)
+        run: cargo clippy --all --all-targets --release --no-default-features --features parallel,disk-persistence,transcript-blake2b,dev-protocol -- -D warnings
       - name: Crate dependency hygiene
         run: |
           scripts/check-crate-deps.sh akita-verifier
@@ -78,6 +80,44 @@ jobs:
           scripts/check-crate-deps.sh akita-params
           scripts/check-crate-deps.sh akita-schedules
           scripts/check-crate-deps.sh akita-sis-estimator
+          scripts/check-crate-deps.sh akita-metal
+          scripts/check-crate-deps.sh akita-zk-verifier
+          scripts/check-crate-deps.sh akita-zk-prover
+
+  labinius-trinomial:
+    name: LaBinius trinomial arithmetic and relation bridge
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
+        with:
+          components: clippy
+      - name: Test trinomial arithmetic
+        run: cargo test -p akita-algebra --lib --no-default-features --features labinius-trinomial
+      - name: Clippy trinomial arithmetic and benchmarks
+        run: cargo clippy -p akita-algebra --lib --benches --no-default-features --features labinius-trinomial -- -D warnings
+      - name: Test trinomial relation geometry
+        run: cargo test -p akita-types --lib --no-default-features --features labinius-trinomial,transcript-blake2b
+      - name: Test trinomial quotient kernel
+        run: cargo test -p akita-cpu-backend --lib --no-default-features --features labinius-trinomial,transcript-blake2b -- kernels::trinomial_relation
+      - name: Clippy trinomial bridge and benchmarks
+        run: cargo clippy -p akita-types -p akita-cpu-backend --lib --benches --no-default-features --features labinius-trinomial,transcript-blake2b -- -D warnings
+
+
+  labinius-binary:
+    name: LaBinius binary arithmetic
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
+        with:
+          components: clippy
+      - name: Test algebra without the extension
+        run: cargo test -p akita-algebra --lib --no-default-features
+      - name: Test binary arithmetic
+        run: cargo test -p akita-algebra --lib --no-default-features --features labinius-binary binary
+      - name: Lint binary arithmetic and benchmarks
+        run: cargo clippy -p akita-algebra --all-targets --no-default-features --features labinius-binary -- -D warnings
 
   machete:
     name: Unused dependencies
@@ -217,6 +257,75 @@ jobs:
         run: |
           cargo test --release -p akita-pcs --test akita_fp128_e2e --no-default-features --features parallel,transcript-blake2b -- --exact heterogeneous::combined_family_setup_matches_per_family_proofs
 
+  # The dev protocol has its own schedule set, so its drift check runs apart
+  # from the default one. Its tests run in `test-dev-protocol`.
+  test-dev-protocol-drift:
+    name: Dev protocol schedule artifact drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: ci-test-dev-protocol-drift
+          add-job-id-key: false
+          cache-on-failure: true
+      - name: Trusted dev artifact guard
+        run: |
+          cargo test --release -p akita-config --features dev-protocol --test trusted_schedule_artifact
+      - name: Regenerate dev schedule artifacts in temporary storage
+        env:
+          AKITA_SCHEDULE_GEN_JOBS: 2
+        run: |
+          artifact_dir="$RUNNER_TEMP/akita-schedule-artifacts-dev"
+          mkdir -p "$artifact_dir"
+          cargo run --release -p akita-planner --features catalog-gen,dev-protocol \
+            --bin gen_schedule_artifacts -- "$artifact_dir" --row-progress \
+            --catalog-baseline artifacts/schedule-catalog-dev.tsv \
+            --require-catalog-baseline-match \
+            --catalog-report "$RUNNER_TEMP/akita-schedule-dev-baseline-comparison.tsv"
+          diff -ru artifacts/schedules-dev "$artifact_dir"
+      - name: Direct modeled SIS cost for every dev schedule
+        run: |
+          cargo run --release -p akita-planner \
+            --features catalog-security,dev-protocol \
+            --example catalog_security -- --check
+
+  # The workspace test suite under the dev protocol, sharded like `test`. It
+  # uploads no timing artifacts; `test-timing` reports the default build.
+  test-dev-protocol:
+    name: Test dev protocol (${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: GitHubRunner-Large-Public
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: ci-test-dev-protocol
+          add-job-id-key: false
+          cache-on-failure: true
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@3f74d7c16a4242f1c95561e98edc25d36adb4375 # carg-nextest
+        with:
+          tool: cargo-nextest
+      - name: Run tests
+        env:
+          SHARD_INDEX: ${{ matrix.shard }}
+          SHARD_TOTAL: ${{ strategy.job-total }}
+        run: |
+          cargo nextest run --lib --bins --tests --profile ci --cargo-profile ci-test --no-default-features --features parallel,disk-persistence,catalog-gen,transcript-blake2b,dev-protocol \
+            --partition "slice:${SHARD_INDEX}/${SHARD_TOTAL}"
+
   test-transcript-backends:
     name: Transcript semantics (${{ matrix.backend }})
     runs-on: ubuntu-latest
@@ -285,6 +394,40 @@ jobs:
           --features parallel,${{ matrix.backend }}
           --
           --test-threads=1
+
+  test-labinius-sis:
+    name: LaBinius SIS foundations
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
+        with:
+          components: clippy
+      - name: Test opt-in source bounds and certified table
+        run: |
+          cargo test -p akita-params --lib --no-default-features --features labinius-sis,transcript-blake2b sis::labinius
+          cargo test -p akita-sis-estimator --lib --test labinius_width_table --no-default-features --features labinius-sis
+          cargo test -p akita-sis-estimator --example labinius_infinity_width_table --no-default-features --features labinius-sis
+      - name: Check opt-in estimator targets
+        run: cargo clippy -p akita-params -p akita-sis-estimator --all-targets --no-default-features --features labinius-sis,transcript-blake2b -- -D warnings
+
+  test-labinius-challenges:
+    name: LaBinius challenge families (${{ matrix.backend }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      matrix:
+        backend: [transcript-blake2b, transcript-keccak]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
+        with:
+          components: clippy
+      - name: Test opt-in binary families
+        run: cargo test -p akita-challenges --lib --no-default-features --features labinius-challenges,${{ matrix.backend }}
+      - name: Check opt-in challenge targets
+        run: cargo clippy -p akita-challenges --all-targets --no-default-features --features labinius-challenges,${{ matrix.backend }} -- -D warnings
 
   test-timing:
     name: Test timing

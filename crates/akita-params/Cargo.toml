@@ -12,7 +12,7 @@ readme = "../../README.md"
 akita-error = { version = "0.1.0", path = "../akita-error" }
 akita-algebra = { version = "0.1.0", path = "../akita-algebra" }
 akita-challenges = { version = "0.1.0", path = "../akita-challenges", default-features = false }
-jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "1618f4b6dc97effcec3568ca7cf2b7420ac9e75f", default-features = false, features = [
+jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "c7c2d08d5bb0c7c80501f29f723e595af7fcff3c", default-features = false, features = [
   "asm",
   "solinas",
 ] }
@@ -24,6 +24,11 @@ blake2 = "0.11.0"
 sha3 = "0.12.0"
 
 [features]
+labinius-sis = []
+# Selects the dev protocol: every wire-format change `dev` carries that `main`
+# does not, together. Off by default. Schedules priced for it live in
+# `artifacts/schedules-dev`. See docs/branches.md.
+dev-protocol = []
 default = ["transcript-blake2b"]
 test-support = []
 transcript-blake2b = [

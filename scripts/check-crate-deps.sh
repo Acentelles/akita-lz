@@ -20,16 +20,16 @@ else
       forbidden=(akita-types)
       ;;
     akita-verifier)
-      forbidden=(akita-planner akita-prover akita-cpu-backend akita-pcs)
+      forbidden=(akita-planner akita-prover akita-cpu-backend akita-pcs akita-metal jolt-metal akita-zk-prover akita-zk-verifier)
       ;;
     akita-prover)
-      forbidden=(akita-planner akita-verifier akita-cpu-backend akita-setup akita-pcs)
+      forbidden=(akita-planner akita-verifier akita-cpu-backend akita-setup akita-pcs akita-metal jolt-metal akita-zk-prover akita-zk-verifier)
       ;;
     akita-cpu-backend)
-      forbidden=(akita-planner akita-verifier akita-setup akita-pcs)
+      forbidden=(akita-planner akita-verifier akita-setup akita-pcs akita-metal jolt-metal akita-zk-prover akita-zk-verifier)
       ;;
     akita-config)
-      forbidden=(akita-planner akita-prover akita-cpu-backend akita-verifier akita-pcs)
+      forbidden=(akita-planner akita-prover akita-cpu-backend akita-verifier akita-pcs akita-metal jolt-metal akita-zk-prover akita-zk-verifier)
       ;;
     akita-schedules)
       forbidden=(akita-types akita-planner akita-config akita-prover akita-cpu-backend akita-verifier akita-setup akita-pcs)
@@ -40,8 +40,23 @@ else
       # prover/verifier/setup crates.
       forbidden=(akita-prover akita-cpu-backend akita-verifier akita-setup akita-pcs)
       ;;
+    akita-metal)
+      # Prover-only device kernels: never a verifier, planner or setup
+      # dependency, and never the other way around (see the cases above).
+      forbidden=(akita-verifier akita-planner akita-setup akita-pcs)
+      ;;
     akita-setup)
-      forbidden=(akita-verifier akita-pcs)
+      forbidden=(akita-verifier akita-pcs akita-metal jolt-metal akita-zk-prover akita-zk-verifier)
+      ;;
+    akita-zk-verifier)
+      # Verifier-side zero-knowledge building blocks (#120): never a prover,
+      # planner or setup dependency.
+      forbidden=(akita-planner akita-prover akita-cpu-backend akita-setup akita-pcs akita-metal jolt-metal akita-zk-prover)
+      ;;
+    akita-zk-prover)
+      # Prover-side zero-knowledge building blocks (#120). Like akita-prover,
+      # they reach CPU kernels only through backend traits.
+      forbidden=(akita-planner akita-verifier akita-cpu-backend akita-setup akita-pcs akita-metal jolt-metal)
       ;;
     *)
       echo "no default forbidden dependency set for ${pkg}; pass forbidden packages explicitly" >&2
@@ -55,7 +70,7 @@ fi
 # Verifier tests must also remain independent of the prover and PCS layers;
 # otherwise test-only reverse edges can conceal a production layering error.
 edge_kinds="normal"
-if [ "${pkg}" = "akita-verifier" ]; then
+if [ "${pkg}" = "akita-verifier" ] || [ "${pkg}" = "akita-zk-verifier" ]; then
   edge_kinds="normal,dev"
 fi
 default_tree="$(cargo tree -p "${pkg}" --edges "${edge_kinds}")"

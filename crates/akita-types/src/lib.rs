@@ -9,6 +9,8 @@ mod l2_sites;
 pub mod ntt_cache;
 pub mod opening_claims;
 pub mod proof;
+#[cfg(feature = "labinius-trinomial")]
+mod relation_bridge;
 pub mod setup_contribution;
 mod stage1_sites;
 mod stage2_sites;
@@ -85,11 +87,19 @@ pub(crate) use proof::{
     FoldLevelProof, NextWitnessBinding, PhysicalL2NormProof, SetupSumcheckProof,
     TerminalLevelProof,
 };
+#[cfg(feature = "labinius-trinomial")]
+pub use relation_bridge::{RelationCoefficientLayout, RelationCoefficientRole, TrinomialSign};
+#[cfg(feature = "labinius-trinomial")]
+pub use relation_bridge::{RelationPolynomial, RelationPolynomialKind};
 pub use setup_contribution::{
     checked_slice, ensure_setup_envelope, factor_aligned_role_tensors, project_role_tensors,
     role_projection_evaluation, role_tensors_are_aligned, shared_setup_fold_gadget,
     PhysicalBSetupPlan, PhysicalBWeightSegment, PhysicalBWeightTerm, PreparedRelationAddress,
     SetupContributionGroupInputs, SetupContributionGroupPlan, SetupContributionPlan,
+};
+#[cfg(feature = "labinius-trinomial")]
+pub use setup_contribution::{
+    PreparedTrinomialASetupWeights, TrinomialASetupView, TrinomialResponseLayout,
 };
 pub use stage1_sites::{stage1_child_claims, stage1_range_image};
 pub use stage2_sites::stage2_w_eval;

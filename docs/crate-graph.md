@@ -18,7 +18,7 @@ orchestration lives in `akita-pcs`.
 | `akita-serialization` | Serialization, validation, compression traits |
 | `akita-algebra` | Modules, NTTs, cyclotomic rings, polynomials |
 | `akita-transcript` | Fiat-Shamir transcript and descriptor preamble |
-| `akita-challenges` | Challenge sampling helpers |
+| `akita-challenges` | Ordinary and binary challenge sampling with exact family counts |
 | `akita-sumcheck` | Sumcheck proofs, drivers, folding, batching |
 | `akita-params` | Parameter geometry, sizing, SIS tables, schedules, compression plans, witness layout, dispatch, and grinding plans |
 | `akita-types` | Proof, setup, and claim wire values, shared protocol math, and native transcript replay |
@@ -31,6 +31,8 @@ orchestration lives in `akita-pcs`.
 | `akita-prover` | Generic protocol sequencing and opaque backend contracts |
 | `akita-cpu-backend` | Owning CPU sources, commitments, witness arithmetic, and caches |
 | `akita-pcs` | Umbrella orchestration, examples, integration tests |
+| `akita-zk-verifier` (`dev`) | Verifier-side zero-knowledge building blocks (#120); no proof path depends on it |
+| `akita-zk-prover` (`dev`) | Prover-side zero-knowledge building blocks (#120); no proof path depends on it |
 
 ## Dependency Layers
 
@@ -161,6 +163,10 @@ graph TD
   `akita_error::checked`. The formulas return `Option` and do not choose a
   protocol error variant. Callers map failure at the boundary where its meaning
   is known. Generic checked helpers must not be redefined in downstream crates.
+- `akita-challenges` owns transcript-derived challenge distributions. Its
+  optional `labinius-challenges` profiles use external `num-bigint` for exact
+  combinatorial counts that exceed 256 bits; protocol crates should consume
+  those counts and norm bounds instead of reimplementing the policy.
 - `akita-planner` is the offline schedule search and artifact emission engine.
   Normal planner search is `Cfg`-free and depends on `akita-params`,
   `akita-challenges`, `akita-error`, and `akita-schedules`. The optional

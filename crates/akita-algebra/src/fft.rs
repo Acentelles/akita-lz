@@ -62,6 +62,14 @@
 
 use jolt_field::{CanonicalEncoding, Field, Prime128OffsetA7F7, PseudoMersenne};
 
+#[cfg(feature = "labinius-trinomial")]
+mod fields;
+
+#[cfg(feature = "labinius-trinomial")]
+pub use fields::{
+    Prime64Offset23703, Prime64Offset23703Ext2, Prime64Offset23703Nr5, PRIME64_OFFSET_23703_MODULUS,
+};
+
 /// Field with a precomputed primitive root of a supported smooth subgroup.
 ///
 /// Ported from the pre-rebuild `jolt-field`: the rebuilt crate dropped the

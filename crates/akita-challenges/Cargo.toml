@@ -11,15 +11,18 @@ readme = "../../README.md"
 [dependencies]
 akita-error = { version = "0.1.0", path = "../akita-error" }
 serde = { version = "1", features = ["derive"] }
-jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "1618f4b6dc97effcec3568ca7cf2b7420ac9e75f", default-features = false, features = [
+jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "c7c2d08d5bb0c7c80501f29f723e595af7fcff3c", default-features = false, features = [
   "asm",
   "solinas",
 ] }
 akita-transcript = { version = "0.1.0", path = "../akita-transcript", default-features = false }
 keccak = { version = "0.1.6", features = ["asm"] }
+num-bigint = { version = "0.5.1", optional = true }
+shake = { version = "0.1.0", optional = true }
 smallvec = { version = "1.15.2", features = ["const_generics"] }
 
 [dev-dependencies]
+criterion = "0.8"
 shake = "0.1.0"
 
 [features]
@@ -28,6 +31,12 @@ transcript-blake2b = ["akita-transcript/transcript-blake2b"]
 transcript-keccak = ["akita-transcript/transcript-keccak"]
 parallel = ["jolt-field/parallel"]
 logging-transcript = ["akita-transcript/logging-transcript"]
+labinius-challenges = ["dep:num-bigint", "dep:shake"]
+
+[[bench]]
+name = "binary_challenge"
+harness = false
+required-features = ["labinius-challenges"]
 
 [lints]
 workspace = true

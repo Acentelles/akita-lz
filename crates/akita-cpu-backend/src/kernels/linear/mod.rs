@@ -41,6 +41,7 @@ pub(crate) use compression::validate_compression_batch_shape;
 use crt_matvec::precompute_dense_mat_ntt_with_params;
 #[cfg(test)]
 pub(crate) use crt_matvec::{mat_vec_mul_crt_ntt, mat_vec_mul_crt_ntt_many, mat_vec_mul_unchecked};
+pub use decompose::decompose_rows_i8_into;
 pub(crate) use decompose::{decompose_block_i8, decompose_commit_blocks_into, try_centered_i8};
 pub(crate) use digit_relation::{
     digit_relation_matrix_extent, digit_relation_rows_cached_prover_bounds,
