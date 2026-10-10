@@ -206,5 +206,5 @@ complete catalog comparison and the measured profile benchmark against `main`.
   dense nv20 to nv24) keep their setup bucket and accept 190 KB to 320 KB
   proofs.
 - Measured, 13 profile cases: proof +4% to +17% (median +16.5%), prove time
-  -5% to +23% (median +2.7%), verify time within about 10% (median under
-  1.5%).
+  -9% to +23% (median +2.7%), verify time medians -1.9% (32 threads) and
+  -2.7% (one thread).

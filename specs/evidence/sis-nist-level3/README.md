@@ -88,30 +88,32 @@ producer row saves one nonce byte with a different root matrix. Replanning
 The profile-bench workflow cases ran on one AMD Ryzen 9 9950X (32 threads,
 `-C target-cpu=x86-64-v3`, features `parallel,profile-ci,transcript-blake2b`).
 The `main` and branch binaries ran interleaved: one warmup and five measured
-processes per side and case. The table shows medians, `main -> branch`. Every
+processes per side and case. The table shows medians, `main → branch`. Every
 case proved and verified on both sides.
 
 | Case | Proof bytes | Commit (s) | Prove (s) | Verify, 32 threads (ms) | Verify, 1 thread (ms) | Setup fields | Folds |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| fp32 dense nv30 | 64,548 → 75,294 (+17%) | 0.73 → 0.92 (+26%) | 0.61 → 0.73 (+19%) | 9.3 → 8.9 (-4%) | 26.9 → 23.4 (-13%) | -9% | 7 → 7 |
-| fp32 one-hot nv34 | 65,507 → 75,398 (+15%) | 0.45 → 0.45 (-2%) | 0.71 → 0.83 (+17%) | 10.7 → 10.1 (-5%) | 35.6 → 41.8 (+17%) | +100% | 7 → 7 |
-| fp64 dense nv29 | 67,091 → 78,244 (+17%) | 0.95 → 0.95 (-0%) | 0.62 → 0.59 (-5%) | 6.2 → 6.3 (+2%) | 17.8 → 17.5 (-2%) | +0% | 7 → 7 |
-| fp64 one-hot nv35 | 67,711 → 78,913 (+17%) | 0.74 → 1.05 (+42%) | 0.69 → 0.85 (+23%) | 9.0 → 10.0 (+11%) | 34.5 → 33.5 (-3%) | +0% | 7 → 8 |
-| fp128 dense nv28 | 69,062 → 80,581 (+17%) | 0.92 → 0.92 (+1%) | 0.62 → 0.59 (-4%) | 7.8 → 7.3 (-6%) | 25.1 → 21.7 (-14%) | +0% | 7 → 7 |
-| fp128 one-hot nv36 | 69,700 → 81,777 (+17%) | 2.78 → 2.81 (+1%) | 1.28 → 1.32 (+3%) | 18.1 → 17.7 (-2%) | 66.1 → 72.5 (+10%) | +34% | 7 → 8 |
-| fp128 one-hot nv36, recursive setup | 73,154 → 84,962 (+16%) | 2.77 → 3.25 (+17%) | 1.52 → 1.48 (-3%) | 10.0 → 10.0 (-0%) | 28.1 → 22.2 (-21%) | +100% | 8 → 8 |
-| fp128 multi-group 4 polys, nv34 | 69,619 → 81,624 (+17%) | 1.08 → 1.43 (+32%) | 0.66 → 0.76 (+15%) | 13.4 → 13.9 (+4%) | 53.8 → 53.2 (-1%) | +0% | 7 → 8 |
-| fp128 multi-group nv34, recursive | 86,034 → 89,769 (+4%) | 1.40 → 1.41 (+1%) | 1.06 → 1.08 (+2%) | 9.2 → 9.0 (-2%) | 18.0 → 18.8 (+4%) | +0% | 8 → 8 |
-| fp128 multi-group nv32, recursive W8R2 | 75,253 → 83,769 (+11%) | 0.46 → 0.32 (-30%) | 1.07 → 1.23 (+15%) | 12.3 → 13.3 (+8%) | 33.2 → 38.8 (+17%) | +0% | 8 → 8 |
-| fp128 one-hot nv32 W2R2 | 69,515 → 81,554 (+17%) | 0.20 → 0.19 (-2%) | 0.33 → 0.34 (+3%) | 8.1 → 8.7 (+6%) | 22.1 → 22.6 (+2%) | +0% | 7 → 8 |
-| fp128 one-hot nv32 W4R2 | 70,509 → 81,782 (+16%) | 0.19 → 0.20 (+3%) | 0.44 → 0.45 (+2%) | 9.0 → 9.5 (+6%) | 25.5 → 26.9 (+6%) | +0% | 7 → 8 |
-| fp128 one-hot nv32 W8R2 | 71,887 → 82,329 (+15%) | 0.19 → 0.19 (+1%) | 0.62 → 0.62 (+1%) | 10.3 → 10.4 (+1%) | 31.7 → 31.2 (-2%) | +0% | 8 → 8 |
+| fp32 dense nv30 | 64,548 → 75,294 (+17%) | 0.72 → 0.91 (+27%) | 0.62 → 0.72 (+18%) | 9.1 → 8.9 (-2%) | 27.2 → 22.3 (-18%) | -9% | 7 → 7 |
+| fp32 one-hot nv34 | 65,507 → 75,398 (+15%) | 0.46 → 0.44 (-4%) | 0.71 → 0.81 (+14%) | 10.5 → 10.1 (-3%) | 35.1 → 41.9 (+19%) | +100% | 7 → 7 |
+| fp64 dense nv29 | 67,091 → 78,244 (+17%) | 0.94 → 0.94 (+1%) | 0.65 → 0.59 (-9%) | 6.4 → 6.2 (-3%) | 18.6 → 16.7 (-10%) | +0% | 7 → 7 |
+| fp64 one-hot nv35 | 67,711 → 78,913 (+17%) | 0.77 → 1.03 (+34%) | 0.70 → 0.85 (+23%) | 9.3 → 10.4 (+11%) | 34.6 → 32.7 (-5%) | +0% | 7 → 8 |
+| fp128 dense nv28 | 69,062 → 80,581 (+17%) | 0.94 → 0.92 (-2%) | 0.61 → 0.59 (-5%) | 8.0 → 7.3 (-9%) | 25.9 → 21.8 (-16%) | +0% | 7 → 7 |
+| fp128 one-hot nv36 | 69,700 → 81,777 (+17%) | 2.77 → 2.80 (+1%) | 1.28 → 1.31 (+2%) | 18.0 → 18.0 (-0%) | 65.6 → 71.5 (+9%) | +34% | 7 → 8 |
+| fp128 one-hot nv36, recursive setup | 73,154 → 84,962 (+16%) | 2.78 → 3.29 (+18%) | 1.45 → 1.50 (+3%) | 10.1 → 9.9 (-2%) | 28.5 → 23.2 (-19%) | +100% | 8 → 8 |
+| fp128 multi-group 4 polys, nv34 | 69,619 → 81,624 (+17%) | 1.08 → 1.42 (+31%) | 0.66 → 0.76 (+15%) | 13.4 → 14.0 (+4%) | 53.8 → 51.4 (-4%) | +0% | 7 → 8 |
+| fp128 multi-group nv34, recursive | 86,034 → 89,769 (+4%) | 1.39 → 1.43 (+3%) | 1.06 → 1.07 (+1%) | 9.4 → 9.1 (-3%) | 17.6 → 18.2 (+3%) | +0% | 8 → 8 |
+| fp128 multi-group nv32, recursive W8R2 | 75,253 → 83,746 (+11%) | 0.46 → 0.33 (-27%) | 1.06 → 1.21 (+13%) | 12.6 → 13.5 (+7%) | 33.8 → 36.9 (+9%) | +0% | 8 → 8 |
+| fp128 one-hot nv32 W2R2 | 69,515 → 81,550 (+17%) | 0.19 → 0.19 (+1%) | 0.33 → 0.34 (+2%) | 8.5 → 8.3 (-2%) | 22.8 → 22.4 (-2%) | +0% | 7 → 8 |
+| fp128 one-hot nv32 W4R2 | 70,509 → 81,782 (+16%) | 0.19 → 0.20 (+2%) | 0.43 → 0.45 (+3%) | 9.0 → 9.3 (+3%) | 25.4 → 25.8 (+1%) | +0% | 7 → 8 |
+| fp128 one-hot nv32 W8R2 | 71,887 → 82,329 (+15%) | 0.20 → 0.20 (+0%) | 0.62 → 0.62 (+1%) | 10.5 → 10.2 (-3%) | 32.3 → 31.4 (-3%) | +0% | 8 → 8 |
 
 Across the 13 cases the median change is +16.5% in proof bytes, +2.7% in prove
-time, +1% in commit time, and under 1.5% in either verify time. Sample ranges
-are a few percent wide, so the larger prover deltas are real. The fp64 one-hot
-and fp128 multi-group rows add a fold; fp32 dense (+19% prove, +26% commit)
-and the recursive W8R2 row (+15% prove) keep their fold count and were not
-profiled further. The fp128 one-hot nv36 and recursive-setup rows grow their
-setup by 34% and 100%, which raises setup time and peak memory (+49% and +93%
-RSS).
+time, and +1.3% in commit time. Verify time is within noise: the medians are
+-1.9% with 32 threads and -2.7% single-threaded. The spread of the five prove
+and commit samples (maximum minus minimum, over the median) is 3.7% at the
+median and at most 13%, so prover deltas above 15% are real. The fp64 one-hot
+and fp128 multi-group rows add a fold. Two rows keep their fold count and were
+not profiled further: fp32 dense (+18% prove, +27% commit) and the recursive
+W8R2 row (+13% prove). The fp128 one-hot nv36 and recursive-setup rows grow
+their setup by 34% and 100%, which raises setup time and peak memory (+50% and
++93% RSS).
