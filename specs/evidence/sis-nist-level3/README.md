@@ -83,6 +83,29 @@ bytes to `fp128_onehot_multi_chunk_w2r2` nv14 with one nv14 precommit. Its
 producer row saves one nonce byte with a different root matrix. Replanning
 `main`'s key with the fixed planner reproduces `main`'s schedule exactly.
 
+## Jolt-scale planning coverage
+
+Jolt plans its own schedule artifacts with this planner. It uses fp128 one-hot
+policies with K=16 or K=256 sources, each with single, W2R2, W4R2, or W8R2
+chunking and recursive setup planning, plus bounded and full dense producers
+with W8R2 chunking. A scratch check built the same policies from
+`policy_of::<RecursiveCommitmentConfig<OneHot>>()`, `DenseBounded`, and
+`Dense`, swapping in the K=16 source contract and each chunk profile. It
+planned 190 shapes at trace lengths `2^30` and `2^31`. Every shape planned
+and passed `validate_structure`.
+
+| Shapes (every chunk profile) | Proof bytes | Folds | Setup field elements |
+| --- | ---: | ---: | ---: |
+| K=16 trace, nv34 (`2^30`), 51 to 64 polys | 92,034 to 95,546 | 7 to 8 | `2^27` to `2^28` |
+| K=16 trace, nv35 (`2^31`), 51 to 64 polys | 92,070 to 95,822 | 8 | `2^27` to `2^28` |
+| K=16, nv40 to nv44, 1 or 2 polys | 92,030 to 103,506 | 7 to 8 | `2^27` to `2^30` |
+| K=256 trace, nv38 and nv39, 27 and 37 polys | 92,190 to 103,506 | 8 | `2^28` to `2^30` |
+| K=256, nv43 and nv44, 1 or 2 polys | 92,186 to 103,730 | 8 | `2^28` to `2^30` |
+| Dense bounded and full, nv34 and nv35 | 88,786 to 88,910 | 7 | at most 90,177,536 |
+
+Each shape plans in 35 to 90 seconds. The check plans schedules only; it
+does not prove at these sizes.
+
 ## Measured profile benchmark
 
 The profile-bench workflow cases ran on one AMD Ryzen 9 9950X (32 threads,
