@@ -32,7 +32,7 @@ boundary.
 | --- | --- |
 | Proof bytes, 111 rows | +4.2% to +25.2%, median +14.9% (+10,368 bytes) |
 | Proof bytes, 4 small recursive rows | +97% to +250% (see below) |
-| Total setup fields | median x1.14, range x0.69 to x2.67 |
+| Total setup fields, 111 rows | median x1.14, range x0.54 to x2.67 |
 | Fold levels (111 rows) | unchanged in 64, one more in 43, fewer in 4 |
 
 Per-family medians fall between +10% and +17%. Higher A, B, and D ranks
@@ -51,6 +51,37 @@ families minimize the padded setup envelope before proof bytes. Under the
 planner keeps the bucket and accepts a shallow schedule. `fp32_dense_recursive`
 nv20 already made the same trade on `main` (161 KB). A larger setup bucket
 would restore a deep schedule; the catalog objective is unchanged here.
+
+### Slice-pruning fix
+
+Under the 169-bit tables, the oracle comparison for the fp128 one-hot W8 nv20
+fixture failed. At every level and under both objectives, the planner kept
+only the outer slice counts with the smallest padded setup. That discarded
+the 256-position single-slice first fold that the exhaustive reference picks,
+which cost 116 proof bytes. The pruning is exact only at the root under the
+first-direct setup objective. This branch keeps every recursive slice count
+and prunes root counts only under that objective. The comparison above
+includes the fix.
+
+On the 169-bit catalog the fix changes 10 artifact files. Comparing the exact
+objective of all 123 planning calls (catalog rows and precommit preplans)
+before and after the fix: 105 are identical and 11 improve. The other six
+fall into two groups:
+
+- `fp128_onehot_multi_chunk` and `fp128_onehot_multi_chunk_w8r3` at nv16, and
+  the two W8 preplans with the same layouts, halve their first-direct setup
+  capacity from 262,144 to 131,072. That is the leading objective
+  coordinate. Their proofs grow by 1,633 and 2,106 bytes.
+- `fp128_onehot_multi_chunk` nv34 and `fp64_dense` nv20, each with
+  precommits, plan against a changed producer. A grouped row freezes the
+  root of its standalone producer row as the precommit descriptor. When that
+  row improves, the grouped row's lookup key changes. Replanning the pre-fix
+  keys with the fixed planner reproduces the pre-fix schedules exactly.
+
+On `main` alone the fix changes 18 rows. The same producer effect adds 4,644
+bytes to `fp128_onehot_multi_chunk_w2r2` nv14 with one nv14 precommit. Its
+producer row saves one nonce byte with a different root matrix. Replanning
+`main`'s key with the fixed planner reproduces `main`'s schedule exactly.
 
 ## Measured profile benchmark
 

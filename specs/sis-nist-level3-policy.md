@@ -134,6 +134,19 @@ rule. Planner admission (`compression_sources_supported`), payload geometry,
 and setup-prefix compression all apply it, so a compressed q32 image uses
 D=128 or D=256.
 
+### Planner slice pruning
+
+The 169-bit tables exposed a planner gap in the oracle comparisons. At every
+level, the planner kept only the outer slice counts with the smallest padded
+setup. That is exact only for root slices under the first-direct setup
+objective, where the root's padded setup leads. It is not exact for recursive
+levels, and not under the recursive setup envelope. The planner now keeps
+every recursive slice count. `prune_root_slices_by_first_direct_setup` prunes
+root counts only under the first-direct objective. On equal lookup keys no
+catalog row gets worse;
+[the evidence](evidence/sis-nist-level3/README.md#slice-pruning-fix) lists
+every changed row.
+
 ## Intent
 
 ### Goal
