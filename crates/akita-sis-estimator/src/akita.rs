@@ -14,13 +14,13 @@ pub enum AkitaModulusProfileId {
     Q32Offset99,
     /// `2^64 - 59`.
     Q64Offset59,
-    /// LaBinius coefficient prime `2^64 - 23703`.
+    /// LaBinius commitment prime `2^25 + 14561 = 1 + 23328 * 1439`.
     ///
     /// This profile is available to the offline estimator. It is deliberately
     /// absent from Akita's native power-of-two runtime dispatch: the binary
-    /// protocol uses non-native cyclotomic degrees and has no live schedule yet.
+    /// protocol uses non-native cyclotomic degrees.
     #[cfg(feature = "labinius-sis")]
-    Q64Offset23703,
+    Q25Plus14561,
     /// `2^128 - (2^32 - 22537)`.
     Q128OffsetA7F7,
     /// `2^128 - 275`. Owns no generated rows; see
@@ -39,7 +39,7 @@ impl AkitaModulusProfileId {
             "q32" | "Q32Offset99" => Ok(Self::Q32Offset99),
             "q64" | "Q64Offset59" => Ok(Self::Q64Offset59),
             #[cfg(feature = "labinius-sis")]
-            "q64-labinius" | "Q64Offset23703" => Ok(Self::Q64Offset23703),
+            "q25-labinius" | "Q25Plus14561" => Ok(Self::Q25Plus14561),
             "q128" | "Q128OffsetA7F7" => Ok(Self::Q128OffsetA7F7),
             "q128_offset275" | "Q128Offset275" => Ok(Self::Q128Offset275),
             _ => Err(EstimatorError::InvalidParameter {
@@ -56,7 +56,7 @@ impl AkitaModulusProfileId {
             Self::Q32Offset99 => akita_q32(),
             Self::Q64Offset59 => akita_q64(),
             #[cfg(feature = "labinius-sis")]
-            Self::Q64Offset23703 => crate::params::labinius_q64(),
+            Self::Q25Plus14561 => BigUint::from(33_568_993u32),
             Self::Q128OffsetA7F7 => akita_q128(),
             Self::Q128Offset275 => {
                 BigUint::from(akita_params::sis::SisModulusProfileId::Q128Offset275.modulus())
@@ -71,7 +71,7 @@ impl AkitaModulusProfileId {
             Self::Q32Offset99 => "q32",
             Self::Q64Offset59 => "q64",
             #[cfg(feature = "labinius-sis")]
-            Self::Q64Offset23703 => "q64-labinius",
+            Self::Q25Plus14561 => "q25-labinius",
             Self::Q128OffsetA7F7 => "q128",
             Self::Q128Offset275 => "q128_offset275",
         }
@@ -210,6 +210,24 @@ pub fn scalar_sis_from_ring_euclidean(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "labinius-sis")]
+    #[test]
+    fn commitment_prime_has_an_exact_feature_gated_identity() {
+        let profile = AkitaModulusProfileId::Q25Plus14561;
+        assert_eq!(profile.label(), "q25-labinius");
+        assert_eq!(profile.modulus(), BigUint::from(33_568_993u32));
+        assert_eq!(
+            AkitaModulusProfileId::parse(profile.label()).unwrap(),
+            profile
+        );
+    }
+
+    #[cfg(not(feature = "labinius-sis"))]
+    #[test]
+    fn commitment_prime_is_absent_without_the_feature() {
+        assert!(AkitaModulusProfileId::parse("q25-labinius").is_err());
+    }
 
     #[test]
     fn scalar_mapping_matches_golden_convention() {
