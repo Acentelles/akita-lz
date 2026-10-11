@@ -378,8 +378,8 @@ fn restricted_search_recovers_pruned_query_tradeoff() {
     };
     policy.selection_policy = crate::SelectionPolicyId::MinFirstDirectSetupThenExactProofAndWorkV5;
     policy.selective_l2_response_model = crate::SelectiveL2ResponseModelId::Disabled;
-    // Under the 169-bit tables nv19 is a small root whose level-1 frontier
-    // still holds two equal-successor folds with different query counts.
+    // nv19 is a small root whose level-1 frontier holds two equal-successor
+    // folds with different query counts.
     let key =
         akita_params::ScheduleLookupKey::single(akita_params::PolynomialGroupLayout::singleton(19));
     let root = crate::planner::find_schedule(
@@ -444,17 +444,18 @@ fn restricted_search_recovers_pruned_query_tradeoff() {
             candidate.opening_reduction_bytes,
         ]
     };
-    // Both folds emit the same successor; only their level setup differs.
-    let find = |level_setup| {
-        candidates
-            .iter()
-            .find(|candidate| {
-                candidate.next_witness_len == 226_048 && coords(candidate)[1] == level_setup
-            })
-            .unwrap()
+    // Both folds emit the same successor and B/D images; only their setup
+    // coordinates differ. Each tuple identifies exactly one candidate.
+    let find = |target| {
+        let mut matches = candidates.iter().filter(|candidate| {
+            candidate.next_witness_len == 226_048 && coords(candidate) == target
+        });
+        let candidate = matches.next().unwrap();
+        assert!(matches.next().is_none(), "fixture tuple must be unique");
+        candidate
     };
-    let high_query = find(163_840);
-    let low_query = find(327_680);
+    let high_query = find([262_144, 163_840, 64, 512, 256, 0]);
+    let low_query = find([524_288, 327_680, 64, 512, 256, 0]);
     let child_state = super::SuffixState {
         input_chunks: None,
         level: 2,
