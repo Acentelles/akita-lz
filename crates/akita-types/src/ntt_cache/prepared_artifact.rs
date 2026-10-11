@@ -263,8 +263,8 @@ fn encode_riscv64_scalar_q128_cache<const D: usize>(
 /// This checks the header, the expected setup and schedule identities, the
 /// exact payload length, and every residue range. It cannot prove that the
 /// transformed payload was derived from the named setup seed. Callers must
-/// bind the bytes to trusted setup provisioning or to the verifier program
-/// identity.
+/// either check that with [`check_riscv64_scalar_q128_cache_derivation`] or
+/// bind the bytes to the verifier program identity.
 ///
 /// # Errors
 ///
