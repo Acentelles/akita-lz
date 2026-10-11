@@ -43,64 +43,42 @@ impl CommittedGroupParams {
         )
     }
 
-    /// Whether every B/D image at this level fits the compression policy cap.
+    /// Whether every B/D image at this level can feed the compression ladder.
     pub fn compression_sources_supported(&self) -> Result<bool, AkitaError> {
         if !self.payload_mode.is_compressed() {
             return Ok(true);
         }
-        let outer_profile = self.outer().matrix.sis_modulus_profile();
-        if !crate::compression_source_ring_dimension_supported(
-            outer_profile,
+        let outer = &self.outer().matrix;
+        if crate::CompressionChainPlan::try_for_image(
+            outer.sis_modulus_profile(),
+            self.outer_slice_count()
+                .logical_output_rows(outer.output_rank())?,
             self.role_dims().d_b(),
-        ) || !crate::compression_source_ring_dimension_supported(
-            self.open().matrix.sis_modulus_profile(),
-            self.role_dims().d_d(),
-        ) || self.preceding_group_iter().any(|group| {
-            !crate::compression_source_ring_dimension_supported(
-                group.profile.outer.matrix.sis_modulus_profile(),
-                group.profile.outer.matrix.ring_dimension(),
-            )
-        }) {
-            return Ok(false);
-        }
-        let final_outer = self.outer_slice_count().complete_source_coefficients(
-            self.outer().matrix.output_rank(),
-            self.role_dims().d_b(),
-        )?;
-        if crate::CompressionChainPlan::try_for_complete_source(
-            self.outer().matrix.sis_modulus_profile(),
-            final_outer,
         )?
         .is_none()
         {
             return Ok(false);
         }
         for group in self.preceding_group_iter() {
-            let source = group
-                .profile
-                .outer_slice_count
-                .complete_source_coefficients(
-                    group.profile.outer.matrix.output_rank(),
-                    group.profile.outer.matrix.ring_dimension(),
-                )?;
-            if crate::CompressionChainPlan::try_for_complete_source(
-                group.profile.outer.matrix.sis_modulus_profile(),
-                source,
+            let outer = &group.profile.outer.matrix;
+            if crate::CompressionChainPlan::try_for_image(
+                outer.sis_modulus_profile(),
+                group
+                    .profile
+                    .outer_slice_count
+                    .logical_output_rows(outer.output_rank())?,
+                outer.ring_dimension(),
             )?
             .is_none()
             {
                 return Ok(false);
             }
         }
-        let opening = self
-            .open()
-            .matrix
-            .output_rank()
-            .checked_mul(self.role_dims().d_d())
-            .ok_or_else(|| AkitaError::InvalidSetup("D compression shape overflow".into()))?;
-        Ok(crate::CompressionChainPlan::try_for_complete_source(
-            self.open().matrix.sis_modulus_profile(),
-            opening,
+        let opening = &self.open().matrix;
+        Ok(crate::CompressionChainPlan::try_for_image(
+            opening.sis_modulus_profile(),
+            opening.output_rank(),
+            self.role_dims().d_d(),
         )?
         .is_some())
     }

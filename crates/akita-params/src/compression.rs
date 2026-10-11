@@ -19,8 +19,9 @@ pub const MAX_COMPRESSION_INPUT_BYTES: usize = 8 * 1024;
 
 /// Exact terminal payload target for the current compression ladder.
 ///
-/// A rank-one map can stay below the 169-bit SIS gate only at twice the ring
-/// dimension the retired 128-bit ladder used, so its terminal image doubles.
+/// The terminal map's ring dimension is this byte count over the field width.
+/// A 128-byte terminal map could not absorb the preceding rank-one map's
+/// output within the SIS width cap, so the target is 256 bytes.
 pub const COMPRESSION_TARGET_BYTES: usize = 256;
 
 /// Exact number of maps in every compression chain.
@@ -122,12 +123,9 @@ impl CommitmentPayloadGeometry {
         source_rows: usize,
         source_ring_dimension: usize,
     ) -> Result<Self, AkitaError> {
-        let source_coefficients = source_rows
-            .checked_mul(source_ring_dimension)
-            .ok_or_else(|| AkitaError::InvalidSetup("commitment payload shape overflow".into()))?;
         let plan = mode
             .is_compressed()
-            .then(|| CompressionChainPlan::for_complete_source(profile, source_coefficients))
+            .then(|| CompressionChainPlan::for_image(profile, source_rows, source_ring_dimension))
             .transpose()?;
         Self::new(source_rows, source_ring_dimension, plan.as_ref())
     }
@@ -255,8 +253,7 @@ pub const fn compression_ring_dimensions(profile: SisModulusProfileId) -> [usize
 /// Recomposition rebuilds every source ring element from whole first-map digit
 /// blocks, so the first ladder dimension must divide the source dimension. The
 /// q32 ladder starts at D=128 and therefore excludes D=64 sources.
-#[must_use]
-pub const fn compression_source_ring_dimension_supported(
+const fn compression_source_ring_dimension_supported(
     profile: SisModulusProfileId,
     source_ring_dimension: usize,
 ) -> bool {
@@ -796,9 +793,6 @@ mod tests {
         let plan = CompressionChainPlan::for_complete_source(profile, 256).unwrap();
         assert!(CommitmentPayloadGeometry::new(5, 64, Some(&plan)).is_err());
 
-        // The q128 ladder starts at D=32, so it cannot recompose a D=16 source.
-        assert!(compression_source_ring_dimension_supported(profile, 64));
-        assert!(!compression_source_ring_dimension_supported(profile, 16));
         assert!(CommitmentPayloadGeometry::for_mode(
             CommitmentPayloadMode::Compressed,
             profile,
@@ -806,10 +800,37 @@ mod tests {
             16
         )
         .is_err());
-        assert!(!compression_source_ring_dimension_supported(
-            SisModulusProfileId::Q32Offset99,
-            64
-        ));
+    }
+
+    #[test]
+    fn image_chains_require_the_first_ladder_dimension_to_divide_the_source() {
+        // Each ladder rebuilds source ring elements from whole first-map digit
+        // blocks: q128 starts at D=32 and q32 at D=128.
+        for (profile, rejected, admitted) in [
+            (SisModulusProfileId::Q128OffsetA7F7, 16, 64),
+            (SisModulusProfileId::Q64Offset59, 32, 64),
+            (SisModulusProfileId::Q32Offset99, 64, 128),
+        ] {
+            assert!(CompressionChainPlan::try_for_image(profile, 2, rejected)
+                .unwrap()
+                .is_none());
+            assert!(CompressionChainPlan::for_image(profile, 2, rejected).is_err());
+            let plan = CompressionChainPlan::for_image(profile, 2, admitted).unwrap();
+            assert_eq!(
+                plan,
+                CompressionChainPlan::for_complete_source(profile, 2 * admitted).unwrap()
+            );
+            assert_eq!(
+                CompressionChainPlan::try_for_image(profile, 2, admitted).unwrap(),
+                Some(plan)
+            );
+        }
+        // An over-cap source stays a soft rejection, not an error.
+        assert!(
+            CompressionChainPlan::try_for_image(SisModulusProfileId::Q128OffsetA7F7, 1024, 64)
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]

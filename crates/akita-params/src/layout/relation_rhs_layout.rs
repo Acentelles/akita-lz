@@ -11,7 +11,7 @@ use crate::layout::relation_layout::{
 use crate::layout::CommittedGroupParams;
 use crate::{
     CommitmentRingDims, CommitmentSliceCount, CommittedSourceEncoding, CompressionChainPlan,
-    OpeningMethod, SisModulusProfileId, SubringCoefficientPackingGeometry,
+    OpeningMethod, SubringCoefficientPackingGeometry,
 };
 
 /// Row geometry for one group's opening.
@@ -240,17 +240,6 @@ impl RelationRhsLayout {
     }
 }
 
-pub(crate) fn compression_plan(
-    profile: SisModulusProfileId,
-    rows: usize,
-    ring_dim: usize,
-) -> Result<CompressionChainPlan, AkitaError> {
-    let source_coefficients = rows
-        .checked_mul(ring_dim)
-        .ok_or_else(|| AkitaError::InvalidSetup("compression source shape overflow".into()))?;
-    CompressionChainPlan::for_complete_source(profile, source_coefficients)
-}
-
 /// Single source of truth for the relation rhs row layout at one level.
 ///
 /// # Errors
@@ -267,7 +256,7 @@ fn build_relation_rhs_layout(
         .payload_mode
         .is_compressed()
         .then(|| {
-            compression_plan(
+            CompressionChainPlan::for_image(
                 lp.open().matrix.sis_modulus_profile(),
                 n_d,
                 lp.open().matrix.ring_dimension(),
@@ -296,7 +285,7 @@ fn build_relation_rhs_layout(
             })
             .collect::<Vec<_>>();
         let compression = if let Some(opening_plan) = opening_plan {
-            let group_plan = compression_plan(
+            let group_plan = CompressionChainPlan::for_image(
                 lp.outer().matrix.sis_modulus_profile(),
                 lp.outer_slice_count()
                     .logical_output_rows(lp.outer().matrix.output_rank())?,
@@ -342,7 +331,7 @@ fn build_relation_rhs_layout(
     });
     group_indices.push(final_group_index);
     if opening_plan.is_some() {
-        group_plans.push(compression_plan(
+        group_plans.push(CompressionChainPlan::for_image(
             lp.outer().matrix.sis_modulus_profile(),
             lp.outer_slice_count()
                 .logical_output_rows(lp.outer().matrix.output_rank())?,
@@ -367,7 +356,7 @@ fn build_relation_rhs_layout(
         });
         group_indices.push(group_index);
         if opening_plan.is_some() {
-            group_plans.push(compression_plan(
+            group_plans.push(CompressionChainPlan::for_image(
                 group.profile.outer.matrix.sis_modulus_profile(),
                 group
                     .profile

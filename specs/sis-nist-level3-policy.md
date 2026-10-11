@@ -129,10 +129,11 @@ The compression policy becomes `NegativeBinaryTwoMapExactMonotoneCutover8KiBV4`
 Recomposition rebuilds each B or D ring element from whole first-map digit
 blocks, so the first ladder dimension must divide the source ring dimension.
 The q32 ladder now starts at D=128, above the smallest q32 B/D dimension.
-`compression_source_ring_dimension_supported` is the one predicate for this
-rule. Planner admission (`compression_sources_supported`), payload geometry,
-and setup-prefix compression all apply it, so a compressed q32 image uses
-D=128 or D=256.
+`CompressionChainPlan::for_image` and `try_for_image` own this rule, and
+every compressed-image admission goes through them: planner B candidates,
+level admission (`compression_sources_supported`), commitment-request
+validation, the relation layout, payload geometry, and setup-prefix
+compression. A compressed q32 image therefore uses D=128 or D=256.
 
 ### Planner slice pruning
 

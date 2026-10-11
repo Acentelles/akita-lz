@@ -44,17 +44,16 @@ pub fn setup_prefix_compression_plan(
     params: &GroupCommitPhaseParams,
 ) -> Result<CompressionChainPlan, SerializationError> {
     let matrix = &params.outer.matrix;
-    let profile = matrix.sis_table_key().modulus_profile;
-    if !crate::compression_source_ring_dimension_supported(profile, matrix.ring_dimension()) {
-        return Err(SerializationError::InvalidData(
-            "setup-prefix outer ring dimension cannot feed the compression ladder".to_string(),
-        ));
-    }
-    let source_coefficients = params
+    params
         .outer_slice_count
-        .complete_source_coefficients(matrix.output_rank(), matrix.ring_dimension())
-        .map_err(|error| SerializationError::InvalidData(error.to_string()))?;
-    CompressionChainPlan::for_complete_source(profile, source_coefficients)
+        .logical_output_rows(matrix.output_rank())
+        .and_then(|rows| {
+            CompressionChainPlan::for_image(
+                matrix.sis_table_key().modulus_profile,
+                rows,
+                matrix.ring_dimension(),
+            )
+        })
         .map_err(|error| SerializationError::InvalidData(error.to_string()))
 }
 
