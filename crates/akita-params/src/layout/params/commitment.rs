@@ -108,13 +108,7 @@ impl CommittedGroupParams {
                 "commitment B matrix width disagrees with sliced request geometry".into(),
             ));
         }
-        if self.payload_mode.is_compressed()
-            && crate::CompressionChainPlan::try_for_image(
-                self.outer().matrix.sis_modulus_profile(),
-                geometry.logical_output_rows(self.outer().matrix.output_rank())?,
-                self.role_dims().d_b(),
-            )?
-            .is_none()
+        if self.payload_mode.is_compressed() && own_profile.try_outer_compression_plan()?.is_none()
         {
             return Err(AkitaError::InvalidSetup(
                 "commitment B image cannot feed the compression ladder".into(),

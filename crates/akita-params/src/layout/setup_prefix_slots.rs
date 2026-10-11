@@ -24,7 +24,6 @@ pub const SETUP_PREFIX_CONTENT_TAG: &[u8; 4] = b"SPF4";
 
 #[path = "setup_prefix_helpers.rs"]
 mod helpers;
-pub use helpers::setup_prefix_compression_plan;
 pub use helpers::suffix_opening_layout;
 
 /// Identity for one committed setup-prefix slot.

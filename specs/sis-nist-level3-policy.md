@@ -130,12 +130,14 @@ Recomposition rebuilds each B or D ring element from whole first-map digit
 blocks, so the first ladder dimension must divide the source ring dimension.
 The q32 ladder now starts at D=128, above the smallest q32 B/D dimension.
 `CompressionChainPlan::for_image` and `try_for_image` own this rule, and
-every chain derived from a B or D image goes through them: planner B
-candidates, level admission (`compression_sources_supported`),
+every chain derived from a B or D image goes through them. A group's B image
+uses `GroupCommitPhaseParams::outer_compression_plan` (or its `try_` form for
+admission), and a level's shared D image uses
+`CommittedGroupParams::opening_compression_plan`. Planner admission,
 commitment-request validation, committed-group decoding, the verifier's
-precommit check, the relation layout, payload geometry, setup envelopes,
-setup-prefix compression, and the prover's handoff plans. A compressed q32
-image therefore uses D=128 or D=256.
+precommit check, the relation layout, setup envelopes, setup-prefix slots, and
+the prover's handoff plans all call these, so a compressed q32 image uses
+D=128 or D=256.
 
 ### Planner slice pruning
 

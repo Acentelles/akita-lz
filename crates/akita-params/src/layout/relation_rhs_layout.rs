@@ -255,13 +255,7 @@ fn build_relation_rhs_layout(
     let opening_plan = lp
         .payload_mode
         .is_compressed()
-        .then(|| {
-            CompressionChainPlan::for_image(
-                lp.open().matrix.sis_modulus_profile(),
-                n_d,
-                lp.open().matrix.ring_dimension(),
-            )
-        })
+        .then(|| lp.opening_compression_plan())
         .transpose()?;
     if !lp.has_preceding_groups() {
         let role_dims = lp.role_dims();
@@ -285,12 +279,7 @@ fn build_relation_rhs_layout(
             })
             .collect::<Vec<_>>();
         let compression = if let Some(opening_plan) = opening_plan {
-            let group_plan = CompressionChainPlan::for_image(
-                lp.outer().matrix.sis_modulus_profile(),
-                lp.outer_slice_count()
-                    .logical_output_rows(lp.outer().matrix.output_rank())?,
-                role_dims.d_b(),
-            )?;
+            let group_plan = lp.own_group().profile.outer_compression_plan()?;
             Some(RelationCompressionLayout {
                 group_plans: repeat_n(group_plan, group_indices.len()).collect(),
                 group_indices,
@@ -331,12 +320,7 @@ fn build_relation_rhs_layout(
     });
     group_indices.push(final_group_index);
     if opening_plan.is_some() {
-        group_plans.push(CompressionChainPlan::for_image(
-            lp.outer().matrix.sis_modulus_profile(),
-            lp.outer_slice_count()
-                .logical_output_rows(lp.outer().matrix.output_rank())?,
-            final_role_dims.d_b(),
-        )?);
+        group_plans.push(lp.own_group().profile.outer_compression_plan()?);
     }
     for (group_index, group) in lp.preceding_group_iter().enumerate() {
         let role_dims = group.role_dims(lp.open().matrix.ring_dimension());
@@ -356,14 +340,7 @@ fn build_relation_rhs_layout(
         });
         group_indices.push(group_index);
         if opening_plan.is_some() {
-            group_plans.push(CompressionChainPlan::for_image(
-                group.profile.outer.matrix.sis_modulus_profile(),
-                group
-                    .profile
-                    .outer_slice_count
-                    .logical_output_rows(group.profile.outer.matrix.output_rank())?,
-                role_dims.d_b(),
-            )?);
+            group_plans.push(group.profile.outer_compression_plan()?);
         }
     }
     let layout = RelationRhsLayout {

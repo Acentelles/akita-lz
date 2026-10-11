@@ -133,11 +133,7 @@ fn append_nonterminal_occurrences(
     }
     append_compression_chain_occurrences(
         &format!("{location} shared D"),
-        &CompressionChainPlan::for_image(
-            params.open_matrix.sis_modulus_profile(),
-            params.open_matrix.output_rank(),
-            params.role_dims().d_d(),
-        )?,
+        &params.opening_compression_plan()?,
         occurrences,
     );
     Ok(())
@@ -163,17 +159,9 @@ fn append_group_compression_occurrences(
     group: &GroupOpenPhaseParams,
     occurrences: &mut Vec<ScheduleSisOccurrence>,
 ) -> Result<(), AkitaError> {
-    let matrix = &group.profile.outer.matrix;
     append_compression_chain_occurrences(
         location,
-        &CompressionChainPlan::for_image(
-            matrix.sis_modulus_profile(),
-            group
-                .profile
-                .outer_slice_count
-                .logical_output_rows(matrix.output_rank())?,
-            matrix.ring_dimension(),
-        )?,
+        &group.profile.outer_compression_plan()?,
         occurrences,
     );
     Ok(())

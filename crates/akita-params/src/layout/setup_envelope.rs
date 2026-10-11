@@ -6,7 +6,7 @@ use super::setup_prefix_slots::{active_setup_field_len, suffix_opening_layout};
 use crate::{
     CommitmentSliceCount, CommittedGroupParams, CompressionChainPlan, FoldSchedule,
     InnerCommitMatrixParams, OpeningClaimsLayout, OuterCommitMatrixParams, SetupPrefixSlotId,
-    SisModulusProfileId, TerminalFoldParams,
+    TerminalFoldParams,
 };
 
 /// Exact base-field capacity of the shared public setup vector.
@@ -266,29 +266,12 @@ fn accumulate_compression_matrix_field_elements_for_level(
     }
     include_compression_setup(
         max_field_elements,
-        params.outer().matrix.sis_modulus_profile(),
-        params
-            .outer_slice_count()
-            .logical_output_rows(params.outer().matrix.output_rank())?,
-        params.role_dims().d_b(),
+        &params.own_group().profile.outer_compression_plan()?,
     )?;
     for group in params.preceding_group_iter() {
-        include_compression_setup(
-            max_field_elements,
-            group.profile.outer.matrix.sis_modulus_profile(),
-            group
-                .profile
-                .outer_slice_count
-                .logical_output_rows(group.profile.outer.matrix.output_rank())?,
-            group.profile.outer.matrix.ring_dimension(),
-        )?;
+        include_compression_setup(max_field_elements, &group.profile.outer_compression_plan()?)?;
     }
-    include_compression_setup(
-        max_field_elements,
-        params.open().matrix.sis_modulus_profile(),
-        params.open().matrix.output_rank(),
-        params.role_dims().d_d(),
-    )
+    include_compression_setup(max_field_elements, &params.opening_compression_plan()?)
 }
 
 /// Extend a physical setup footprint with the terminal inner matrix.
@@ -334,24 +317,14 @@ pub fn setup_prefix_slot_field_elements(slot: &SetupPrefixSlotId) -> Result<usiz
         params.outer.matrix.ring_dimension(),
         "setup-prefix outer setup",
     )?;
-    include_compression_setup(
-        &mut max_field_elements,
-        params.outer.matrix.sis_modulus_profile(),
-        params
-            .outer_slice_count
-            .logical_output_rows(params.outer.matrix.output_rank())?,
-        params.outer.matrix.ring_dimension(),
-    )?;
+    include_compression_setup(&mut max_field_elements, &params.outer_compression_plan()?)?;
     Ok(max_field_elements)
 }
 
 fn include_compression_setup(
     max_field_elements: &mut usize,
-    profile: SisModulusProfileId,
-    rows: usize,
-    ring_dimension: usize,
+    chain: &CompressionChainPlan,
 ) -> Result<(), AkitaError> {
-    let chain = CompressionChainPlan::for_image(profile, rows, ring_dimension)?;
     *max_field_elements = (*max_field_elements).max(chain.max_setup_field_elements()?);
     Ok(())
 }

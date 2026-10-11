@@ -108,7 +108,9 @@ fn active_setup_field_len_includes_mixed_role_subcolumns() {
 }
 
 fn verifier_slot_for_id<F: Field>(id: SetupPrefixSlotId) -> SetupPrefixVerifierSlot<F> {
-    let payload_coefficients = setup_prefix_compression_plan(&id.commitment_profile)
+    let payload_coefficients = id
+        .commitment_profile
+        .outer_compression_plan()
         .expect("setup-prefix compression plan")
         .terminal_coefficients();
     SetupPrefixVerifierSlot {

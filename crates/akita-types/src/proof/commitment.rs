@@ -5,9 +5,7 @@ use akita_params::sis::{
     InnerCommitMatrixParams, OuterCommitMatrixParams, SisMatrixRole, SisModulusProfileId,
     SisSecurityPolicyId, SisTableDigest,
 };
-use akita_params::{
-    CommitmentSliceCount, CompressionChainPlan, GroupCommitPhaseParams, PolynomialGroupLayout,
-};
+use akita_params::{CommitmentSliceCount, GroupCommitPhaseParams, PolynomialGroupLayout};
 
 type MatrixFields = (
     SisSecurityPolicyId,
@@ -90,18 +88,9 @@ impl<F: Field + CanonicalEncoding + Valid> Valid for CommittedGroup<F> {
             .validate_frozen_precommit(field_bits)
             .map_err(|err| SerializationError::InvalidData(err.to_string()))?;
         self.commitment.check()?;
-        let outer = &self.profile.outer.matrix;
         let expected_coeffs = self
             .profile
-            .outer_slice_count
-            .logical_output_rows(outer.output_rank())
-            .and_then(|rows| {
-                CompressionChainPlan::for_image(
-                    outer.sis_table_key().modulus_profile,
-                    rows,
-                    outer.ring_dimension(),
-                )
-            })
+            .outer_compression_plan()
             .map_err(|error| SerializationError::InvalidData(error.to_string()))?
             .terminal_coefficients();
         if self.commitment.rows().coeff_len() != expected_coeffs {
@@ -360,17 +349,8 @@ where
         descriptor
             .validate_frozen_precommit(field_bits)
             .map_err(|err| SerializationError::InvalidData(err.to_string()))?;
-        let outer = &descriptor.outer.matrix;
         let num_coeffs = descriptor
-            .outer_slice_count
-            .logical_output_rows(outer.output_rank())
-            .and_then(|rows| {
-                CompressionChainPlan::for_image(
-                    outer.sis_table_key().modulus_profile,
-                    rows,
-                    outer.ring_dimension(),
-                )
-            })
+            .outer_compression_plan()
             .map_err(|error| SerializationError::InvalidData(error.to_string()))?
             .terminal_coefficients();
         if num_coeffs > MAX_UNTRUSTED_COMMITMENT_COEFFICIENTS {

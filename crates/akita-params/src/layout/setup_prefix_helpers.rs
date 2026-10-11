@@ -1,10 +1,7 @@
 //! Focused geometry helpers for setup-prefix commitments.
 
-use crate::{
-    CompressionChainPlan, GroupCommitPhaseParams, OpeningClaimsLayout, PolynomialGroupLayout,
-};
+use crate::{OpeningClaimsLayout, PolynomialGroupLayout};
 use akita_error::{checked, AkitaError};
-use akita_serialization::SerializationError;
 
 use super::padded_setup_prefix_len;
 
@@ -38,23 +35,6 @@ pub fn suffix_opening_layout(
         }
         None => OpeningClaimsLayout::from_groups(vec![witness_group]),
     }
-}
-
-pub fn setup_prefix_compression_plan(
-    params: &GroupCommitPhaseParams,
-) -> Result<CompressionChainPlan, SerializationError> {
-    let matrix = &params.outer.matrix;
-    params
-        .outer_slice_count
-        .logical_output_rows(matrix.output_rank())
-        .and_then(|rows| {
-            CompressionChainPlan::for_image(
-                matrix.sis_table_key().modulus_profile,
-                rows,
-                matrix.ring_dimension(),
-            )
-        })
-        .map_err(|error| SerializationError::InvalidData(error.to_string()))
 }
 
 #[cfg(test)]

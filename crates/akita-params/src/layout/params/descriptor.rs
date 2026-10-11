@@ -48,29 +48,10 @@ impl CommittedGroupParams {
         if !self.payload_mode.is_compressed() {
             return Ok(true);
         }
-        let outer = &self.outer().matrix;
-        if crate::CompressionChainPlan::try_for_image(
-            outer.sis_modulus_profile(),
-            self.outer_slice_count()
-                .logical_output_rows(outer.output_rank())?,
-            self.role_dims().d_b(),
-        )?
-        .is_none()
-        {
-            return Ok(false);
-        }
-        for group in self.preceding_group_iter() {
-            let outer = &group.profile.outer.matrix;
-            if crate::CompressionChainPlan::try_for_image(
-                outer.sis_modulus_profile(),
-                group
-                    .profile
-                    .outer_slice_count
-                    .logical_output_rows(outer.output_rank())?,
-                outer.ring_dimension(),
-            )?
-            .is_none()
-            {
+        let group_profiles = std::iter::once(&self.own_group().profile)
+            .chain(self.preceding_group_iter().map(|group| &group.profile));
+        for profile in group_profiles {
+            if profile.try_outer_compression_plan()?.is_none() {
                 return Ok(false);
             }
         }
@@ -81,6 +62,16 @@ impl CommittedGroupParams {
             self.role_dims().d_d(),
         )?
         .is_some())
+    }
+
+    /// Compression chain of this level's shared D image.
+    pub fn opening_compression_plan(&self) -> Result<crate::CompressionChainPlan, AkitaError> {
+        let opening = &self.open().matrix;
+        crate::CompressionChainPlan::for_image(
+            opening.sis_modulus_profile(),
+            opening.output_rank(),
+            self.role_dims().d_d(),
+        )
     }
 
     /// Append the descriptor digest encoding for this parameter set.
