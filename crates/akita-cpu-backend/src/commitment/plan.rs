@@ -263,12 +263,10 @@ impl CommitmentExecutionPlan {
             geometry,
         )?;
         let compression = if payload_mode.is_compressed() {
-            let source_coefficients = profile
-                .outer_slice_count
-                .complete_source_coefficients(outer.n_b, outer.ring_dimension)?;
-            Some(CompressionChainPlan::for_complete_source(
+            Some(CompressionChainPlan::for_image(
                 profile.outer.matrix.sis_modulus_profile(),
-                source_coefficients,
+                profile.outer_slice_count.logical_output_rows(outer.n_b)?,
+                outer.ring_dimension,
             )?)
         } else {
             None

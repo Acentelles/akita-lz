@@ -136,8 +136,8 @@ impl CompressionChainPlan {
 
     /// Derive the canonical chain for one native B or D image.
     ///
-    /// Every compressed-image admission goes through this constructor or
-    /// [`Self::try_for_image`], so the ladder's source-dimension rule is
+    /// Every chain derived from a B or D image goes through this constructor
+    /// or [`Self::try_for_image`], so the ladder's source-dimension rule is
     /// enforced in one place.
     pub fn for_image(
         modulus_profile: SisModulusProfileId,

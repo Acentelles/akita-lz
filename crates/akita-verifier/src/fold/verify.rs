@@ -44,13 +44,12 @@ where
             let committed = group.commitment();
             let descriptor = committed.profile();
             descriptor.validate_frozen_precommit(Cfg::decomposition().field_bits())?;
-            let source_coefficients = descriptor.outer_slice_count.complete_source_coefficients(
-                descriptor.outer.matrix.output_rank(),
-                descriptor.outer.matrix.ring_dimension(),
-            )?;
-            let plan = akita_params::CompressionChainPlan::for_complete_source(
+            let plan = akita_params::CompressionChainPlan::for_image(
                 descriptor.outer.matrix.sis_table_key().modulus_profile,
-                source_coefficients,
+                descriptor
+                    .outer_slice_count
+                    .logical_output_rows(descriptor.outer.matrix.output_rank())?,
+                descriptor.outer.matrix.ring_dimension(),
             )?;
             if committed.commitment().rows().coeff_len() != plan.terminal_coefficients() {
                 return Err(AkitaError::InvalidInput(

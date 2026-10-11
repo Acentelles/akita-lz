@@ -235,13 +235,10 @@ pub fn commit_only_setup_field_elements(
     outer_commit_matrix: &OuterCommitMatrixParams,
     outer_slice_count: CommitmentSliceCount,
 ) -> Result<usize, AkitaError> {
-    let source_coefficients = outer_slice_count.complete_source_coefficients(
-        outer_commit_matrix.output_rank(),
-        outer_commit_matrix.ring_dimension(),
-    )?;
-    let compression = CompressionChainPlan::for_complete_source(
+    let compression = CompressionChainPlan::for_image(
         outer_commit_matrix.sis_modulus_profile(),
-        source_coefficients,
+        outer_slice_count.logical_output_rows(outer_commit_matrix.output_rank())?,
+        outer_commit_matrix.ring_dimension(),
     )?;
     commitment_execution_setup_field_elements(
         CommitmentSetupMatrixShape {
@@ -274,7 +271,6 @@ fn accumulate_compression_matrix_field_elements_for_level(
             .outer_slice_count()
             .logical_output_rows(params.outer().matrix.output_rank())?,
         params.role_dims().d_b(),
-        "outer compression setup",
     )?;
     for group in params.preceding_group_iter() {
         include_compression_setup(
@@ -285,7 +281,6 @@ fn accumulate_compression_matrix_field_elements_for_level(
                 .outer_slice_count
                 .logical_output_rows(group.profile.outer.matrix.output_rank())?,
             group.profile.outer.matrix.ring_dimension(),
-            "precommitted outer compression setup",
         )?;
     }
     include_compression_setup(
@@ -293,7 +288,6 @@ fn accumulate_compression_matrix_field_elements_for_level(
         params.open().matrix.sis_modulus_profile(),
         params.open().matrix.output_rank(),
         params.role_dims().d_d(),
-        "opening compression setup",
     )
 }
 
@@ -347,7 +341,6 @@ pub fn setup_prefix_slot_field_elements(slot: &SetupPrefixSlotId) -> Result<usiz
             .outer_slice_count
             .logical_output_rows(params.outer.matrix.output_rank())?,
         params.outer.matrix.ring_dimension(),
-        "setup-prefix outer compression setup",
     )?;
     Ok(max_field_elements)
 }
@@ -357,12 +350,8 @@ fn include_compression_setup(
     profile: SisModulusProfileId,
     rows: usize,
     ring_dimension: usize,
-    role: &'static str,
 ) -> Result<(), AkitaError> {
-    let source_coefficients = rows
-        .checked_mul(ring_dimension)
-        .ok_or_else(|| AkitaError::InvalidSetup(format!("{role} source shape overflow")))?;
-    let chain = CompressionChainPlan::for_complete_source(profile, source_coefficients)?;
+    let chain = CompressionChainPlan::for_image(profile, rows, ring_dimension)?;
     *max_field_elements = (*max_field_elements).max(chain.max_setup_field_elements()?);
     Ok(())
 }

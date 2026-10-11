@@ -90,20 +90,20 @@ impl<F: Field + CanonicalEncoding + Valid> Valid for CommittedGroup<F> {
             .validate_frozen_precommit(field_bits)
             .map_err(|err| SerializationError::InvalidData(err.to_string()))?;
         self.commitment.check()?;
-        let source_coefficients = self
+        let outer = &self.profile.outer.matrix;
+        let expected_coeffs = self
             .profile
             .outer_slice_count
-            .complete_source_coefficients(
-                self.profile.outer.matrix.output_rank(),
-                self.profile.outer.matrix.ring_dimension(),
-            )
-            .map_err(|err| SerializationError::InvalidData(err.to_string()))?;
-        let expected_coeffs = CompressionChainPlan::for_complete_source(
-            self.profile.outer.matrix.sis_table_key().modulus_profile,
-            source_coefficients,
-        )
-        .map_err(|error| SerializationError::InvalidData(error.to_string()))?
-        .terminal_coefficients();
+            .logical_output_rows(outer.output_rank())
+            .and_then(|rows| {
+                CompressionChainPlan::for_image(
+                    outer.sis_table_key().modulus_profile,
+                    rows,
+                    outer.ring_dimension(),
+                )
+            })
+            .map_err(|error| SerializationError::InvalidData(error.to_string()))?
+            .terminal_coefficients();
         if self.commitment.rows().coeff_len() != expected_coeffs {
             return Err(SerializationError::InvalidData(
                 "committed-group rows do not match the frozen descriptor".to_string(),
@@ -360,19 +360,19 @@ where
         descriptor
             .validate_frozen_precommit(field_bits)
             .map_err(|err| SerializationError::InvalidData(err.to_string()))?;
-        let source_coefficients = descriptor
+        let outer = &descriptor.outer.matrix;
+        let num_coeffs = descriptor
             .outer_slice_count
-            .complete_source_coefficients(
-                descriptor.outer.matrix.output_rank(),
-                descriptor.outer.matrix.ring_dimension(),
-            )
-            .map_err(|err| SerializationError::InvalidData(err.to_string()))?;
-        let num_coeffs = CompressionChainPlan::for_complete_source(
-            descriptor.outer.matrix.sis_table_key().modulus_profile,
-            source_coefficients,
-        )
-        .map_err(|error| SerializationError::InvalidData(error.to_string()))?
-        .terminal_coefficients();
+            .logical_output_rows(outer.output_rank())
+            .and_then(|rows| {
+                CompressionChainPlan::for_image(
+                    outer.sis_table_key().modulus_profile,
+                    rows,
+                    outer.ring_dimension(),
+                )
+            })
+            .map_err(|error| SerializationError::InvalidData(error.to_string()))?
+            .terminal_coefficients();
         if num_coeffs > MAX_UNTRUSTED_COMMITMENT_COEFFICIENTS {
             return Err(SerializationError::InvalidData(format!(
                 "committed-group coefficient count {num_coeffs} exceeds allocation cap \
@@ -432,6 +432,10 @@ mod committed_group_tests {
     type F = Fp32<4294967197>;
 
     fn group() -> CommittedGroup<F> {
+        group_with_outer_ring_dimension(128)
+    }
+
+    fn group_with_outer_ring_dimension(outer_ring_dimension: usize) -> CommittedGroup<F> {
         let a_bound =
             *akita_params::sis::inner_coeff_linf_bounds(SisModulusProfileId::Q32Offset99, 64)
                 .first()
@@ -455,7 +459,7 @@ mod committed_group_tests {
                 table_digest: SisTableDigest::CURRENT,
                 modulus_profile: SisModulusProfileId::Q32Offset99,
                 role: SisMatrixRole::Outer,
-                ring_dimension: 64,
+                ring_dimension: u32::try_from(outer_ring_dimension).unwrap(),
                 coeff_linf_bound: 3,
             },
             outer_width,
@@ -475,7 +479,7 @@ mod committed_group_tests {
                 outer_commit_matrix,
             ),
         };
-        let source_coefficients = outer_commit_matrix.output_rank() * 64;
+        let source_coefficients = outer_commit_matrix.output_rank() * outer_ring_dimension;
         let payload_coefficients = akita_params::CompressionChainPlan::for_complete_source(
             outer_commit_matrix.sis_modulus_profile(),
             source_coefficients,
@@ -542,6 +546,24 @@ mod committed_group_tests {
         wrong_matrix_role[inner_matrix_role_offset] = SisMatrixRole::Outer.tag();
         assert!(CommittedGroup::<F>::deserialize_with_mode(
             wrong_matrix_role.as_slice(),
+            Compress::Yes,
+            Validate::Yes,
+            &(),
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn committed_group_decoding_rejects_an_outer_image_the_ladder_cannot_recompose() {
+        // The q32 ladder starts at D=128, so a D=64 outer image cannot be compressed.
+        let group = group_with_outer_ring_dimension(64);
+        assert!(group.check().is_err());
+        let mut bytes = Vec::new();
+        group
+            .serialize_with_mode(&mut bytes, Compress::Yes)
+            .expect("serialize committed group");
+        assert!(CommittedGroup::<F>::deserialize_with_mode(
+            bytes.as_slice(),
             Compress::Yes,
             Validate::Yes,
             &(),
