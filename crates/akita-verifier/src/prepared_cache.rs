@@ -213,7 +213,12 @@ impl TerminalNttCache {
 
 /// A prepared terminal cache artifact from [`build_riscv64_terminal_ntt_cache`],
 /// with the trust its caller places in it.
+///
+/// Non-exhaustive because `ProgramBound` exists only with the
+/// `program-bound-terminal-cache` feature, which Cargo may unify into any
+/// build.
 #[derive(Clone, Copy, Debug)]
+#[non_exhaustive]
 pub enum TerminalCacheArtifact<'a> {
     /// Bytes loaded at run time. The verifier rebuilds the payload from the
     /// setup matrix and rejects any residue that differs.
