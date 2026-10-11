@@ -5,7 +5,7 @@
 | Author(s)     | sumchecker |
 | Created       | 2026-10-10 |
 | Status        | active |
-| PR            | |
+| PR            | [#232](https://github.com/LayerZero-Labs/akita/pull/232) |
 | Supersedes    | the 128-bit target and `Quantum128BitADPS16` policy ID of [`sis-quantum128-scalar-n-table`](sis-quantum128-scalar-n-table.md) |
 | Superseded-by | |
 | Book-chapter  | book/src/how/security.md |
