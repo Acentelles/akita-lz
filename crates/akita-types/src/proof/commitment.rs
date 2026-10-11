@@ -412,24 +412,29 @@ mod committed_group_tests {
     type F = Fp32<4294967197>;
 
     fn group() -> CommittedGroup<F> {
-        group_with_outer_ring_dimension(128)
+        group_with_ring_dimension(128)
     }
 
-    fn group_with_outer_ring_dimension(outer_ring_dimension: usize) -> CommittedGroup<F> {
-        let a_bound =
-            *akita_params::sis::inner_coeff_linf_bounds(SisModulusProfileId::Q32Offset99, 64)
-                .first()
-                .expect("D64 exact A bounds");
+    /// One nv11 group whose A and B matrices share `ring_dimension`.
+    fn group_with_ring_dimension(ring_dimension: usize) -> CommittedGroup<F> {
+        let ring_dimension_u32 = u32::try_from(ring_dimension).unwrap();
+        let positions = (1 << 11) / ring_dimension;
+        let a_bound = *akita_params::sis::inner_coeff_linf_bounds(
+            SisModulusProfileId::Q32Offset99,
+            ring_dimension_u32,
+        )
+        .first()
+        .expect("exact A bounds");
         let inner_commit_matrix = InnerCommitMatrixParams::try_new_with_min_rank(
             akita_params::SisTableKey {
                 policy: akita_params::sis::DEFAULT_SIS_SECURITY_POLICY,
                 table_digest: SisTableDigest::CURRENT,
                 modulus_profile: SisModulusProfileId::Q32Offset99,
                 role: SisMatrixRole::Inner,
-                ring_dimension: 64,
+                ring_dimension: ring_dimension_u32,
                 coeff_linf_bound: a_bound,
             },
-            32,
+            positions,
         )
         .expect("audited A profile");
         let outer_width = inner_commit_matrix.output_rank();
@@ -439,7 +444,7 @@ mod committed_group_tests {
                 table_digest: SisTableDigest::CURRENT,
                 modulus_profile: SisModulusProfileId::Q32Offset99,
                 role: SisMatrixRole::Outer,
-                ring_dimension: u32::try_from(outer_ring_dimension).unwrap(),
+                ring_dimension: ring_dimension_u32,
                 coeff_linf_bound: 3,
             },
             outer_width,
@@ -448,7 +453,7 @@ mod committed_group_tests {
         let profile = GroupCommitPhaseParams {
             version: GroupCommitPhaseParams::VERSION,
             group: PolynomialGroupLayout::new(11, 1),
-            blocks: akita_params::BlockGeometry::new(32, 32, 1),
+            blocks: akita_params::BlockGeometry::new(positions, positions, 1),
             outer_slice_count: CommitmentSliceCount::ONE,
             inner: akita_params::RoleParams::new(
                 akita_params::GadgetDigits::new(1, 1),
@@ -459,7 +464,7 @@ mod committed_group_tests {
                 outer_commit_matrix,
             ),
         };
-        let source_coefficients = outer_commit_matrix.output_rank() * outer_ring_dimension;
+        let source_coefficients = outer_commit_matrix.output_rank() * ring_dimension;
         let payload_coefficients = akita_params::CompressionChainPlan::for_complete_source(
             outer_commit_matrix.sis_modulus_profile(),
             source_coefficients,
@@ -534,21 +539,13 @@ mod committed_group_tests {
     }
 
     #[test]
-    fn committed_group_decoding_rejects_an_outer_image_the_ladder_cannot_recompose() {
+    fn committed_group_validation_rejects_an_outer_image_the_ladder_cannot_recompose() {
         // The q32 ladder starts at D=128, so a D=64 outer image cannot be compressed.
-        let group = group_with_outer_ring_dimension(64);
+        let group = group_with_ring_dimension(64);
         assert!(group.check().is_err());
-        let mut bytes = Vec::new();
-        group
-            .serialize_with_mode(&mut bytes, Compress::Yes)
-            .expect("serialize committed group");
-        assert!(CommittedGroup::<F>::deserialize_with_mode(
-            bytes.as_slice(),
-            Compress::Yes,
-            Validate::Yes,
-            &(),
-        )
-        .is_err());
+        assert!(group
+            .serialize_with_mode(&mut Vec::new(), Compress::Yes)
+            .is_err());
     }
 
     #[test]
