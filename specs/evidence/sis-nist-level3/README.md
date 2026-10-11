@@ -88,11 +88,17 @@ producer row saves one nonce byte with a different root matrix. Replanning
 Jolt plans its own schedule artifacts with this planner. It uses fp128 one-hot
 policies with K=16 or K=256 sources, each with single, W2R2, W4R2, or W8R2
 chunking and recursive setup planning, plus bounded and full dense producers
-with W8R2 chunking. A scratch check built the same policies from
+with W8R2 chunking. The ignored test
+`jolt_scale_shapes_plan_for_every_chunk_profile` builds the same policies from
 `policy_of::<RecursiveCommitmentConfig<OneHot>>()`, `DenseBounded`, and
-`Dense`, swapping in the K=16 source contract and each chunk profile. It
-planned 190 shapes at trace lengths `2^30` and `2^31`. Every shape planned
-and passed `validate_structure`.
+`Dense`, swapping in the K=16 source contract and each chunk profile. It plans
+190 shapes at trace lengths `2^30` and `2^31`. Every shape plans and passes
+`validate_structure`:
+
+```text
+cargo test --release -p akita-planner --lib --features catalog-gen -- \
+  jolt_scale_shapes_plan_for_every_chunk_profile --ignored --nocapture
+```
 
 | Shapes (every chunk profile) | Proof bytes | Folds | Setup field elements |
 | --- | ---: | ---: | ---: |
