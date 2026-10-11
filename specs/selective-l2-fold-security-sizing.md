@@ -1064,7 +1064,8 @@ public row digest selects the exact expanded schedule for verification.
 ## Euclidean SIS table
 
 The L2 route uses a separate quantum ADPS16 table at the production SIS
-policy target, now 169 bits ([`sis-nist-level3-policy`](sis-nist-level3-policy.md)). It does not reuse the
+policy target, now 169 bits
+([`sis-nist-level3-policy`](sis-nist-level3-policy.md)). It does not reuse the
 coefficient Linf table and does not use the retired BDGL16 Euclidean profile.
 
 The table domain is:
