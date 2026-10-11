@@ -65,8 +65,8 @@ fn root_candidate_classes<Cfg: CommitmentConfig>(
 #[test]
 fn contractive_winner_remains_selected() {
     let policy = policy_of::<Dense>();
-    // Under the 169-bit tables nv14 selects a noncontractive root; nv16 is a
-    // small size whose complete winner still contracts.
+    // nv14 selects a noncontractive root; nv16 is a small size whose complete
+    // winner contracts.
     let key = ScheduleLookupKey::single(PolynomialGroupLayout::singleton(16));
     let schedule = find_schedule(
         &key,

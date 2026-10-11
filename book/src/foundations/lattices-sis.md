@@ -194,9 +194,10 @@ prices each role separately.
 Akita targets 169-bit quantum security under the ADPS16 quantum LGSA attack
 model. That is NIST security category 3: under the same model, forging an
 ML-DSA-65 signature also costs 169 bits, and every Akita SIS instance needs at
-least the BKZ block size, 638, that the forgery needs. The estimator runs offline. It searches scalar lattice attack
-parameters, certifies the accepted width boundary for each supported query,
-and emits compact tables for the runtime.
+least the BKZ block size, 638, that the forgery needs. The estimator runs
+offline. It searches scalar lattice attack parameters, certifies the accepted
+width boundary for each supported query, and emits compact tables for the
+runtime.
 
 The runtime lookup has the following shape:
 

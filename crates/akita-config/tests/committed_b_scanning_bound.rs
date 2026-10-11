@@ -131,8 +131,8 @@ fn committed_b_scanning_bound_changes_the_required_rank() {
     assert_eq!(matrix.output_rank(), 2);
     let mut scanner_key = matrix.sis_table_key();
     scanner_key.coeff_linf_bound = 7;
-    // Under the 169-bit table both alphabets need rank 2 at this width; a wider
-    // q32 D128 matrix still separates them.
+    // Both alphabets need rank 2 at this width; a wider q32 D128 matrix
+    // separates them.
     let rank = |key, width| {
         OuterCommitMatrixParams::try_new_with_min_rank(key, width)
             .unwrap()

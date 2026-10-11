@@ -451,7 +451,7 @@ fn q128_exact_cache_matches_ring_arithmetic_at_all_ifma_dimensions() {
 }
 
 #[test]
-fn compression_selector_rejects_the_retired_q128_d8_map_and_prepares_the_terminal_d16_map() {
+fn compression_selector_admits_only_q128_ladder_dimensions() {
     assert!(matches!(
         select_crt_ntt_params::<Prime128OffsetA7F7, 8>(),
         Err(AkitaError::InvalidSetup(_))

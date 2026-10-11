@@ -459,8 +459,7 @@ where
 
 /// The fp128 bounded-dense 24- and 26-variable single-polynomial rows share
 /// every other key field, but their norm routes differ at one level. Both fit
-/// the cap, so both must be proved. (Under the 169-bit tables the fp64 dense
-/// rows that used to show this no longer differ.)
+/// the cap, so both must be proved.
 #[test]
 fn norm_route_separates_single_polynomial_rows() {
     let scheme =

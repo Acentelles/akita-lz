@@ -4,9 +4,8 @@ use crate::sis::inner_coeff_linf_bounds;
 #[test]
 fn generated_cutoffs_exclude_cells_with_one_attempt_below_128_bits() {
     // Independent probability regressions in akita-sis-estimator establish a
-    // beta=483 candidate costing 127.995 quantum bits at this old cutoff; the
-    // 169-bit table must stay below it. The retired q32 D32 compression cell
-    // that the same regression covered is no longer generated.
+    // beta=483 candidate costing 127.995 quantum bits at width 904 for this
+    // cell, so the generated cutoff must stay below that width.
     let widths = sis_max_widths(
         DEFAULT_SIS_SECURITY_POLICY,
         SisTableDigest::CURRENT,

@@ -872,7 +872,7 @@ fn adaptive_search_applies_setup_budget_in_physical_fields() {
     .unwrap();
     policy = policy_for_domain(policy, &domain);
     // nv17 is the smallest size with an admitted schedule below the exact
-    // setup of its selected schedule under the 169-bit tables.
+    // setup of its selected schedule.
     let selected = find_schedule(
         onehot_group(17, 1),
         &policy,
