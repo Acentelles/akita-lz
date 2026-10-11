@@ -206,6 +206,35 @@ trusted parameter is loaded. Unknown proof row digests reject. There is no
 proof field that can replace a catalog row or ask the verifier to decode
 schedule content.
 
+## What the verifier trusts
+
+The verifier has two kinds of input, and it treats them differently.
+
+Proof bytes, commitments, claims, and opening points are untrusted. Every
+check in this chapter exists so that soundness does not depend on who produced
+them.
+
+The remaining inputs are preprocessing: the expanded public matrix, the
+setup-prefix commitment registry, the optional terminal NTT cache, and the
+schedule catalog. The matrix is a function of the setup seed. The registry and
+the cache are functions of the seed and of schedule rows. The catalog is
+planner output checked against the compiled SIS tables. Together they play
+the role of a verifying key. They must be derived honestly once and then
+pinned by the deployment, for example by shipping them with a release or
+compiling them into the verifier program. A verifier then either trusts the
+pinned data or recomputes it. Recomputation is always allowed and never
+required, and it is costly for the setup-prefix commitments in particular. A
+verifier that receives preprocessing from an adversary is outside the
+soundness claim. Akita binds the setup seed and the selected row digest into
+the transcript, but it does not pin the preprocessing itself. That is the
+deployment's responsibility.
+
+Trusting preprocessing for soundness does not relax parsing. Its bytes are
+decoded under the same no-panic contract as proof bytes. Akita also keeps
+inexpensive admission checks where a faulty generator could produce data that
+verifies and is weaker than intended. The SIS re-audit of each catalog row is
+the main example.
+
 ## The verifier no-panic contract
 
 Verifier-reachable execution is a **no-panic boundary**.
