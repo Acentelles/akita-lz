@@ -47,7 +47,7 @@ pub struct NttTwiddles<W: PrimeWidth, const D: usize> {
         target_arch = "aarch64",
         target_arch = "x86",
         target_arch = "x86_64",
-        all(feature = "ntt-inline", target_arch = "riscv64")
+        all(feature = "ntt-inline", any(target_arch = "riscv64", test))
     ))]
     pub(crate) psi_pows_r2: [W; D],
     /// Untwist factors `psi^{-i}`, in Montgomery form.
@@ -100,7 +100,7 @@ impl<W: PrimeWidth, const D: usize> NttTwiddles<W, D> {
             target_arch = "aarch64",
             target_arch = "x86",
             target_arch = "x86_64",
-            all(feature = "ntt-inline", target_arch = "riscv64")
+            all(feature = "ntt-inline", any(target_arch = "riscv64", test))
         ))]
         let mut psi_pows_r2 = [W::default(); D];
         let mut psi_inv_pows = [MontCoeff::from_raw(W::default()); D];
@@ -112,7 +112,7 @@ impl<W: PrimeWidth, const D: usize> NttTwiddles<W, D> {
                 target_arch = "aarch64",
                 target_arch = "x86",
                 target_arch = "x86_64",
-                all(feature = "ntt-inline", target_arch = "riscv64")
+                all(feature = "ntt-inline", any(target_arch = "riscv64", test))
             ))]
             {
                 psi_pows_r2[i] = prime.center(
@@ -193,7 +193,7 @@ impl<W: PrimeWidth, const D: usize> NttTwiddles<W, D> {
                 target_arch = "aarch64",
                 target_arch = "x86",
                 target_arch = "x86_64",
-                all(feature = "ntt-inline", target_arch = "riscv64")
+                all(feature = "ntt-inline", any(target_arch = "riscv64", test))
             ))]
             psi_pows_r2,
             psi_inv_pows,
