@@ -1,6 +1,8 @@
 //! Program-bound prepared verifier NTT cache artifacts.
 
 use super::*;
+#[cfg(target_endian = "big")]
+use akita_algebra::ntt::MontCoeff;
 use akita_params::ScheduleRowDigest;
 
 const MAGIC: [u8; 8] = *b"AKVNTT01";
