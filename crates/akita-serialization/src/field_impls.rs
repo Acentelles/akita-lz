@@ -476,9 +476,9 @@ mod tests {
 
     #[test]
     fn bulk_decode_of_a_forged_count_fails_on_the_missing_bytes() {
-        // A header claiming 2^40 elements with no payload must fail as a
-        // truncated read, not after reserving or zero-filling the claimed run.
-        let forged = 1usize << 40;
+        // A header claiming `usize::MAX` elements with no payload must fail as
+        // a truncated read, not after reserving or zero-filling the claimed run.
+        let forged = usize::MAX;
         let err = Prime128OffsetA7F7::deserialize_many_with_mode(
             &[0u8; 16][..],
             Compress::No,

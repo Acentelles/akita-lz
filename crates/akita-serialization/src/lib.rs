@@ -200,9 +200,13 @@ pub trait AkitaDeserialize: Sized {
         count: usize,
     ) -> Result<Vec<Self>, SerializationError> {
         let mut out = Vec::new();
-        out.try_reserve_exact(count.min(DECODE_CHUNK_ELEMENTS))
-            .map_err(|_| SerializationError::InvalidData("allocation failed".to_string()))?;
-        for _ in 0..count {
+        for decoded in 0..count {
+            if out.len() == out.capacity() {
+                out.try_reserve_exact((count - decoded).min(DECODE_CHUNK_ELEMENTS))
+                    .map_err(|_| {
+                        SerializationError::InvalidData("allocation failed".to_string())
+                    })?;
+            }
             out.push(Self::deserialize_with_mode(
                 &mut reader,
                 compress,

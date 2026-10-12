@@ -152,7 +152,6 @@ fn materialize_disjoint_unit_intervals<F: Field>(
 struct DenseLeftTensorView<'a, F: Field> {
     family: &'a EqPairTensorFamily<F>,
     destination_axis: usize,
-    residual_len: usize,
     residual: Vec<(usize, F)>,
 }
 
@@ -267,7 +266,6 @@ fn materialize_dense_left_overlap<F: Field>(
         views.push(DenseLeftTensorView {
             family,
             destination_axis,
-            residual_len: family_residual,
             residual: Vec::new(),
         });
     }
@@ -287,15 +285,20 @@ fn materialize_dense_left_overlap<F: Field>(
     }
     // The work bound above also bounds these tables because the destination
     // axis is nonempty. Only its varying offset remains in the output loop.
+    // Each table holds only the nonzero-weight residuals, so zero weights cost
+    // no storage.
     for view in &mut views {
         if !view.family.scalar.is_zero() {
-            view.residual
-                .try_reserve_exact(view.residual_len)
-                .map_err(|_| {
-                    AkitaError::InvalidInput(
-                        "paired tensor residual table allocation failed".into(),
-                    )
-                })?;
+            let live = view
+                .family
+                .axes
+                .iter()
+                .enumerate()
+                .filter(|(index, _)| *index != view.destination_axis)
+                .fold(1, |count, (_, axis)| count * axis.nonzero_len());
+            view.residual.try_reserve_exact(live).map_err(|_| {
+                AkitaError::InvalidInput("paired tensor residual table allocation failed".into())
+            })?;
             view.collect_residual(0, 0, F::one())?;
         }
     }
