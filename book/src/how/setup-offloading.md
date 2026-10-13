@@ -168,9 +168,12 @@ The recursive catalog is intentionally narrower than the ordinary Akita
 catalogs. The current build can expose recursive setup schedules for:
 
 - the fp32, fp64, and fp128 dense configurations;
-- the fp128 one hot configuration; and
+- the fp128 one hot configuration;
 - the fp128 one hot multi chunk configuration with eight chunks and two leading
-  distributed levels.
+  distributed levels (`OneHotMultiChunk`); and
+- the fp128 one hot multi chunk configurations with two, four, or eight chunks
+  and three leading distributed levels (`OneHotMultiChunkW2R3`,
+  `OneHotMultiChunkW4R3`, and `OneHotMultiChunkW8R3`).
 
 `RecursiveCommitmentConfig<Cfg>` inherits the base configuration's ring-dimension
 policy. Each artifact row fixes the native A, B, and D dimensions for its folds.
@@ -258,6 +261,6 @@ panic.
 | Enforce the recursive fold handoff | `crates/akita-prover/src/protocol/prove/` and `crates/akita-verifier/src/fold/` |
 
 The live planner contract is
-[`specs/setup-offloading-planner.md`](../../specs/setup-offloading-planner.md).
+[`specs/setup-offloading-planner.md`](https://github.com/LayerZero-Labs/akita/blob/main/specs/setup-offloading-planner.md).
 It records the exact feasibility rules and external-artifact invariants. This
 chapter owns the reader explanation of the implemented feature.

@@ -253,11 +253,26 @@ A root whose complete outgoing witness is no smaller than its input remains
 eligible. Contractive and noncontractive roots share the same suffix memo and
 frontier.
 The configured `SelectionPolicyId` comparator selects the final complete
-schedule. Recursive folds still require strict progress, and offloaded edges
-still enforce their explicit minimum contraction policy.
+schedule.
+
+For each non-root, nonterminal candidate, the planner requires the next
+witness length to be strictly smaller than the current search-state length.
+Both lengths include auxiliary data and existing layout alignment, but exclude
+chunk padding that depends on the consuming fold's block width. This padding
+adds zeros so each chunk body fits that width. The physical output can therefore
+be larger than the physical input even when the candidate passes this test.
+Root candidates do not require this decrease, even before successor padding.
+Terminal candidates instead satisfy the direct-response feasibility checks;
+they create no successor witness. Offloaded edges also enforce the explicit
+minimum contraction policy described in
+[setup offloading](./setup-offloading.md#how-the-planner-chooses-offloading).
 
 ## Code map
 
+- `crates/akita-planner/src/schedule_params/candidate/recursive.rs` checks
+  recursive candidate contraction and derives terminal candidates.
+- `crates/akita-planner/src/schedule_params/suffix_dp.rs` records the
+  successor-aligned physical lengths and checks offloaded-edge contraction.
 - `crates/akita-cpu-backend/src/opaque/recursive/commit.rs` prepares the
   successor's physical witness, commitment, or terminal inner state.
 - `crates/akita-types/src/proof/levels.rs` defines the level records and

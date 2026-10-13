@@ -721,7 +721,7 @@ path follows the reduction above:
 scalar openings for each group as `PreparedRelationGroupPublic` metadata.
 For evaluation trace, `PreparedRelationGroupPublic::kind()` gives the prepared
 $P$, $Q$, and $B$ factors. `PreparedFold::witness_handle` is an opaque handle
-to the CPU-owned digit witness. Protocol orchestration can use the public
+to the backend-owned digit witness. Protocol orchestration can use the public
 weights but cannot inspect the private opening digits through that handle.
 
 The main data flow is:
@@ -742,7 +742,7 @@ PreparedFold
 |-- evaluation_trace_claim: v_tr
 |-- relation_groups: method-selected points and scalar openings
 |-- evaluation_trace_claim_coefficients: c_q
-`-- witness_handle: opaque CPU-owned digit witness
+`-- witness_handle: opaque backend-owned digit witness
       |
       v
 prepare_evaluation_trace_group_parameters
@@ -760,12 +760,16 @@ accumulate_fused_relation_linear
       `-- Stage 2 proves v_tr = sum_x w(x) T(x)
 ```
 
+In the base-field case, calling `as_base()` on
+`PreparedOpeningPoint::ring_multiplier_point` returns `Some(base_point)`.
+The table uses `base_point` for the contained `RingOpeningPoint` reference.
+
 The main values are:
 
 | Code value | Mathematical object |
 |---|---|
-| `PreparedOpeningPoint::ring_multiplier_point.as_base().position_weights` in the base-field case | $Q_p$ |
-| `PreparedOpeningPoint::ring_multiplier_point.as_base().live_block_weights` in the base-field case | $B_b$ |
+| `base_point.position_weights` in the base-field case | $Q_p$ |
+| `base_point.live_block_weights` in the base-field case | $B_b$ |
 | `PreparedOpeningPoint::packed_inner_trusted()` | $P(X)$ |
 | `OpeningFoldOutput::folded` | $E_0,E_1,\ldots$ |
 | `OpeningFoldOutput::eval` | temporary $Y(X)$ |
@@ -775,7 +779,7 @@ The main values are:
 | `RingRelationGroupWitness::e_hat` | digit rings $\hat e_{b,h}(X)$ |
 | `PreparedFold::evaluation_trace_claim` | $v_{\mathrm{tr}}$ carried into Stage 2 |
 | `PreparedFold::relation_groups`, through `PreparedRelationGroupPublic::kind()` | prepared $P$, $Q$, and $B$ for each evaluation-trace group |
-| `PreparedFold::witness_handle` | opaque handle to the CPU-owned digit witness, including the opening digits |
+| `PreparedFold::witness_handle` | opaque handle to the backend-owned digit witness, including the opening digits |
 | `PreparedFold::evaluation_trace_claim_coefficients` | $c_q$ carried into trace-weight construction |
 | `EvaluationTraceGroupParameters::shared_block_opening_point` | block point from which $B_b$ is evaluated |
 | `EvaluationTraceGroupParameters::opening_digit_weights` | $G_h$ |
