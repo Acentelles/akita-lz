@@ -61,7 +61,7 @@ fn dense_round_trip(shape_index: usize, basis_mode: BasisMode, seed: u64) {
         )
         .expect("commit");
     let proof = scheme
-        .prove_standalone(
+        .batched_prove(
             &setup,
             prove_input::<DenseCfg>(
                 &opening_point,

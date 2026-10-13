@@ -46,6 +46,8 @@ cargo build -p akita-pcs --release --features disk-persistence
 This stores public matrix coefficients and setup prefix artifacts. Prepared NTT
 caches remain local memory state and rebuild from the public setup.
 
+Backend routing requires no Cargo feature; see [backend routing](../how/architecture.md#backend-routing).
+
 ## Transcript sponge
 
 The sponge is not a Cargo feature. The core prove and verify entry points are

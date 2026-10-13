@@ -133,22 +133,22 @@ pub(crate) fn run_batched_onehot<FF, const D: usize, Cfg: CommitmentConfig<Field
         eprintln!("[{label}] setup_contribution_mode: {setup_contribution_mode:?}");
         let mut transcript =
             ProverTranscript::<AkitaSponge>::new(&PROOF_STREAM_PROTOCOL, b"profile");
-        scheme
-            .batched_prove(
-                &setup,
-                prover_claims::<Cfg>(
-                    scheme.schedules(),
-                    selection,
-                    &pt[..],
-                    &openings,
-                    &commitments[0],
-                    hints.into_iter().next().unwrap(),
-                ),
-                &backend,
-                &mut transcript,
-                BasisMode::Lagrange,
-            )
-            .unwrap();
+        crate::caller_transcript::prove_on_transcript(
+            &scheme,
+            &setup,
+            prover_claims::<Cfg>(
+                scheme.schedules(),
+                selection,
+                &pt[..],
+                &openings,
+                &commitments[0],
+                hints.into_iter().next().unwrap(),
+            ),
+            &backend,
+            &mut transcript,
+            BasisMode::Lagrange,
+        )
+        .unwrap();
         #[cfg(feature = "logging")]
         crate::report::print_wire_events(label, transcript.events());
         let proof = transcript.finish();

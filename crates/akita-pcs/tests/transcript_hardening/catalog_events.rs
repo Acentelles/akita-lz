@@ -332,15 +332,15 @@ where
     );
 
     let mut prover = ProverTranscript::<AkitaSponge>::new(&PROOF_STREAM_PROTOCOL, LABEL);
-    scheme
-        .batched_prove(
-            &setup,
-            prover_data,
-            &backend,
-            &mut prover,
-            BasisMode::Lagrange,
-        )
-        .expect("prove");
+    crate::common::caller_transcript::prove_on_transcript(
+        &scheme,
+        &setup,
+        prover_data,
+        &backend,
+        &mut prover,
+        BasisMode::Lagrange,
+    )
+    .expect("prove");
     let prover_events = prover.events().to_vec();
     let proof = prover.finish();
 
@@ -507,5 +507,19 @@ fn prover_and_verifier_emit_identical_event_sequences_for_every_catalog_shape() 
         check_catalog::<fp64::OneHot, OneHotSource>(&mut covered);
         assert!(!covered.is_empty());
         eprintln!("{} catalog shapes covered", covered.len());
+    });
+}
+
+#[test]
+fn r3_prover_and_verifier_emit_identical_event_sequences() {
+    crate::common::init_rayon_pool();
+    crate::common::run_on_large_stack(|| {
+        let mut covered = Vec::new();
+        check_catalog::<fp128::OneHotMultiChunkW2R3, OneHotSource>(&mut covered);
+        check_catalog::<fp128::OneHotMultiChunkW4R3, OneHotSource>(&mut covered);
+        check_catalog::<fp128::OneHotMultiChunkW8R3, OneHotSource>(&mut covered);
+        check_catalog::<fp128::DenseMultiChunkW8R3, DenseSource>(&mut covered);
+        assert!(!covered.is_empty());
+        eprintln!("{} R3 catalog shapes covered", covered.len());
     });
 }

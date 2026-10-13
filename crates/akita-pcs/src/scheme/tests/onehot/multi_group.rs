@@ -245,7 +245,7 @@ where
     let selection = prover_claims.selection();
 
     let proof = scheme
-        .prove_standalone(
+        .batched_prove(
             &setup,
             prover_claims,
             &stack,

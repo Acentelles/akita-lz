@@ -163,7 +163,7 @@ fn heterogeneous_group_types() {
 
         let session = b"completeness/heterogeneous_group_types";
         let proof = onehot_scheme
-            .prove_standalone(&setup, prover_data, &stack, session, BasisMode::Lagrange)
+            .batched_prove(&setup, prover_data, &stack, session, BasisMode::Lagrange)
             .expect("heterogeneous prove");
 
         let verifier_setup = onehot_scheme
@@ -336,7 +336,7 @@ fn bounded_dense_precommit_with_onehot_final_group() {
 
         let session = b"completeness/bounded_dense_precommit_with_onehot_final";
         let proof = onehot_scheme
-            .prove_standalone(&setup, prover_data, &stack, session, BasisMode::Lagrange)
+            .batched_prove(&setup, prover_data, &stack, session, BasisMode::Lagrange)
             .expect("mixed-bound prove");
 
         let verifier_setup = onehot_scheme
@@ -813,18 +813,22 @@ fn explicit_commitment_transfer_between_backends() {
         let prefixes = receiver
             .import_setup_prefixes(&setup.prefix_slots, &required_prefix_ids)
             .unwrap();
+        let mut registry = akita_prover::BackendRegistry::<Cfg>::new().unwrap();
+        let root = registry.register(&receiver, &prefixes).unwrap();
+        let mut route =
+            akita_prover::FixedFoldRoute::new(vec![root; resolved.schedule().num_fold_levels()]);
         let mut transcript = jolt_transcript::ProverTranscript::<akita_pcs::AkitaSponge>::new(
             &akita_pcs::PROOF_STREAM_PROTOCOL,
             session,
         );
         akita_prover::batched_prove::<Cfg, _, _>(
             setup.expanded.descriptor(),
-            &prefixes,
             scheme.schedules(),
-            &receiver,
+            &registry,
             prover_data,
             &mut transcript,
             BasisMode::Lagrange,
+            &mut route,
         )
         .expect("heterogeneous prove");
         let proof = transcript.finish();
@@ -878,7 +882,7 @@ where
         )
         .expect("commit");
     let proof = scheme
-        .prove_standalone(
+        .batched_prove(
             setup,
             prove_input::<Cfg>(point, &[opening], &commitment, hint, scheme.schedules()),
             backend,

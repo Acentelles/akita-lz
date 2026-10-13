@@ -353,15 +353,15 @@ fn run_recursive_multi_group_onehot_with_proof_cfg<FF, const D: usize, Cfg, Proo
         let selection = prover_data.selection();
         let mut transcript =
             ProverTranscript::<AkitaSponge>::new(&PROOF_STREAM_PROTOCOL, b"profile");
-        proof_scheme
-            .batched_prove(
-                &setup,
-                prover_data,
-                &backend,
-                &mut transcript,
-                BasisMode::Lagrange,
-            )
-            .expect("multi-group prove");
+        crate::caller_transcript::prove_on_transcript(
+            &proof_scheme,
+            &setup,
+            prover_data,
+            &backend,
+            &mut transcript,
+            BasisMode::Lagrange,
+        )
+        .expect("multi-group prove");
         #[cfg(feature = "logging")]
         crate::report::print_wire_events(label, transcript.events());
         let proof = transcript.finish();

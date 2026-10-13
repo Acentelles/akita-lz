@@ -123,7 +123,7 @@ construction.
 ```rust
 const TRANSCRIPT_DOMAIN: &[u8] = b"akita/book/quickstart/v1";
 
-let proof = scheme.prove_standalone(
+let proof = scheme.batched_prove(
     &setup,
     prover_data,
     &backend,

@@ -43,7 +43,7 @@ fn commit_prove_verify<Cfg, P>(
     .expect("prover data");
     let selection = prover_data.selection();
     let proof = scheme
-        .prove_standalone(setup, prover_data, backend, label, BasisMode::Lagrange)
+        .batched_prove(setup, prover_data, backend, label, BasisMode::Lagrange)
         .expect("prove");
     let verify_claims = OpeningClaims::from_groups(vec![PolynomialGroupClaims::new(
         point,

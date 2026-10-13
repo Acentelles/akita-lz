@@ -108,8 +108,8 @@ pub use transcript_site::ProtocolSiteId;
 pub use witness::{
     dyadic_block_ranges, grouped_witness_body_coefficients, ChunkedWitnessCfg,
     CompressionWitnessLayerLayout, CompressionWitnessSpan, MultiChunkProfileId,
-    QuotientCoefficientBreakdown, RelationQuotientLayout, RelationQuotientPlan, WitnessLayout,
-    WitnessQuotientRowLayout, WitnessUnitLayout, MAX_WITNESS_CHUNKS,
+    QuotientCoefficientBreakdown, RelationQuotientLayout, RelationQuotientPlan, WitnessChunkShape,
+    WitnessLayout, WitnessQuotientRowLayout, WitnessUnitLayout, MAX_WITNESS_CHUNKS,
 };
 
 #[cfg(any(test, feature = "test-support"))]

@@ -170,22 +170,22 @@ where
         .expect("commitment");
     let selection = selection_for::<Cfg>(&commitment, scheme.schedules());
     let mut transcript = ProverTranscript::<AkitaSponge>::new(&PROOF_STREAM_PROTOCOL, label);
-    scheme
-        .batched_prove(
-            &setup,
-            prove_input::<Cfg>(
-                selection,
-                &point,
-                opening,
-                &commitment,
-                hint,
-                scheme.schedules(),
-            ),
-            &stack,
-            &mut transcript,
-            BasisMode::Lagrange,
-        )
-        .expect("native proof");
+    crate::common::caller_transcript::prove_on_transcript(
+        &scheme,
+        &setup,
+        prove_input::<Cfg>(
+            selection,
+            &point,
+            opening,
+            &commitment,
+            hint,
+            scheme.schedules(),
+        ),
+        &stack,
+        &mut transcript,
+        BasisMode::Lagrange,
+    )
+    .expect("native proof");
     (
         verifier_setup,
         commitment,

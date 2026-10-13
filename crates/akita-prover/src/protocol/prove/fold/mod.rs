@@ -330,6 +330,7 @@ impl<'a> FoldSuccessorParams<'a> {
 
 struct CommittedNextWitness<F: Field, WitnessHandle, M> {
     committed_witness_len: usize,
+    plan: crate::backend::ValidatedRecursiveWitnessCommitPlan,
     witness_handle: WitnessHandle,
     binding: NextWitnessState<F>,
     commitment_material_handle: M,
@@ -551,7 +552,7 @@ where
                     .into(),
             );
             grinding.state_mut().send_all(message.fields());
-            NextWitnessState::TerminalInnerState
+            NextWitnessState::TerminalInnerState(message)
         }
         _ => {
             return Err(AkitaError::Internal(
@@ -560,6 +561,7 @@ where
         }
     };
     Ok(CommittedNextWitness {
+        plan: commit_plan,
         committed_witness_len,
         witness_handle,
         binding,
@@ -578,7 +580,7 @@ where
 ///
 /// Returns an error if ring switching, recursive commitment, or either
 /// sumcheck prover fails.
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 #[inline(never)]
 pub(in crate::protocol::prove) fn prove_fold<F, E, B, H: Sponge>(
     expanded: &akita_types::AkitaSetupDescriptor,
@@ -592,6 +594,13 @@ pub(in crate::protocol::prove) fn prove_fold<F, E, B, H: Sponge>(
     expected_output_witness_len: usize,
     next_witness_binding: akita_params::NextWitnessBindingPolicy,
     prepared_fold: PreparedFold<F, E, B::WitnessHandle>,
+    handoff: impl FnOnce(
+        &RingRelationInstance<F>,
+        &crate::backend::ValidatedRecursiveWitnessCommitPlan,
+        &NextWitnessState<F>,
+        &B::WitnessHandle,
+        &B::CommitmentMaterialHandle,
+    ) -> Result<(), AkitaError>,
 ) -> Result<ProveLevelOutput<F, E, B::CommitmentMaterialHandle, B::WitnessHandle>, AkitaError>
 where
     F: Field + CanonicalEncoding + AkitaSerialize + Ring + Unreduced + PseudoMersenne + 'static,
@@ -604,7 +613,7 @@ where
         + MulBaseUnreduced<F>
         + AkitaSerialize
         + 'static,
-    B: ProverBackend<F, E>,
+    B: ProverBackend<F, E> + 'static,
 {
     let opening_batch = prepared_fold.instance.opening_batch().clone();
     let challenge_field_bits = F::MODULUS_BITS
@@ -639,6 +648,7 @@ where
     let fold_level =
         u32::try_from(level).map_err(|_| AkitaError::Internal("fold level exceeds u32".into()))?;
     let CommittedNextWitness {
+        plan: commit_plan,
         committed_witness_len,
         witness_handle: mut next_witness,
         binding: next_commitment_binding,
@@ -651,6 +661,13 @@ where
         expected_output_witness_len,
         next_witness_binding,
         witness_handle,
+    )?;
+    handoff(
+        &instance,
+        &commit_plan,
+        &next_commitment_binding,
+        &next_witness,
+        &commitment_material_handle,
     )?;
     let consumer = backend;
     let consumer_ctx = OperationCtx::new(
@@ -804,11 +821,14 @@ where
     Ok(ProveLevelOutput {
         next_state: SuffixProverState {
             witness_handle: next_witness,
-            binding: next_commitment_binding,
             commitment_material: commitment_material_handle,
-            sumcheck_challenges,
-            opening: w_eval,
-            setup_prefix_opening,
+            public: super::FoldPublicState {
+                level: level + 1,
+                binding: next_commitment_binding,
+                sumcheck_challenges,
+                opening: w_eval,
+                setup_prefix_opening,
+            },
         },
     })
 }

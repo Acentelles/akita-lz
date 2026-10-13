@@ -113,7 +113,7 @@ fn proofs_cannot_replay_across_valid_quotient_and_reduced_schedules() {
                 let claims =
                     OpeningClaims::from_groups(vec![group]).expect("cross-mode prover claims");
                 scheme
-                    .prove_standalone(
+                    .batched_prove(
                         &setup,
                         selected_prover_data(scheme, claims, vec![handle])
                             .expect("cross-mode prover data"),

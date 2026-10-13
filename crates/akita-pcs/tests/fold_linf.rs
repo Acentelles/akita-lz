@@ -65,7 +65,7 @@ fn prove_fold_linf_grind_onehot_fixture(num_vars: usize, seed: u64) -> FoldLinfG
         )
         .expect("commit");
     let proof = scheme
-        .prove_standalone(
+        .batched_prove(
             &setup,
             prove_input::<OneHotCfg>(&point, &[opening], &commitment, hint, scheme.schedules()),
             &stack,

@@ -170,7 +170,7 @@ fn bench_dense_phases<const D: usize, Cfg: CommitmentConfig<Field = F, ExtField 
             |h| {
                 black_box(
                     scheme
-                        .prove_standalone(
+                        .batched_prove(
                             &setup,
                             prover_claims::<Cfg>(
                                 scheme.schedules(),
@@ -191,7 +191,7 @@ fn bench_dense_phases<const D: usize, Cfg: CommitmentConfig<Field = F, ExtField 
     });
 
     let proof = scheme
-        .prove_standalone(
+        .batched_prove(
             &setup,
             prover_claims::<Cfg>(
                 scheme.schedules(),
@@ -273,7 +273,7 @@ fn bench_dense_phases<const D: usize, Cfg: CommitmentConfig<Field = F, ExtField 
                 .unwrap();
             let cms = [cm];
             let pf = scheme
-                .prove_standalone(
+                .batched_prove(
                     &setup,
                     prover_claims::<Cfg>(scheme.schedules(), &pt[..], &openings[..], &cms[0], h),
                     &stack,
@@ -401,7 +401,7 @@ fn bench_onehot_phases<Cfg: CommitmentConfig<Field = F, ExtField = F>>(
             |h| {
                 black_box(
                     scheme
-                        .prove_standalone(
+                        .batched_prove(
                             &setup,
                             prover_claims::<Cfg>(
                                 scheme.schedules(),
@@ -422,7 +422,7 @@ fn bench_onehot_phases<Cfg: CommitmentConfig<Field = F, ExtField = F>>(
     });
 
     let proof = scheme
-        .prove_standalone(
+        .batched_prove(
             &setup,
             prover_claims::<Cfg>(
                 scheme.schedules(),
@@ -469,7 +469,7 @@ fn bench_onehot_phases<Cfg: CommitmentConfig<Field = F, ExtField = F>>(
                 .unwrap();
             let cms = [cm];
             let pf = scheme
-                .prove_standalone(
+                .batched_prove(
                     &setup,
                     prover_claims::<Cfg>(scheme.schedules(), &pt[..], &openings[..], &cms[0], h),
                     &stack,

@@ -358,7 +358,7 @@ fn fp128_onehot_batched() {
         let prover_data =
             prove_input::<OneHotCfg>(&pt[..], &openings, &commitment, hint, scheme.schedules());
         let proof = prove_matching_byte_model(scheme.schedules(), prover_data.selection(), || {
-            scheme.prove_standalone(&setup, prover_data, &stack, session, BasisMode::Lagrange)
+            scheme.batched_prove(&setup, prover_data, &stack, session, BasisMode::Lagrange)
         });
 
         scheme
@@ -419,7 +419,7 @@ fn fp128_dense_batched() {
         let prover_data =
             prove_input::<DenseCfg>(&pt[..], &openings, &commitment, hint, scheme.schedules());
         let proof = prove_matching_byte_model(scheme.schedules(), prover_data.selection(), || {
-            scheme.prove_standalone(&setup, prover_data, &stack, session, BasisMode::Lagrange)
+            scheme.batched_prove(&setup, prover_data, &stack, session, BasisMode::Lagrange)
         });
 
         scheme
@@ -499,7 +499,7 @@ fn fp128_onehot_oversized_setup() {
 
         let session = b"completeness/fp128_onehot_oversized_setup";
         let proof = scheme
-            .prove_standalone(
+            .batched_prove(
                 &setup,
                 prove_input::<OneHotCfg>(
                     &pt[..],
@@ -571,7 +571,7 @@ fn fp128_dense_monomial_basis() {
 
         let session = b"completeness/fp128_dense_monomial_basis";
         let proof = scheme
-            .prove_standalone(
+            .batched_prove(
                 &setup,
                 prove_input::<DenseCfg>(
                     &pt[..],

@@ -171,7 +171,7 @@ pub(crate) fn recursive_multi_group_round_trip_on<BaseCfg>(
     let selection = prover_claims.selection();
 
     let proof = recursive_scheme
-        .prove_standalone(
+        .batched_prove(
             setup,
             prover_claims,
             stack,

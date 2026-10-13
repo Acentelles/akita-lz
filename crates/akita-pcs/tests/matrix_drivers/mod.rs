@@ -99,7 +99,7 @@ where
         let selection = prover_data.selection();
 
         let proof = scheme
-            .prove_standalone(
+            .batched_prove(
                 &setup,
                 prover_data,
                 &stack,
@@ -179,7 +179,7 @@ pub(super) fn prove_verify_dense_roundtrip_with_evals<Cfg>(
             scheme.schedules(),
         );
         let proof = prove_matching_byte_model(scheme.schedules(), prover_data.selection(), || {
-            scheme.prove_standalone(&setup, prover_data, &stack, label, BasisMode::Lagrange)
+            scheme.batched_prove(&setup, prover_data, &stack, label, BasisMode::Lagrange)
         });
 
         let openings = [expected_opening];
@@ -234,7 +234,7 @@ where
             scheme.schedules(),
         );
         let proof = prove_matching_byte_model(scheme.schedules(), prover_data.selection(), || {
-            scheme.prove_standalone(&setup, prover_data, &stack, label, BasisMode::Lagrange)
+            scheme.batched_prove(&setup, prover_data, &stack, label, BasisMode::Lagrange)
         });
 
         let openings = [expected_opening];
@@ -346,7 +346,7 @@ where
         let selection = prover_data.selection();
 
         let proof = prove_matching_byte_model(scheme.schedules(), selection, || {
-            scheme.prove_standalone(&setup, prover_data, &stack, label, BasisMode::Lagrange)
+            scheme.batched_prove(&setup, prover_data, &stack, label, BasisMode::Lagrange)
         });
 
         let verifier_groups = vec![
@@ -448,7 +448,7 @@ where
         let selection = prover_data.selection();
 
         let proof = prove_matching_byte_model(scheme.schedules(), selection, || {
-            scheme.prove_standalone(&setup, prover_data, &stack, label, BasisMode::Lagrange)
+            scheme.batched_prove(&setup, prover_data, &stack, label, BasisMode::Lagrange)
         });
 
         let verifier_groups = vec![

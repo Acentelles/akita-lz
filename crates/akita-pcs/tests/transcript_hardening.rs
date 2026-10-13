@@ -57,15 +57,15 @@ fn stream_binds_session_statement_basis_and_eof() {
             )
             .expect("commit");
         let mut prover = ProverTranscript::<AkitaSponge>::new(&PROOF_STREAM_PROTOCOL, LABEL);
-        scheme
-            .batched_prove(
-                &setup,
-                prove_input::<OneHotCfg>(&point, &[opening], &commitment, hint, scheme.schedules()),
-                &stack,
-                &mut prover,
-                BasisMode::Lagrange,
-            )
-            .expect("prove");
+        crate::common::caller_transcript::prove_on_transcript(
+            &scheme,
+            &setup,
+            prove_input::<OneHotCfg>(&point, &[opening], &commitment, hint, scheme.schedules()),
+            &stack,
+            &mut prover,
+            BasisMode::Lagrange,
+        )
+        .expect("prove");
         #[cfg(feature = "logging")]
         let prover_events = prover.events().to_vec();
         let proof = prover.finish();
@@ -253,7 +253,7 @@ fn stream_mutations_reject_without_panicking() {
             )
             .expect("commit");
         let proof = scheme
-            .prove_standalone(
+            .batched_prove(
                 &setup,
                 prove_input::<DenseCfg>(&point, &[opening], &commitment, hint, scheme.schedules()),
                 &stack,

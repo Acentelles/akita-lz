@@ -4,14 +4,14 @@ use akita_config::{CommitmentConfig, TrustedScheduleCatalog};
 use akita_cpu_backend::{AkitaProverSetup, CommitmentHandle, CpuBackend};
 use akita_error::AkitaError;
 use akita_params::{BasisMode, FoldSchedule, OpeningClaimsLayout, SetupMatrixCapacity};
-use akita_prover::{ProverBackend, SelectedProverOpeningData};
+use akita_prover::{BackendRegistry, FixedFoldRoute, ProverBackend, SelectedProverOpeningData};
 use akita_serialization::{AkitaDeserialize, AkitaSerialize, Valid};
 use akita_types::AkitaVerifierSetup;
 use akita_types::{AkitaSponge, FpExtEncoding, PROOF_STREAM_PROTOCOL};
 use akita_verifier::AkitaVerifier;
 use jolt_field::{AdditiveGroup, CanonicalEncoding, ExtField, Field, PseudoMersenne, Ring};
 use jolt_field::{Fold, Unreduced, WithCommitAccumulator};
-use jolt_transcript::{ProverTranscript, Sponge};
+use jolt_transcript::ProverTranscript;
 use std::time::Instant;
 
 /// End-to-end PCS wrapper, generic over commitment config `Cfg`.
@@ -113,15 +113,23 @@ where
         setup.to_verifier_setup(capacity)
     }
 
-    /// Produce a standalone fused batched opening proof: the argument string
-    /// of a fresh transcript under [`PROOF_STREAM_PROTOCOL`] bound to
-    /// `session`, as [`AkitaVerifier::verify_standalone`] reads it.
+    /// Produce a fused batched opening proof from retained commitments.
+    ///
+    /// Each handle retains its exact source. The backend validates public claims
+    /// against that commitment before creating independent proof state. The
+    /// proof is the argument string of a fresh [`AkitaSponge`] transcript under
+    /// [`PROOF_STREAM_PROTOCOL`] bound to `session`, as
+    /// [`AkitaVerifier::verify_standalone`] reads it. To embed Akita in an outer
+    /// transcript instead, call [`akita_prover::batched_prove`] with that
+    /// transcript.
     ///
     /// # Errors
     ///
-    /// As [`batched_prove`](Self::batched_prove).
+    /// Returns an error for mismatched ownership, setup, claims, or an invalid
+    /// protocol transition.
+    #[tracing::instrument(skip_all, name = "AkitaCommitmentScheme::batched_prove")]
     #[allow(clippy::type_complexity)]
-    pub fn prove_standalone<'a>(
+    pub fn batched_prove<'a>(
         &self,
         setup: &AkitaProverSetup<Cfg::Field>,
         opening: SelectedProverOpeningData<
@@ -144,47 +152,6 @@ where
             CommitmentHandle = CommitmentHandle<Cfg::Field, Cfg::ExtField>,
         >,
     {
-        let mut transcript = ProverTranscript::<AkitaSponge>::new(&PROOF_STREAM_PROTOCOL, session);
-        self.batched_prove(setup, opening, backend, &mut transcript, basis)?;
-        Ok(transcript.finish())
-    }
-
-    /// Prove a fused batched opening from retained commitments into the
-    /// caller's transcript.
-    ///
-    /// Each handle retains its exact source. The backend validates public claims
-    /// against that commitment before creating independent proof state. The
-    /// proof messages are appended to `transcript`; the caller finishes it.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error for mismatched ownership, setup, claims, or an invalid
-    /// protocol transition.
-    #[tracing::instrument(skip_all, name = "AkitaCommitmentScheme::batched_prove")]
-    #[allow(clippy::type_complexity)]
-    pub fn batched_prove<'a, H: Sponge>(
-        &self,
-        setup: &AkitaProverSetup<Cfg::Field>,
-        opening: SelectedProverOpeningData<
-            'a,
-            Cfg::ExtField,
-            CommitmentHandle<Cfg::Field, Cfg::ExtField>,
-            Cfg::Field,
-        >,
-        backend: &CpuBackend<Cfg::Field, Cfg::ExtField>,
-        transcript: &mut ProverTranscript<H>,
-        basis: BasisMode,
-    ) -> Result<(), AkitaError>
-    where
-        Cfg::Field: WithCommitAccumulator + 'static,
-        Cfg::ExtField: jolt_field::MulBaseUnreduced<Cfg::Field> + 'static,
-        <Cfg::Field as Unreduced>::Wide: From<Cfg::Field> + AdditiveGroup,
-        CpuBackend<Cfg::Field, Cfg::ExtField>: ProverBackend<
-            Cfg::Field,
-            Cfg::ExtField,
-            CommitmentHandle = CommitmentHandle<Cfg::Field, Cfg::ExtField>,
-        >,
-    {
         let started = Instant::now();
         let resolved = self.schedules.resolve_selection(opening.selection())?;
         let required_prefix_ids = akita_config::required_setup_prefix_slot_ids_for_schedule(
@@ -193,22 +160,26 @@ where
         )?;
         let prefix_slots =
             backend.import_setup_prefixes(&setup.prefix_slots, &required_prefix_ids)?;
-        let start = transcript.narg().len();
-        akita_prover::batched_prove::<Cfg, CpuBackend<Cfg::Field, Cfg::ExtField>, H>(
+        let mut registry = BackendRegistry::<Cfg>::new()?;
+        let root = registry.register(backend, &prefix_slots)?;
+        let mut route = FixedFoldRoute::new(vec![root; resolved.schedule().num_fold_levels()]);
+        let mut transcript = ProverTranscript::<AkitaSponge>::new(&PROOF_STREAM_PROTOCOL, session);
+        akita_prover::batched_prove::<Cfg, _, _>(
             setup.expanded.descriptor(),
-            &prefix_slots,
             &self.schedules,
-            backend,
+            &registry,
             opening,
-            transcript,
+            &mut transcript,
             basis,
+            &mut route,
         )?;
+        let proof = transcript.finish();
         tracing::info!(
-            proof_bytes = transcript.narg().len() - start,
+            proof_bytes = proof.len(),
             elapsed_s = started.elapsed().as_secs_f64(),
             "akita batched prove complete"
         );
-        Ok(())
+        Ok(proof)
     }
 
     /// Build a verifier for `setup` over this scheme's schedule catalog.

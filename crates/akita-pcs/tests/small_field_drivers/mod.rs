@@ -109,7 +109,7 @@ where
     let selection = prover_data.selection();
 
     let proof = prove_matching_byte_model(scheme.schedules(), selection, || {
-        scheme.prove_standalone(&setup, prover_data, &stack, label, BasisMode::Lagrange)
+        scheme.batched_prove(&setup, prover_data, &stack, label, BasisMode::Lagrange)
     });
 
     let verify_claims = OpeningClaims::from_groups(vec![PolynomialGroupClaims::new(

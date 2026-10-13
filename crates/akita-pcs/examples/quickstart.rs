@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
     let selection = prover_data.selection();
 
-    let proof = scheme.prove_standalone(
+    let proof = scheme.batched_prove(
         &setup,
         prover_data,
         &backend,

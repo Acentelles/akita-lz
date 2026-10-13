@@ -401,7 +401,7 @@ macro_rules! generate_scalar_case {
         let schedule_selection = prove_input.selection();
         let t0 = Instant::now();
         let proof = scheme
-            .prove_standalone(
+            .batched_prove(
                 &prover_setup,
                 prove_input,
                 &backend,
@@ -733,14 +733,14 @@ fn run() -> Result<(), String> {
     .map_err(|err| format!("invalid prover opening data: {err}"))?;
     let schedule_selection = prove_input.selection();
     let proof = scheme
-        .prove_standalone(
+        .batched_prove(
             &prover_setup,
             prove_input,
             &backend,
             TRANSCRIPT_DOMAIN,
             BasisMode::Lagrange,
         )
-        .map_err(|err| format!("prove_standalone failed: {err}"))?;
+        .map_err(|err| format!("batched_prove failed: {err}"))?;
     tracing::info!(elapsed_s = t0.elapsed().as_secs_f64(), "prove complete");
 
     let verifier_setup = scheme

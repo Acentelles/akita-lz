@@ -54,7 +54,7 @@ fn selective_l2_proof_rejects_transcript_mutations_inner() {
         PolynomialGroupClaims::new(point.clone(), openings.clone(), commitments[0].clone())
             .expect("L2 prover group");
     let proof = scheme
-        .prove_standalone(
+        .batched_prove(
             &setup,
             selected_prover_data::<L2Cfg, _>(
                 &scheme,

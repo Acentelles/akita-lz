@@ -110,22 +110,22 @@ fn run_prove<FF, const D: usize, Cfg: CommitmentConfig<Field = FF>>(
         let t0 = Instant::now();
         let mut transcript =
             ProverTranscript::<AkitaSponge>::new(&PROOF_STREAM_PROTOCOL, b"profile");
-        scheme
-            .batched_prove(
-                setup,
-                prover_claims::<Cfg>(
-                    scheme.schedules(),
-                    selection,
-                    pt,
-                    &openings,
-                    &commitments[0],
-                    hint,
-                ),
-                backend,
-                &mut transcript,
-                BasisMode::Lagrange,
-            )
-            .unwrap();
+        crate::caller_transcript::prove_on_transcript(
+            &scheme,
+            setup,
+            prover_claims::<Cfg>(
+                scheme.schedules(),
+                selection,
+                pt,
+                &openings,
+                &commitments[0],
+                hint,
+            ),
+            backend,
+            &mut transcript,
+            BasisMode::Lagrange,
+        )
+        .unwrap();
         #[cfg(feature = "logging")]
         crate::report::print_wire_events(label, transcript.events());
         let proof = transcript.finish();

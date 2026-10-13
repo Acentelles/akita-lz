@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+#[path = "../../examples/support/caller_transcript.rs"]
+pub(crate) mod caller_transcript;
 #[cfg(feature = "logging")]
 pub(crate) mod mutations;
 mod opening_oracles;
@@ -391,4 +393,21 @@ pub(super) fn make_onehot_poly_with_k(nv: usize, k: usize, seed: u64) -> OneHotP
         .map(|_| Some(rng.gen_range(0..k) as u8))
         .collect();
     OneHotPoly::<F, u8>::new(k, indices).expect("onehot poly")
+}
+
+/// Run the core prover on a fresh [`akita_types::AkitaSponge`] transcript under
+/// [`akita_types::PROOF_STREAM_PROTOCOL`] bound to `session`, and return its
+/// argument string, as `AkitaVerifier::verify_standalone` reads it.
+pub(crate) fn prove_on_session(
+    session: &[u8],
+    prove: impl FnOnce(
+        &mut jolt_transcript::ProverTranscript<akita_types::AkitaSponge>,
+    ) -> Result<(), akita_error::AkitaError>,
+) -> Result<Vec<u8>, akita_error::AkitaError> {
+    let mut transcript = jolt_transcript::ProverTranscript::<akita_types::AkitaSponge>::new(
+        &akita_types::PROOF_STREAM_PROTOCOL,
+        session,
+    );
+    prove(&mut transcript)?;
+    Ok(transcript.finish())
 }

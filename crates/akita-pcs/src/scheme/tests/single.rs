@@ -107,7 +107,7 @@ fn verify_rejects_wrong_opening() {
     let commitments = [commitment];
 
     let proof = scheme
-        .prove_standalone(
+        .batched_prove(
             &setup,
             prover_claims(
                 &scheme,
@@ -184,7 +184,7 @@ fn standalone_roundtrip_and_statement_binding_inner() {
         .zip(&weights)
         .fold(F::zero(), |sum, (&value, &weight)| sum + value * weight);
     let proof = scheme
-        .prove_standalone(
+        .batched_prove(
             &setup,
             prover_claims(
                 &scheme,

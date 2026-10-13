@@ -1,3 +1,5 @@
+mod common;
+
 use akita_config::{
     proof_optimized::{fp128, fp32},
     CommitmentConfig,
@@ -88,15 +90,15 @@ fn onehot_fp32_roundtrip_inner<H: Sponge>() {
     let session = b"native-port-onehot-fp32";
     let mut prover = ProverTranscript::<H>::new(&protocol, session);
     prover.send(&7u32);
-    scheme
-        .batched_prove(
-            &setup,
-            prover_data,
-            &backend,
-            &mut prover,
-            BasisMode::Lagrange,
-        )
-        .unwrap();
+    crate::common::caller_transcript::prove_on_transcript(
+        &scheme,
+        &setup,
+        prover_data,
+        &backend,
+        &mut prover,
+        BasisMode::Lagrange,
+    )
+    .unwrap();
     let proof = prover.finish();
     let verify_group = PolynomialGroupClaims::new(point, vec![opening], &commitment).unwrap();
     let verify_claims = OpeningClaims::from_groups(vec![verify_group]).unwrap();
@@ -150,7 +152,7 @@ fn dense_fp128_roundtrip_inner() {
     .unwrap();
     let selection = prover_data.selection();
     let proof = scheme
-        .prove_standalone(
+        .batched_prove(
             &setup,
             prover_data,
             &backend,

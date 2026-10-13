@@ -115,6 +115,12 @@ pub struct CommittedGroupParams {
     pub source_encoding: crate::CommittedSourceEncoding,
     /// Multi-chunk witness layout this level commits under.
     pub witness_chunk: crate::witness::ChunkedWitnessCfg,
+    /// Successor source-block width for a multi-chunk producer; absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub successor_block_len: Option<usize>,
+    /// Endpoints of this fold's inherited own-group block partition.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub witness_chunk_ends: Vec<usize>,
 }
 
 impl CommittedGroupParams {
@@ -134,6 +140,8 @@ impl CommittedGroupParams {
             ring_relation_mode,
             source_encoding,
             witness_chunk,
+            successor_block_len: None,
+            witness_chunk_ends: Vec::new(),
         })
     }
 
@@ -500,6 +508,14 @@ impl CommittedGroupParams {
     /// schedule commits to; see `validate_nonterminal_opening_execution`.
     pub fn groups(&self) -> &[crate::GroupOpenPhaseParams] {
         self.groups.as_slice()
+    }
+
+    /// Widest balanced basis emitted into this producer's recursive witness.
+    pub fn witness_log_basis(&self) -> u32 {
+        self.groups()
+            .iter()
+            .flat_map(|group| [group.log_basis_outer(), group.log_basis_open()])
+            .fold(self.open().digits.log_basis, u32::max)
     }
 
     /// One group of this fold's opening batch, as a concrete group.

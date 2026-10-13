@@ -46,6 +46,13 @@ impl<F: Field + CanonicalEncoding> CommitmentRelationMaterial<F> for Handle {
     }
 }
 impl<F: Field + CanonicalEncoding, E: Field> ProverHandleFamily<F, E> for ExternalBackend<F, E> {
+    fn instance_identity(&self) -> BackendInstanceIdentity
+    where
+        Self: 'static,
+    {
+        BackendInstanceIdentity::new::<Self>(0)
+    }
+
     type CommitmentHandle = Handle;
     type EorPreparationHandle = ();
     type EorSessionHandle = ();
@@ -67,6 +74,42 @@ impl<F, E> ProofScopeConsumer for ExternalBackend<F, E> {
     fn abort_scope_best_effort(&self, _session: &Self::ProofSessionHandle) {}
 }
 impl<F: Field + CanonicalEncoding, E: Field> OpaqueProverConsumer<F, E> for ExternalBackend<F, E> {}
+
+pub struct ExternalExport(HandoffMetadata);
+impl SuccessorImportPacket for ExternalExport {
+    fn metadata(&self) -> &HandoffMetadata {
+        &self.0
+    }
+}
+impl<F: Field + CanonicalEncoding, E: Field + 'static> SuccessorExportKernel<F, E>
+    for ExternalBackend<F, E>
+{
+    type ExportPacket = ExternalExport;
+
+    fn export_successor(
+        &self,
+        _: &Self::ProofSessionHandle,
+        _: &Self::WitnessHandle,
+        _: &Self::CommitmentMaterialHandle,
+        _: &ValidatedSuccessorHandoffPlan<'_, F>,
+    ) -> Result<Self::ExportPacket, AkitaError> {
+        Err(AkitaError::InvalidProof)
+    }
+}
+impl<F: Field + CanonicalEncoding, E: Field + 'static> SuccessorImportKernel<F, E>
+    for ExternalBackend<F, E>
+{
+    type ImportPacket = ExternalExport;
+    fn import_successor(
+        &self,
+        _: &Self::ProofSessionHandle,
+        _: &ValidatedSuccessorHandoffPlan<'_, F>,
+        _: Self::ImportPacket,
+    ) -> Result<ImportedSuccessor<Self::WitnessHandle, Self::CommitmentMaterialHandle>, AkitaError>
+    {
+        Err(AkitaError::InvalidProof)
+    }
+}
 impl<F: Field + CanonicalEncoding, E: Field> TerminalCommitmentMaterialKernel<F, Handle>
     for ExternalBackend<F, E>
 {
@@ -83,7 +126,7 @@ impl<F: Field + CanonicalEncoding, E: Field> TerminalCommitmentMaterialKernel<F,
 
 #[allow(unused_variables)]
 impl<F: Field + CanonicalEncoding, E: Field> ProofAdmission<F, E> for ExternalBackend<F, E> {
-    fn begin_proof<Cfg>(
+    fn prepare_executor<Cfg>(
         &self,
         setup: &AkitaSetupDescriptor,
         schedules: &TrustedScheduleCatalog<Cfg>,
@@ -97,6 +140,17 @@ impl<F: Field + CanonicalEncoding, E: Field> ProofAdmission<F, E> for ExternalBa
             "external fixture rejects this operation".into(),
         ))
     }
+
+    fn begin_fold(
+        &self,
+        _: &Self::ProofSessionHandle,
+        _: &FoldExecutionRequirements<'_>,
+    ) -> Result<(), AkitaError> {
+        Err(AkitaError::InvalidInput(
+            "external fixture rejects execution preparation".into(),
+        ))
+    }
+
     fn proof_context(
         &self,
         session: &Self::ProofSessionHandle,
@@ -513,14 +567,21 @@ where
         + 'static,
 {
     let backend = ExternalBackend::<Cfg::Field, Cfg::ExtField>(PhantomData);
+    let levels = schedules
+        .resolve_selection(opening.selection())?
+        .schedule()
+        .num_fold_levels();
+    let mut registry = akita_prover::BackendRegistry::<Cfg>::new()?;
+    let root = registry.register(&backend, prefixes)?;
+    let mut route = akita_prover::FixedFoldRoute::new(vec![root; levels]);
     akita_prover::batched_prove::<Cfg, _, _>(
         expanded,
-        prefixes,
         schedules,
-        &backend,
+        &registry,
         opening,
         transcript,
         BasisMode::Lagrange,
+        &mut route,
     )
 }
 

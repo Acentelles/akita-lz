@@ -23,7 +23,7 @@ the canonical instance descriptor as a length-framed public message, and they
 never start, finish, or end-of-proof check a transcript. A protocol that opens
 Akita commitments therefore runs Akita on its own channel, and Akita's messages
 land in its argument string. The standalone API
-(`AkitaCommitmentScheme::prove_standalone` and
+(`AkitaCommitmentScheme::batched_prove` and
 `AkitaVerifier::verify_standalone`) starts a transcript under
 `PROOF_STREAM_PROTOCOL` with the default `AkitaSponge` (Blake2b-512), bound to
 the caller's session bytes, and runs the same entry points. The standalone

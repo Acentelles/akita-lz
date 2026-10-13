@@ -188,7 +188,7 @@ where
 
     let session = b"setup-tests/dense";
     let proof = scheme
-        .prove_standalone(
+        .batched_prove(
             &setup,
             prove_input::<Cfg>(
                 &pt[..],
@@ -308,7 +308,7 @@ where
 
     let session = b"setup-tests/onehot";
     let proof = scheme
-        .prove_standalone(
+        .batched_prove(
             &setup,
             prove_input::<Cfg>(
                 &pt[..],
@@ -452,7 +452,7 @@ fn run_dense_batched_e2e<Cfg, const D: usize>(
 
     let session = b"setup-tests/batched-dense";
     let proof = scheme
-        .prove_standalone(
+        .batched_prove(
             &setup,
             prove_input::<Cfg>(
                 &pt[..],
@@ -557,7 +557,7 @@ fn run_onehot_batched_e2e<Cfg, const D: usize>(
 
     let session = b"setup-tests/batched-onehot";
     let proof = scheme
-        .prove_standalone(
+        .batched_prove(
             &setup,
             prove_input::<Cfg>(
                 &pt[..],
