@@ -546,6 +546,35 @@ target for readers. Distribution, replay, and tampering tests check
 implementation correspondence; the accepting-tree and random-oracle
 arguments establish extraction and its concrete loss.
 
+## Cost
+
+Squeeze-then-grind costs the verifier more hashing than the former preview.
+At each nonzero-difficulty site the verifier squeezes a 32-byte seed from the
+live state, absorbs the nonce, builds the candidate's fork and squeezes its
+predicate, then squeezes the protected challenge. The preview absorbed the
+nonce and drew the predicate and the challenge from one live squeeze phase. On
+the Blake2b sponge this is about five more compressions per site. Plans carry
+several hundred such sites: the fp64 dense `nv = 29` proof has 474 runs and
+about 470 one-byte nonces.
+
+Measured with one proof verified 400 times per sample, three interleaved
+samples per binary, single-threaded, against `main` at `60b82bc3` on an Apple
+M4 Max, fp64 dense:
+
+| Coefficients | `main` median | This protocol median | Change |
+| --- | ---: | ---: | ---: |
+| 2^16 | 1.71 ms | 2.08 ms | +22% |
+| 2^20 | 2.64 ms | 3.13 ms | +19% |
+
+The CI profile benchmark sees the same cost as +7% to +12% of multithreaded
+verification at production sizes, where the field arithmetic is parallel and
+the hashing is not. Sampling attributes the difference to Blake2b compressions
+under the grinding check; the relation and field kernels are unchanged. The
+cost is the price of keeping spongefish's duplex state private (no
+`yolocrypto`); drawing each protected challenge from the accepted fork instead
+of the live state would remove two of the five compressions but is a protocol
+change.
+
 ## Encoding and proof-size accounting
 
 Each proof-of-work or fold-response site contributes the canonical unsigned
