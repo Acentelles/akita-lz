@@ -150,8 +150,7 @@ starts. For candidate `c`:
 
 1. Take `c`'s fork.
 2. In canonical group order, absorb each group's public sparse-draw payload
-   into the fork and squeeze its root. Diagnostic context metadata records the
-   expected sequence without changing any sponge.
+   into the fork and squeeze its root.
 3. Derive every indexed sparse coordinate, compute the folded response, and
    accept only if all scheduled representation and norm bounds hold.
 
@@ -162,6 +161,14 @@ reproduces all roots on that fork in the same order, and performs the same
 response checks. The roots are not absorbed into the live state. They are a
 deterministic function of the seed, which binds the whole prior transcript,
 and of the nonce, which the live state absorbs.
+
+Fork draws never reach the live sponge, so `ForkFoldDraw` keeps a record of
+each draw's payload and seed lengths. After the nonce, each role logs the
+accepted fork's record group by group at that group's
+`FoldSite::FoldChallenge { level, group }` site, through
+`Channel::record_fork_draw`, which writes only the event log. The prover logs
+only the accepted candidate's draws, after the search, so rejected candidates
+never appear, and both roles' event logs stay comparable over fold-root draws.
 
 Fold-response search is honest-prover rejection sampling. It does not repair a
 small Fiat--Shamir challenge space and does not add 12 bits of soundness. Every
@@ -585,7 +592,8 @@ structured proof replay, or alternate verifier is prohibited.
   truncation, mutation, and trailing-byte cases reject correctly; diagnostic
   site sequences agree between prover and verifier.
 - A candidate's fork draws, the committed fork, and the verifier's fork agree
-  for multiple groups.
+  for multiple groups, and both roles log the accepted fork's draws at the
+  same per-group fold-challenge sites.
 - Prover and verifier sparse roots agree, and the indexed SHAKE256
   implementation matches an independent 40-byte-input reference.
 - Reprogramming one indexed coordinate changes only that coordinate.

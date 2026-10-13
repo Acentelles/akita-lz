@@ -26,17 +26,14 @@ where
         let group_lp = lp.group_params_geometry(opening_batch, group_index)?;
         let k_g = opening_batch.group_layout(group_index)?.num_polynomials();
         let group = u32::try_from(group_index).map_err(|_| AkitaError::InvalidProof)?;
-        let drawn = draw_group_fold_challenges::<F, E, _>(
-            &mut ForkFoldDraw::new(fork),
-            &group_lp,
-            group_index,
-            k_g,
-        )?;
+        let mut draw = ForkFoldDraw::new(fork);
+        let drawn = draw_group_fold_challenges::<F, E, _>(&mut draw, &group_lp, group_index, k_g)?;
+        let draws = draw.take_record();
         let coordinate_count = group_lp
             .num_live_blocks()
             .checked_mul(k_g)
             .ok_or(AkitaError::InvalidProof)?;
-        grinding.record_fold_challenges(level, group, coordinate_count)?;
+        grinding.record_fold_challenges(level, group, coordinate_count, &draws)?;
         group_challenges.push(drawn);
     }
     Ok(group_challenges)

@@ -50,6 +50,8 @@ pub(crate) struct FoldProbeOutput<FoldHandle> {
     pub(crate) fold_handle: FoldHandle,
     pub(crate) challenges: GroupFoldChallenges,
     pub(crate) diagnostics: FoldProbeDiagnostics,
+    /// The group's fork draws, logged once the fork is accepted.
+    pub(crate) draws: akita_challenges::FoldDrawRecord,
 }
 
 pub(crate) struct TerminalFoldGrindOutput {
@@ -108,7 +110,7 @@ where
     let point_indices = [0usize];
     let site = akita_params::GrindingSite::FoldResponse { level };
     grinding.begin_fold_response(site)?;
-    let (nonce, (fold_handle, encoding, diagnostics)) =
+    let (nonce, (fold_handle, encoding, diagnostics, draws)) =
         first_jointly_accepted_nonce(FOLD_RESPONSE_ATTEMPTS, |nonce| {
             let mut fork = grinding.fold_response_fork(site, nonce)?;
             let mut draw = ForkFoldDraw::new(&mut fork);
@@ -144,12 +146,13 @@ where
                     fold_handle,
                     crate::backend::ValidatedTerminalZEncodingPlan::from_probe(&plan),
                     diagnostics,
+                    draw.take_record(),
                 ))),
             }
         })?;
     // The verifier draws the same challenges from this counter's fork.
     grinding.commit_fold_response(site, nonce)?;
-    grinding.record_fold_challenges(level, 0, params.blocks.live_blocks)?;
+    grinding.record_fold_challenges(level, 0, params.blocks.live_blocks, &draws)?;
     #[cfg(not(feature = "response-model-diagnostics"))]
     let _ = diagnostics;
     #[cfg(feature = "response-model-diagnostics")]
@@ -294,6 +297,7 @@ where
                             fold_handle,
                             challenges,
                             diagnostics,
+                            draws: draw.take_record(),
                         },
                     };
                     candidate_outputs.push(output);
@@ -315,7 +319,7 @@ where
                 .num_live_blocks()
                 .checked_mul(group.num_polynomials)
                 .ok_or_else(|| AkitaError::Internal("fold coordinate count overflow".into()))?;
-            grinding.record_fold_challenges(level, group_index, coordinate_count)?;
+            grinding.record_fold_challenges(level, group_index, coordinate_count, &output.draws)?;
             tracing::info!(
                 group_index = group.group_index,
                 nonce,

@@ -3,7 +3,7 @@
 use crate::sampler::MAX_STACK_RING_DIM;
 use crate::{Challenges, OperatorNormRejection, SparseChallengeConfig};
 use akita_error::AkitaError;
-use jolt_transcript::{Fork, Sponge};
+use jolt_transcript::{Channel, Fork, Sponge};
 
 /// Byte length of every fold-challenge seed.
 pub const FOLD_CHALLENGE_SEED_LEN: usize = 32;
@@ -139,22 +139,52 @@ pub trait FoldDraw {
 /// accepted counter's fold challenges from that fork, group by group in group
 /// order. The fork's seed is squeezed from the live transcript and its counter
 /// is a prover message, so every draw is bound to the transcript.
+///
+/// Fork draws never reach the transcript's sponge, so the adapter keeps a
+/// [`FoldDrawRecord`] of them. Both roles log the accepted fork's record into
+/// the transcript's event log, which keeps these draws visible to event
+/// comparisons without recording rejected candidates.
 pub struct ForkFoldDraw<'a, H> {
     fork: &'a mut Fork<H>,
+    record: FoldDrawRecord,
 }
 
 impl<'a, H> ForkFoldDraw<'a, H> {
     /// Bind this short-lived draw adapter to one fold-response fork.
     #[must_use]
     pub const fn new(fork: &'a mut Fork<H>) -> Self {
-        Self { fork }
+        Self {
+            fork,
+            record: FoldDrawRecord(Vec::new()),
+        }
+    }
+
+    /// The draws made since the last call, in draw order.
+    pub fn take_record(&mut self) -> FoldDrawRecord {
+        core::mem::take(&mut self.record)
     }
 }
 
 impl<H: Sponge> FoldDraw for ForkFoldDraw<'_, H> {
     fn absorb_and_squeeze(&mut self, payload: &[u8]) -> [u8; FOLD_CHALLENGE_SEED_LEN] {
         self.fork.absorb(payload);
+        self.record.0.push((payload.len(), FOLD_CHALLENGE_SEED_LEN));
         self.fork.squeeze()
+    }
+}
+
+/// The absorbed-context and seed byte lengths of a run of fork draws, in draw
+/// order.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct FoldDrawRecord(Vec<(usize, usize)>);
+
+impl FoldDrawRecord {
+    /// Log every draw into `channel`'s event log at its current site, through
+    /// [`Channel::record_fork_draw`]. The sponge is untouched.
+    pub fn log_into(&self, channel: &mut impl Channel) {
+        for &(absorbed, squeezed) in &self.0 {
+            channel.record_fork_draw(absorbed, squeezed);
+        }
     }
 }
 

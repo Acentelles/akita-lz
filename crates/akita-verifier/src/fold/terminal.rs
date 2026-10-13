@@ -131,8 +131,8 @@ where
     } else {
         None
     };
+    let mut draw = akita_challenges::ForkFoldDraw::new(&mut fork);
     let challenges = {
-        let mut draw = akita_challenges::ForkFoldDraw::new(&mut fork);
         draw.draw_folding_challenges_with_rejection(
             akita_challenges::FoldChallengeDrawDomain::EvaluationTrace,
             scheduled.d_a(),
@@ -143,7 +143,8 @@ where
             operator_rejection,
         )?
     };
-    grinding.record_fold_challenges(level, 0, scheduled.blocks.live_blocks)?;
+    let draws = draw.take_record();
+    grinding.record_fold_challenges(level, 0, scheduled.blocks.live_blocks, &draws)?;
     let z_payload = {
         let state = grinding.state_mut();
         state.site(

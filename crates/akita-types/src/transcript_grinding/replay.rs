@@ -1,5 +1,7 @@
 //! Inline nonce replay for transcript grinding.
 
+use crate::FoldSite;
+use akita_challenges::FoldDrawRecord;
 use akita_error::AkitaError;
 use akita_params::transcript_site::{ProtocolSiteId, SITE_FAMILY_SUMCHECK};
 use akita_params::{GrindingPlan, GrindingQueryKind, GrindingSite};
@@ -403,13 +405,18 @@ impl<'a, H: Sponge> ProverGrinding<'a, H> {
         Ok(Fork::new(&seed, counter))
     }
 
-    /// Consume the plan entries for one sparse fold group.
+    /// Consume the plan entries for one sparse fold group, and log the group's
+    /// accepted fork draws at its [`FoldSite::FoldChallenge`] site.
     pub fn record_fold_challenges(
         &mut self,
         level: u32,
         group: u32,
         coordinate_count: usize,
+        draws: &FoldDrawRecord,
     ) -> Result<(), AkitaError> {
+        self.state
+            .site(FoldSite::FoldChallenge { level, group }.id()?.into());
+        draws.log_into(&mut *self.state);
         let result = coordinate_count
             .checked_add(1)
             .ok_or_else(|| {
@@ -514,13 +521,18 @@ impl<'a, 'proof, H: Sponge> VerifierGrinding<'a, 'proof, H> {
         Ok(Fork::new(&seed, counter))
     }
 
-    /// Consume the plan entries for one sparse fold group.
+    /// Consume the plan entries for one sparse fold group, and log the group's
+    /// accepted fork draws at its [`FoldSite::FoldChallenge`] site.
     pub fn record_fold_challenges(
         &mut self,
         level: u32,
         group: u32,
         coordinate_count: usize,
+        draws: &FoldDrawRecord,
     ) -> Result<(), AkitaError> {
+        self.state
+            .site(FoldSite::FoldChallenge { level, group }.id()?.into());
+        draws.log_into(&mut *self.state);
         let result = coordinate_count
             .checked_add(1)
             .ok_or(AkitaError::InvalidProof)

@@ -1,18 +1,20 @@
 use super::*;
 use crate::transcript::test_transcripts::{prover as new_prover, verifier as new_verifier};
 use akita_challenges::{
-    Challenges, FoldChallengeDrawDomain, FoldDraw, ForkFoldDraw, SparseChallengeConfig,
+    Challenges, FoldChallengeDrawDomain, FoldDraw, FoldDrawRecord, ForkFoldDraw,
+    SparseChallengeConfig,
 };
 use akita_params::{ChallengeFieldOrder, GrindingRun};
 use jolt_field::Prime128Offset275 as F;
 use jolt_transcript::{grinding_predicate_accepts, GRINDING_PREDICATE_LEN};
 use std::num::NonZeroU8;
 
-/// The two groups' fold challenges, drawn in group order from `fork`.
+/// The two groups' fold challenges, drawn in group order from `fork`, with
+/// each group's draw record.
 fn draw_two_groups<H: Sponge>(
     fork: &mut Fork<H>,
     config: &SparseChallengeConfig,
-) -> (Challenges, Challenges) {
+) -> ([Challenges; 2], [FoldDrawRecord; 2]) {
     let mut draw = ForkFoldDraw::new(fork);
     let first = draw
         .draw_folding_challenges_with_rejection(
@@ -25,6 +27,7 @@ fn draw_two_groups<H: Sponge>(
             None,
         )
         .unwrap();
+    let first_draws = draw.take_record();
     let second = draw
         .draw_folding_challenges_with_rejection(
             FoldChallengeDrawDomain::EvaluationTrace,
@@ -36,7 +39,7 @@ fn draw_two_groups<H: Sponge>(
             None,
         )
         .unwrap();
-    (first, second)
+    ([first, second], [first_draws, draw.take_record()])
 }
 
 fn plan() -> GrindingPlan {
@@ -70,7 +73,9 @@ fn grinding_roundtrip_uses_inline_canonical_nonces_and_eof() {
     let mut prover_fork = prover
         .commit_fold_response(GrindingSite::FoldResponse { level: 0 }, 7)
         .unwrap();
-    prover.record_fold_challenges(0, 0, 2).unwrap();
+    prover
+        .record_fold_challenges(0, 0, 2, &FoldDrawRecord::default())
+        .unwrap();
     prover.finish().unwrap();
     let proof = transcript.finish();
 
@@ -87,7 +92,9 @@ fn grinding_roundtrip_uses_inline_canonical_nonces_and_eof() {
         .read_fold_response(GrindingSite::FoldResponse { level: 0 })
         .unwrap();
     assert_eq!(verifier_fork.squeeze::<32>(), prover_fork.squeeze::<32>());
-    verifier.record_fold_challenges(0, 0, 2).unwrap();
+    verifier
+        .record_fold_challenges(0, 0, 2, &FoldDrawRecord::default())
+        .unwrap();
     verifier.finish().unwrap();
     transcript.finish().unwrap();
 }
@@ -257,17 +264,50 @@ fn fold_candidate_replays_all_groups_as_one_transaction() {
         &config,
     );
     assert_eq!(candidate, committed);
-    prover.record_fold_challenges(3, 0, 2).unwrap();
-    prover.record_fold_challenges(3, 1, 2).unwrap();
+    let (committed, draws) = committed;
+    prover.record_fold_challenges(3, 0, 2, &draws[0]).unwrap();
+    prover.record_fold_challenges(3, 1, 2, &draws[1]).unwrap();
     prover.finish().unwrap();
+    let prover_events = transcript.events().to_vec();
     let proof = transcript.finish();
 
     let mut transcript = new_verifier(b"native-fold-transaction", &proof);
     let mut verifier = VerifierGrinding::new(&mut transcript, &plan);
-    let verified = draw_two_groups(&mut verifier.read_fold_response(site).unwrap(), &config);
+    let (verified, verified_draws) =
+        draw_two_groups(&mut verifier.read_fold_response(site).unwrap(), &config);
     assert_eq!(verified, committed);
-    verifier.record_fold_challenges(3, 0, 2).unwrap();
-    verifier.record_fold_challenges(3, 1, 2).unwrap();
+    verifier
+        .record_fold_challenges(3, 0, 2, &verified_draws[0])
+        .unwrap();
+    verifier
+        .record_fold_challenges(3, 1, 2, &verified_draws[1])
+        .unwrap();
     verifier.finish().unwrap();
+    // The accepted fork's draws appear, group by group, in both roles' logs.
+    {
+        let fork_draws = |events: &[jolt_transcript::TranscriptEvent]| {
+            events
+                .iter()
+                .filter(|event| event.op == jolt_transcript::TranscriptOp::ForkAbsorb)
+                .map(|event| event.site)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(transcript.events(), prover_events.as_slice());
+        assert_eq!(
+            fork_draws(&prover_events),
+            [
+                SiteId::from(
+                    crate::FoldSite::FoldChallenge { level: 3, group: 0 }
+                        .id()
+                        .unwrap()
+                ),
+                SiteId::from(
+                    crate::FoldSite::FoldChallenge { level: 3, group: 1 }
+                        .id()
+                        .unwrap()
+                ),
+            ]
+        );
+    }
     transcript.finish().unwrap();
 }
