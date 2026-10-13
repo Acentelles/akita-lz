@@ -5,6 +5,9 @@
 mod catalog_events;
 mod common;
 
+use crate::common::sponge::{
+    prove_on_test_sponge, verify_on_test_sponge, TestSponge, TEST_PROTOCOL,
+};
 use akita_cpu_backend::CpuBackend;
 #[cfg(feature = "logging")]
 use akita_params::transcript_site::{
@@ -12,7 +15,6 @@ use akita_params::transcript_site::{
     SITE_FAMILY_STAGE1, SITE_FAMILY_STAGE2, SITE_FAMILY_STAGE3, SITE_FAMILY_SUMCHECK,
     SITE_FAMILY_TERMINAL,
 };
-use akita_pcs::{AkitaSponge, PROOF_STREAM_PROTOCOL};
 #[cfg(feature = "logging")]
 use common::mutations::{
     assert_messages_cover, message_ranges, representative_mutation_ranges,
@@ -56,7 +58,7 @@ fn stream_binds_session_statement_basis_and_eof() {
                 akita_cpu_backend::GroupContext::scheduler_without_precommitted_groups(),
             )
             .expect("commit");
-        let mut prover = ProverTranscript::<AkitaSponge>::new(&PROOF_STREAM_PROTOCOL, LABEL);
+        let mut prover = ProverTranscript::<TestSponge>::new(&TEST_PROTOCOL, LABEL);
         crate::common::caller_transcript::prove_on_transcript(
             &scheme,
             &setup,
@@ -73,7 +75,8 @@ fn stream_binds_session_statement_basis_and_eof() {
             scheme
                 .verifier(verifier_setup.clone())
                 .and_then(|verifier| {
-                    verifier.verify_standalone(
+                    verify_on_test_sponge(
+                        &verifier,
                         candidate,
                         session,
                         verify_input::<OneHotCfg>(
@@ -88,8 +91,7 @@ fn stream_binds_session_statement_basis_and_eof() {
         };
 
         verify(&proof, LABEL, opening, BasisMode::Lagrange).expect("honest proof");
-        let mut verifier =
-            VerifierTranscript::<AkitaSponge>::new(&PROOF_STREAM_PROTOCOL, LABEL, &proof);
+        let mut verifier = VerifierTranscript::<TestSponge>::new(&TEST_PROTOCOL, LABEL, &proof);
         scheme
             .verifier(verifier_setup.clone())
             .and_then(|akita| {
@@ -107,12 +109,12 @@ fn stream_binds_session_statement_basis_and_eof() {
         // The caller's transcript is bound: the same proof under another
         // protocol id, or after a caller prefix the prover never absorbed,
         // rejects.
-        const OTHER_PROTOCOL: ProtocolId = ProtocolId::new::<AkitaSponge>("akita-pcs/other-caller");
+        const OTHER_PROTOCOL: ProtocolId = ProtocolId::new::<TestSponge>("akita-pcs/other-caller");
         for (protocol, prefix) in [
             (&OTHER_PROTOCOL, None),
-            (&PROOF_STREAM_PROTOCOL, Some(&b"caller prefix"[..])),
+            (&TEST_PROTOCOL, Some(&b"caller prefix"[..])),
         ] {
-            let mut verifier = VerifierTranscript::<AkitaSponge>::new(protocol, LABEL, &proof);
+            let mut verifier = VerifierTranscript::<TestSponge>::new(protocol, LABEL, &proof);
             if let Some(prefix) = prefix {
                 verifier.public_bytes(prefix);
             }
@@ -252,15 +254,15 @@ fn stream_mutations_reject_without_panicking() {
                 akita_cpu_backend::GroupContext::scheduler_without_precommitted_groups(),
             )
             .expect("commit");
-        let proof = scheme
-            .batched_prove(
-                &setup,
-                prove_input::<DenseCfg>(&point, &[opening], &commitment, hint, scheme.schedules()),
-                &stack,
-                LABEL,
-                BasisMode::Lagrange,
-            )
-            .expect("prove");
+        let proof = prove_on_test_sponge(
+            &scheme,
+            &setup,
+            prove_input::<DenseCfg>(&point, &[opening], &commitment, hint, scheme.schedules()),
+            &stack,
+            LABEL,
+            BasisMode::Lagrange,
+        )
+        .expect("prove");
         for offset in [
             0,
             proof.len() / 4,
@@ -274,7 +276,8 @@ fn stream_mutations_reject_without_panicking() {
                 scheme
                     .verifier(verifier_setup.clone())
                     .and_then(|verifier| {
-                        verifier.verify_standalone(
+                        verify_on_test_sponge(
+                            &verifier,
                             &mutated,
                             LABEL,
                             verify_input::<DenseCfg>(

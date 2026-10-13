@@ -10,9 +10,12 @@ use jolt_transcript::ProtocolId;
 /// generic over it and run on the caller's transcript.
 pub type AkitaSponge = jolt_transcript::Blake2b512;
 
+/// Protocol name of a standalone Akita proof stream.
+pub const PROOF_STREAM_PROTOCOL_NAME: &str = "akita-pcs/native-proof-stream/v8";
+
 /// Protocol identity of a standalone Akita proof stream.
 pub const PROOF_STREAM_PROTOCOL: ProtocolId =
-    ProtocolId::new::<AkitaSponge>("akita-pcs/native-proof-stream/v8");
+    ProtocolId::new::<AkitaSponge>(PROOF_STREAM_PROTOCOL_NAME);
 
 /// Allocate `count` zeroed extension slots for an in-place exchange.
 ///

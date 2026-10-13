@@ -6,6 +6,7 @@ pub(crate) mod caller_transcript;
 pub(crate) mod mutations;
 mod opening_oracles;
 pub(crate) mod proof_size;
+pub(crate) mod sponge;
 #[path = "../../examples/support/workspace_schedules.rs"]
 mod workspace_schedules;
 

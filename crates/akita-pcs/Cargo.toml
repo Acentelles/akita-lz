@@ -69,6 +69,8 @@ disk-persistence = [
 # Records prover and verifier transcript events for the transcript-hardening
 # suites and the profile example's wire report.
 logging = ["jolt-transcript/logging"]
+# Run the transcript-semantics test suites on Keccak instead of `AkitaSponge`.
+keccak-test-sponge = []
 response-model-diagnostics = ["akita-cpu-backend/response-model-diagnostics"]
 [dependencies]
 akita-error = { version = "0.1.0", path = "../akita-error" }

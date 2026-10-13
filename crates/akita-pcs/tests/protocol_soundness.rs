@@ -8,7 +8,7 @@ use akita_params::{
     lagrange_weights, BasisMode, CommittedGroupBatchProfile, OpeningScheduleSelection,
     PolynomialGroupLayout, ScheduleLookupKey,
 };
-use akita_pcs::{AkitaCommitmentScheme, AkitaSponge, PROOF_STREAM_PROTOCOL};
+use akita_pcs::AkitaCommitmentScheme;
 use akita_prover::SelectedProverOpeningData;
 use akita_serialization::{AkitaDeserialize, AkitaSerialize, Valid};
 use akita_types::{
@@ -24,6 +24,7 @@ use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
 mod common;
+use crate::common::sponge::{verify_on_test_sponge, TestSponge, TEST_PROTOCOL};
 #[cfg(feature = "logging")]
 use akita_params::transcript_site::{
     SITE_FAMILY_EXTENSION_OPENING_REDUCTION, SITE_FAMILY_PHYSICAL_L2, SITE_FAMILY_STAGE3,
@@ -107,7 +108,7 @@ fn verify_input<'a, Cfg: CommitmentConfig>(
 type Fixture<F, E> = (
     AkitaVerifierSetup<F>,
     CommittedGroup<F>,
-    ProverTranscript<AkitaSponge>,
+    ProverTranscript<TestSponge>,
     Vec<E>,
     E,
     OpeningScheduleSelection,
@@ -169,7 +170,7 @@ where
         )
         .expect("commitment");
     let selection = selection_for::<Cfg>(&commitment, scheme.schedules());
-    let mut transcript = ProverTranscript::<AkitaSponge>::new(&PROOF_STREAM_PROTOCOL, label);
+    let mut transcript = ProverTranscript::<TestSponge>::new(&TEST_PROTOCOL, label);
     crate::common::caller_transcript::prove_on_transcript(
         &scheme,
         &setup,
@@ -240,7 +241,8 @@ where
     );
     let verify = |candidate: &[u8], claimed: Cfg::ExtField, session: &[u8]| {
         scheme.verifier(setup.clone()).and_then(|verifier| {
-            verifier.verify_standalone(
+            verify_on_test_sponge(
+                &verifier,
                 candidate,
                 session,
                 verify_input::<Cfg>(selection, &point, claimed, &commitment),

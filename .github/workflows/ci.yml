@@ -222,11 +222,20 @@ jobs:
           cargo test --release -p akita-pcs --test akita_fp128_e2e --no-default-features --features parallel -- --exact heterogeneous::combined_family_setup_matches_per_family_proofs
 
   test-transcript-semantics:
-    name: Transcript semantics
+    name: Transcript semantics (${{ matrix.sponge.name }})
     runs-on: ubuntu-latest
     # Release builds of several logging test binaries dominate this job; it
     # stays well under the schedule-drift job on the critical path.
     timeout-minutes: 40
+    # The semantic and mutation suites run on each sponge a caller may run
+    # Akita on: the standalone AkitaSponge (Blake2b) and Keccak.
+    strategy:
+      matrix:
+        sponge:
+          - name: blake2b
+            features: parallel,logging
+          - name: keccak
+            features: parallel,logging,keccak-test-sponge
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
@@ -236,18 +245,18 @@ jobs:
           --test transcript_hardening
           --test transcript_hardening_proptest
           --no-default-features
-          --features parallel,logging
+          --features ${{ matrix.sponge.features }}
           --
           --test-threads=1
       - name: Run proof stream and mutation suites
         run: |
           cargo test --release -p akita-pcs \
             --no-default-features \
-            --features parallel,logging \
+            --features ${{ matrix.sponge.features }} \
             standalone_roundtrip_and_statement_binding --lib
           cargo test --release -p akita-pcs \
             --no-default-features \
-            --features parallel,logging \
+            --features ${{ matrix.sponge.features }} \
             selective_l2_proof_rejects_transcript_mutations --lib
       - name: Run protocol suites with proof channel tracing
         run: >-
@@ -255,7 +264,7 @@ jobs:
           --test protocol_soundness
           --test fold_linf
           --no-default-features
-          --features parallel,logging
+          --features ${{ matrix.sponge.features }}
           --
           --test-threads=1
 

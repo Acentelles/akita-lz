@@ -29,6 +29,7 @@
 //! matrix marks `#[ignore]`. The recursive catalogs are excluded for the same
 //! reason: every recursive row is production-sized.
 
+use crate::common::sponge::{TestSponge, TEST_PROTOCOL};
 use crate::common::{dense_opening_lagrange, load_workspace_scheme, onehot_opening_lagrange};
 use akita_config::proof_optimized::{fp128, fp32, fp64};
 use akita_config::CommitmentConfig;
@@ -37,7 +38,6 @@ use akita_params::{
     BasisMode, CommitmentPayloadMode, GroupCommitPhaseParams, InnerCommitSecurityRoute,
     OpeningMethod, PhysicalL2NormProofShape, ProtocolSiteId, RingRelationMode,
 };
-use akita_pcs::{AkitaSponge, PROOF_STREAM_PROTOCOL};
 use akita_prover::SelectedProverOpeningData;
 use akita_schedules::ResolvedScheduleRow;
 use akita_serialization::{AkitaDeserialize, AkitaSerialize, Valid};
@@ -331,7 +331,7 @@ where
         "claims must select the probed row"
     );
 
-    let mut prover = ProverTranscript::<AkitaSponge>::new(&PROOF_STREAM_PROTOCOL, LABEL);
+    let mut prover = ProverTranscript::<TestSponge>::new(&TEST_PROTOCOL, LABEL);
     crate::common::caller_transcript::prove_on_transcript(
         &scheme,
         &setup,
@@ -360,8 +360,7 @@ where
             .collect(),
     )
     .expect("verifier claims");
-    let mut verifier =
-        VerifierTranscript::<AkitaSponge>::new(&PROOF_STREAM_PROTOCOL, LABEL, &proof);
+    let mut verifier = VerifierTranscript::<TestSponge>::new(&TEST_PROTOCOL, LABEL, &proof);
     scheme
         .verifier(verifier_setup)
         .and_then(|akita| {

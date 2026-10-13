@@ -100,7 +100,9 @@ pub use trace_weight::{
     ensure_trace_stage2_supported, prepare_evaluation_trace_group_parameters,
     EvaluationTraceGroupParameters, EvaluationTraceInputs,
 };
-pub use transcript::{extension_slots, AkitaSponge, PROOF_STREAM_PROTOCOL};
+pub use transcript::{
+    extension_slots, AkitaSponge, PROOF_STREAM_PROTOCOL, PROOF_STREAM_PROTOCOL_NAME,
+};
 pub use transcript_grinding::{
     GrindingReplay, GrindingSumcheckProver, GrindingSumcheckVerifier, ProverGrinding,
     VerifierGrinding,
