@@ -172,7 +172,7 @@ where
     let selection = selection_for::<Cfg>(&commitment, scheme.schedules());
     let mut transcript = ProverTranscript::<TestSponge>::new(&TEST_PROTOCOL, label);
     crate::common::caller_transcript::prove_on_transcript(
-        &scheme,
+        scheme,
         &setup,
         prove_input::<Cfg>(
             selection,

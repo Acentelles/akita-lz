@@ -111,7 +111,7 @@ fn run_prove<FF, const D: usize, Cfg: CommitmentConfig<Field = FF>>(
         let mut transcript =
             ProverTranscript::<AkitaSponge>::new(&PROOF_STREAM_PROTOCOL, b"profile");
         crate::caller_transcript::prove_on_transcript(
-            &scheme,
+            scheme,
             setup,
             prover_claims::<Cfg>(
                 scheme.schedules(),

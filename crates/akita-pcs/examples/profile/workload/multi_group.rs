@@ -354,7 +354,7 @@ fn run_recursive_multi_group_onehot_with_proof_cfg<FF, const D: usize, Cfg, Proo
         let mut transcript =
             ProverTranscript::<AkitaSponge>::new(&PROOF_STREAM_PROTOCOL, b"profile");
         crate::caller_transcript::prove_on_transcript(
-            &proof_scheme,
+            proof_scheme,
             &setup,
             prover_data,
             &backend,

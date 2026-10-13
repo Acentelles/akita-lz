@@ -333,7 +333,7 @@ where
 
     let mut prover = ProverTranscript::<TestSponge>::new(&TEST_PROTOCOL, LABEL);
     crate::common::caller_transcript::prove_on_transcript(
-        &scheme,
+        scheme,
         &setup,
         prover_data,
         &backend,
