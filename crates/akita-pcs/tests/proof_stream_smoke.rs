@@ -11,7 +11,7 @@ use akita_prover::SelectedProverOpeningData;
 use akita_types::{GroupBatchStatement, OpeningClaims, PolynomialGroupClaims};
 use jolt_field::{Ring, Zero};
 use jolt_transcript::{
-    Blake2b512, Keccak, ProtocolId, ProverTranscript, Sponge, VerifierTranscript,
+    Blake2b512, Channel, Keccak, ProtocolId, ProverTranscript, Sponge, VerifierTranscript,
 };
 
 #[test]
@@ -24,8 +24,9 @@ fn dense_fp128_roundtrip() {
         .unwrap();
 }
 
-/// The core entry points run on a caller-chosen sponge and protocol id, and
-/// leave the final consumption check to the caller.
+/// The core entry points run on a caller-chosen sponge and protocol id, leave
+/// the caller's transcript synchronized for messages after Akita, and leave the
+/// final consumption check to the caller.
 #[test]
 fn onehot_fp32_roundtrip_on_caller_transcripts() {
     for run in [
@@ -99,18 +100,41 @@ fn onehot_fp32_roundtrip_inner<H: Sponge>() {
         BasisMode::Lagrange,
     )
     .unwrap();
+    // The caller continues after Akita: a challenge, then messages bound to it.
+    let post_akita: E = prover.challenge();
+    prover.send(&post_akita);
+    prover.send(&0xC0FF_EE00u32);
     let proof = prover.finish();
-    let verify_group = PolynomialGroupClaims::new(point, vec![opening], &commitment).unwrap();
-    let verify_claims = OpeningClaims::from_groups(vec![verify_group]).unwrap();
-    let statement = GroupBatchStatement::new(selection, verify_claims).unwrap();
     let verifier_setup = scheme.setup_verifier(&setup).unwrap();
-    let mut verifier = VerifierTranscript::<H>::new(&protocol, session, &proof);
-    assert_eq!(verifier.receive::<u32>().unwrap(), 7);
-    scheme
-        .verifier(verifier_setup)
-        .and_then(|akita| akita.batched_verify(&mut verifier, statement, BasisMode::Lagrange))
-        .unwrap();
-    verifier.finish().unwrap();
+    let akita = scheme.verifier(verifier_setup).unwrap();
+    let verify = |proof: &[u8]| -> Result<(E, E, u32), String> {
+        let verify_group =
+            PolynomialGroupClaims::new(point.clone(), vec![opening], &commitment).unwrap();
+        let verify_claims = OpeningClaims::from_groups(vec![verify_group]).unwrap();
+        let statement = GroupBatchStatement::new(selection, verify_claims).unwrap();
+        let mut verifier = VerifierTranscript::<H>::new(&protocol, session, proof);
+        assert_eq!(verifier.receive::<u32>().unwrap(), 7);
+        akita
+            .batched_verify(&mut verifier, statement, BasisMode::Lagrange)
+            .map_err(|error| error.to_string())?;
+        let challenge: E = verifier.challenge();
+        let echoed: E = verifier.receive().map_err(|error| error.to_string())?;
+        let suffix: u32 = verifier.receive().map_err(|error| error.to_string())?;
+        verifier.finish().map_err(|error| error.to_string())?;
+        Ok((challenge, echoed, suffix))
+    };
+    assert_eq!(verify(&proof), Ok((post_akita, post_akita, 0xC0FF_EE00)));
+    // A corrupted caller suffix leaves Akita's verification intact but is
+    // caught by the caller's own checks.
+    let mut corrupted = proof.clone();
+    *corrupted.last_mut().unwrap() ^= 1;
+    let (challenge, echoed, suffix) = verify(&corrupted).unwrap();
+    assert_eq!((challenge, echoed), (post_akita, post_akita));
+    assert_ne!(suffix, 0xC0FF_EE00);
+    let mut corrupted_echo = proof;
+    let echo_start = corrupted_echo.len() - 4 - <E as jolt_field::CanonicalBytes>::NUM_BYTES;
+    corrupted_echo[echo_start] ^= 1;
+    assert!(verify(&corrupted_echo).map_or(true, |(challenge, echoed, _)| echoed != challenge));
 }
 
 fn dense_fp128_roundtrip_inner() {
