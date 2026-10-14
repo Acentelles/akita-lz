@@ -49,3 +49,6 @@ pub(crate) use ring_switch_relation::RingSwitchRelationView;
 pub(crate) use stack::OperationCtx;
 
 pub(crate) use crate::opaque::CpuBackend;
+
+#[cfg(test)]
+mod cache_tests;
