@@ -496,5 +496,8 @@ where
 }
 
 #[cfg(test)]
+mod fold_tests;
+
+#[cfg(test)]
 #[path = "tests.rs"]
 mod tests;

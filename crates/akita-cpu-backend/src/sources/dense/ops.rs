@@ -47,7 +47,7 @@ where
         };
         let rows = if let Some((planes, basis)) = self.digit_planes_for::<D>(num_digits, log_basis)
         {
-            element_partitioned_decompose_fold::<F, _, D>(
+            element_partitioned_decompose_fold::<_, D>(
                 &CachedDigits::new(planes, num_digits, basis)?,
                 challenges,
                 chunk_ranges,
@@ -56,7 +56,7 @@ where
             )?
         } else {
             let params = BalancedDecomposePow2Params::new(num_digits, log_basis);
-            element_partitioned_decompose_fold::<F, _, D>(
+            element_partitioned_decompose_fold::<_, D>(
                 &LiveRings {
                     coeffs,
                     params: &params,

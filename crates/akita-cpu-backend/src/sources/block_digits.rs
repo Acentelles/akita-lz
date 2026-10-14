@@ -46,11 +46,7 @@ pub(crate) trait RingValueSource<F: Field, const D: usize>: Sync {
         Self: 'a;
 
     fn num_rings(&self) -> usize;
-    fn values(&self, _ring: usize) -> Result<Self::Values<'_>, AkitaError> {
-        Err(AkitaError::InvalidInput(
-            "source does not supply ring values".into(),
-        ))
-    }
+    fn values(&self, ring: usize) -> Result<Self::Values<'_>, AkitaError>;
 }
 
 impl<F: Field, const D: usize> RingValueSource<F, D> for &[CyclotomicRing<F, D>] {
@@ -71,45 +67,50 @@ impl<F: Field, const D: usize> RingValueSource<F, D> for &[CyclotomicRing<F, D>]
     }
 }
 
-pub(crate) trait BlockDigits<F: Field, const D: usize>: RingValueSource<F, D> {
+pub(crate) trait BlockDigits<const D: usize>: Sync {
     type Scratch: Send;
     type Planes<'a>: DigitPlaneSet<D>
     where
         Self: 'a;
 
+    fn num_rings(&self) -> usize;
     fn scratch(&self, shape: DigitShape, max_rings: usize) -> Self::Scratch;
     fn digit_abs_bound(&self, shape: DigitShape) -> u64;
     fn i8_digit_span(&self, shape: DigitShape) -> Option<I8DigitSpan>;
     fn digit_planes<'a>(
         &'a self,
-        _ring: usize,
-        _shape: DigitShape,
-        _s: &'a mut Self::Scratch,
-    ) -> Result<Self::Planes<'a>, AkitaError> {
-        Err(AkitaError::InvalidInput(
-            "source does not supply digit planes".into(),
-        ))
-    }
+        ring: usize,
+        shape: DigitShape,
+        s: &'a mut Self::Scratch,
+    ) -> Result<Self::Planes<'a>, AkitaError>;
+}
+
+pub(crate) trait I8Rows<const D: usize>: Sync {
+    type I8Scratch: Send;
+
+    fn i8_scratch(&self, shape: DigitShape, max_rings: usize) -> Self::I8Scratch;
+    fn digit_abs_bound(&self, shape: DigitShape) -> u64;
+    /// `rings` is local to the block; `block_start` locates it in a flat source.
     fn i8_rows<'a>(
         &'a self,
-        _rings: Range<usize>,
-        _shape: DigitShape,
-        _s: &'a mut Self::Scratch,
-    ) -> Result<&'a [[i8; D]], AkitaError> {
-        Err(AkitaError::InvalidInput(
-            "source does not supply i8 rows".into(),
-        ))
-    }
+        block_index: usize,
+        block_start: usize,
+        rings: Range<usize>,
+        shape: DigitShape,
+        s: &'a mut Self::I8Scratch,
+    ) -> Result<&'a [[i8; D]], AkitaError>;
+}
+
+pub(crate) trait I16Rows<const D: usize>: Sync {
+    type I16Scratch: Send;
+
+    fn i16_scratch(&self, shape: DigitShape, max_rings: usize) -> Self::I16Scratch;
     fn i16_rows<'a>(
         &'a self,
-        _rings: Range<usize>,
-        _shape: DigitShape,
-        _s: &'a mut Self::Scratch,
-    ) -> Result<&'a [[i16; D]], AkitaError> {
-        Err(AkitaError::InvalidInput(
-            "source does not supply i16 rows".into(),
-        ))
-    }
+        rings: Range<usize>,
+        shape: DigitShape,
+        s: &'a mut Self::I16Scratch,
+    ) -> Result<&'a [[i16; D]], AkitaError>;
 }
 
 fn bounded_i8_digit_span(digit_abs_bound: u64) -> I8DigitSpan {
@@ -143,22 +144,15 @@ impl<'a, const D: usize> CachedDigits<'a, D> {
     }
 }
 
-impl<F: Field, const D: usize> RingValueSource<F, D> for CachedDigits<'_, D> {
-    type Values<'a>
-        = [i8; D]
-    where
-        Self: 'a;
-    fn num_rings(&self) -> usize {
-        self.num_rings
-    }
-}
-
-impl<F: Field, const D: usize> BlockDigits<F, D> for CachedDigits<'_, D> {
+impl<const D: usize> BlockDigits<D> for CachedDigits<'_, D> {
     type Scratch = ();
     type Planes<'a>
         = DigitPlanes<'a, D>
     where
         Self: 'a;
+    fn num_rings(&self) -> usize {
+        self.num_rings
+    }
     fn digit_abs_bound(&self, _shape: DigitShape) -> u64 {
         self.digit_abs_bound
     }
@@ -185,9 +179,9 @@ pub(crate) struct LiveRings<'a, F: Field + CanonicalEncoding, const D: usize> {
     pub(crate) basis: SignedDigitBasis,
 }
 
-pub(crate) struct LiveDigitScratch<const D: usize> {
-    i8: Vec<[i8; D]>,
-    i16: Vec<[i16; D]>,
+pub(crate) enum LiveDigitScratch<const D: usize> {
+    I8(Vec<[i8; D]>),
+    I16(Vec<[i16; D]>),
 }
 
 impl<F: Field + CanonicalEncoding, const D: usize> RingValueSource<F, D> for LiveRings<'_, F, D> {
@@ -203,12 +197,15 @@ impl<F: Field + CanonicalEncoding, const D: usize> RingValueSource<F, D> for Liv
     }
 }
 
-impl<F: Field + CanonicalEncoding, const D: usize> BlockDigits<F, D> for LiveRings<'_, F, D> {
+impl<F: Field + CanonicalEncoding, const D: usize> BlockDigits<D> for LiveRings<'_, F, D> {
     type Scratch = LiveDigitScratch<D>;
     type Planes<'a>
         = DigitPlanes<'a, D>
     where
         Self: 'a;
+    fn num_rings(&self) -> usize {
+        self.coeffs.len()
+    }
     fn digit_abs_bound(&self, _shape: DigitShape) -> u64 {
         self.basis.abs_bound
     }
@@ -223,63 +220,80 @@ impl<F: Field + CanonicalEncoding, const D: usize> BlockDigits<F, D> for LiveRin
     }
     fn scratch(&self, shape: DigitShape, max_rings: usize) -> Self::Scratch {
         let width = shape.num_digits * max_rings;
-        LiveDigitScratch {
-            i8: if matches!(self.basis.kernel, SignedDigitKernel::I8) {
-                vec![[0; D]; width]
-            } else {
-                Vec::new()
-            },
-            i16: vec![[0; D]; width],
+        match self.basis.kernel {
+            SignedDigitKernel::I8 => LiveDigitScratch::I8(vec![[0; D]; width]),
+            SignedDigitKernel::I16 => LiveDigitScratch::I16(vec![[0; D]; width]),
         }
     }
+
     fn digit_planes<'a>(
         &'a self,
         ring: usize,
         shape: DigitShape,
         s: &'a mut Self::Scratch,
     ) -> Result<Self::Planes<'a>, AkitaError> {
-        match self.basis.kernel {
-            SignedDigitKernel::I8 => {
-                let planes = &mut s.i8[..shape.num_digits];
+        match s {
+            LiveDigitScratch::I8(buffer) => {
+                let planes = &mut buffer[..shape.num_digits];
                 self.coeffs[ring].balanced_decompose_pow2_i8_into_with_params(planes, self.params);
                 Ok(DigitPlanes::I8(planes))
             }
-            SignedDigitKernel::I16 => {
-                let planes = &mut s.i16[..shape.num_digits];
+            LiveDigitScratch::I16(buffer) => {
+                let planes = &mut buffer[..shape.num_digits];
                 self.coeffs[ring].balanced_decompose_pow2_i16_into(planes, self.params);
                 Ok(DigitPlanes::I16(planes))
             }
         }
     }
+}
+
+impl<F: Field + CanonicalEncoding, const D: usize> I8Rows<D> for LiveRings<'_, F, D> {
+    type I8Scratch = Vec<[i8; D]>;
+    fn i8_scratch(&self, shape: DigitShape, max_rings: usize) -> Self::I8Scratch {
+        vec![[0; D]; shape.num_digits * max_rings]
+    }
+    fn digit_abs_bound(&self, _shape: DigitShape) -> u64 {
+        self.basis.abs_bound
+    }
     fn i8_rows<'a>(
         &'a self,
+        _block_index: usize,
+        block_start: usize,
         rings: Range<usize>,
         shape: DigitShape,
-        s: &'a mut Self::Scratch,
+        s: &'a mut Self::I8Scratch,
     ) -> Result<&'a [[i8; D]], AkitaError> {
         let width = rings.len() * shape.num_digits;
-        for (ring, dst) in self.coeffs[rings]
+        for (ring, dst) in self.coeffs[block_start + rings.start..block_start + rings.end]
             .iter()
-            .zip(s.i8[..width].chunks_mut(shape.num_digits))
+            .zip(s[..width].chunks_mut(shape.num_digits))
         {
             ring.balanced_decompose_pow2_i8_into_with_params(dst, self.params);
         }
-        Ok(&s.i8[..width])
+        Ok(&s[..width])
+    }
+}
+
+impl<F: Field + CanonicalEncoding, const D: usize> I16Rows<D> for LiveRings<'_, F, D> {
+    type I16Scratch = Vec<[i16; D]>;
+    fn i16_scratch(&self, shape: DigitShape, max_rings: usize) -> Self::I16Scratch {
+        vec![[0; D]; shape.num_digits * max_rings]
     }
     fn i16_rows<'a>(
         &'a self,
         rings: Range<usize>,
         shape: DigitShape,
-        s: &'a mut Self::Scratch,
+        s: &'a mut Self::I16Scratch,
     ) -> Result<&'a [[i16; D]], AkitaError> {
-        s.i16.fill([0; D]);
+        let width = rings.len() * shape.num_digits;
         for (ring, dst) in self.coeffs[rings]
             .iter()
-            .zip(s.i16.chunks_mut(shape.num_digits))
+            .zip(s[..width].chunks_mut(shape.num_digits))
         {
             ring.balanced_decompose_pow2_i16_into(dst, self.params);
         }
-        Ok(&s.i16)
+        s[width..].fill([0; D]);
+        Ok(s)
     }
 }
 
@@ -289,22 +303,15 @@ pub(crate) struct PackedDigits<'a> {
     pub(crate) digit_abs_bound: u64,
 }
 
-impl<F: Field, const D: usize> RingValueSource<F, D> for PackedDigits<'_> {
-    type Values<'a>
-        = [i8; D]
-    where
-        Self: 'a;
-    fn num_rings(&self) -> usize {
-        self.num_rings
-    }
-}
-
-impl<F: Field, const D: usize> BlockDigits<F, D> for PackedDigits<'_> {
+impl<const D: usize> BlockDigits<D> for PackedDigits<'_> {
     type Scratch = [i8; D];
     type Planes<'a>
         = &'a [i8; D]
     where
         Self: 'a;
+    fn num_rings(&self) -> usize {
+        self.num_rings
+    }
     fn digit_abs_bound(&self, _shape: DigitShape) -> u64 {
         self.digit_abs_bound
     }
@@ -331,54 +338,21 @@ pub(crate) struct DigitRows<'a, const D: usize> {
     pub(crate) digit_abs_bound: u64,
 }
 
-impl<F: Field, const D: usize> RingValueSource<F, D> for DigitRows<'_, D> {
-    type Values<'a>
-        = [i8; D]
-    where
-        Self: 'a;
-    fn num_rings(&self) -> usize {
-        self.blocks.iter().map(|block| block.len()).sum()
-    }
-}
-
-impl<F: Field, const D: usize> BlockDigits<F, D> for DigitRows<'_, D> {
-    type Scratch = Vec<[i8; D]>;
-    type Planes<'a>
-        = DigitPlanes<'a, D>
-    where
-        Self: 'a;
-    fn scratch(&self, shape: DigitShape, max_rings: usize) -> Self::Scratch {
-        vec![[0; D]; shape.num_digits * max_rings]
-    }
+impl<const D: usize> I8Rows<D> for DigitRows<'_, D> {
+    type I8Scratch = ();
+    fn i8_scratch(&self, _shape: DigitShape, _max_rings: usize) {}
     fn digit_abs_bound(&self, _shape: DigitShape) -> u64 {
         self.digit_abs_bound
     }
-    fn i8_digit_span(&self, _shape: DigitShape) -> Option<I8DigitSpan> {
-        Some(bounded_i8_digit_span(self.digit_abs_bound))
-    }
     fn i8_rows<'a>(
         &'a self,
+        block_index: usize,
+        _block_start: usize,
         rings: Range<usize>,
         _shape: DigitShape,
-        s: &'a mut Self::Scratch,
+        _s: &'a mut (),
     ) -> Result<&'a [[i8; D]], AkitaError> {
-        let mut offset = 0;
-        let mut copied = 0;
-        for block in self.blocks {
-            let end = offset + block.len();
-            if rings.start >= offset && rings.end <= end {
-                return Ok(&block[rings.start - offset..rings.end - offset]);
-            }
-            let start = rings.start.max(offset);
-            let stop = rings.end.min(end);
-            if start < stop {
-                let len = stop - start;
-                s[copied..copied + len].copy_from_slice(&block[start - offset..stop - offset]);
-                copied += len;
-            }
-            offset = end;
-        }
-        Ok(&s[..copied])
+        Ok(&self.blocks[block_index][rings])
     }
 }
 /// A ring's digit planes, independent of how the source supplied them.

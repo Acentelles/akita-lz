@@ -96,7 +96,7 @@ pub(super) fn accumulate_i8_columns<
 /// Block-parallel fast path for small `n_a` and many blocks.
 pub(super) fn mat_vec_mul_digits_i8_block_parallel<
     F: Field + CanonicalEncoding,
-    S: BlockDigits<F, D>,
+    S: I8Rows<D>,
     W: PrimeWidth,
     const K: usize,
     const D: usize,
@@ -129,7 +129,7 @@ pub(super) fn mat_vec_mul_digits_i8_block_parallel<
 #[allow(clippy::too_many_arguments)]
 pub(super) fn mat_vec_mul_digits_i8_block_parallel_chunked<
     F: Field + CanonicalEncoding,
-    S: BlockDigits<F, D>,
+    S: I8Rows<D>,
     W: PrimeWidth,
     const K: usize,
     const D: usize,
@@ -146,41 +146,51 @@ pub(super) fn mat_vec_mul_digits_i8_block_parallel_chunked<
 ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
     let n_a = ntt_mat.len();
     let lut = DigitMontLut::<W, K>::new_with_digit_bound(params, digit_bound);
+    // A ring batch keeps full lazy-dot groups intact without tying decode
+    // scratch to the CRT chunk width.
+    let decode_rings = params.pointwise_dot_batch_size();
     let init = || {
         (
-            source.scratch(shape, chunk_width.div_ceil(shape.num_digits) + 1),
+            source.i8_scratch(shape, decode_rings),
             I8ColumnScratch::new(),
             vec![CyclotomicCrtNtt::<W, K, D>::zero(); n_a],
         )
     };
     let apply = |(digits, scratch, accs): &mut (
-        S::Scratch,
+        S::I8Scratch,
         I8ColumnScratch<W, K, D>,
         Vec<CyclotomicCrtNtt<W, K, D>>,
     ),
-                 block: &Range<usize>| {
+                 (block_index, block): (usize, &Range<usize>)| {
         let live_width = (block.len() * shape.num_digits).min(inner_width);
         let mut out = vec![CyclotomicRing::<F, D>::zero(); n_a];
         for start in (0..live_width).step_by(chunk_width) {
             let end = (start + chunk_width).min(live_width);
-            let ring_start = start / shape.num_digits;
-            let ring_end = end.div_ceil(shape.num_digits);
-            let offset = start % shape.num_digits;
-            let rows = source.i8_rows(
-                block.start + ring_start..block.start + ring_end,
-                shape,
-                digits,
-            )?;
             accs.fill(CyclotomicCrtNtt::zero());
-            accumulate_i8_columns::<W, K, D, CHECK_ZERO>(
-                accs,
-                ntt_mat,
-                start,
-                &rows[offset..offset + end - start],
-                params,
-                &lut,
-                scratch,
-            );
+            let mut column = start;
+            while column < end {
+                let ring_start = column / shape.num_digits;
+                let ring_end = (ring_start + decode_rings).min(end.div_ceil(shape.num_digits));
+                let batch_end = (ring_end * shape.num_digits).min(end);
+                let offset = column % shape.num_digits;
+                let rows = source.i8_rows(
+                    block_index,
+                    block.start,
+                    ring_start..ring_end,
+                    shape,
+                    digits,
+                )?;
+                accumulate_i8_columns::<W, K, D, CHECK_ZERO>(
+                    accs,
+                    ntt_mat,
+                    column,
+                    &rows[offset..offset + batch_end - column],
+                    params,
+                    &lut,
+                    scratch,
+                );
+                column = batch_end;
+            }
             for (dst, acc) in out.iter_mut().zip(accs.iter()) {
                 *dst += acc.to_ring(params);
             }
@@ -189,13 +199,18 @@ pub(super) fn mat_vec_mul_digits_i8_block_parallel_chunked<
     };
     #[cfg(feature = "parallel")]
     {
-        blocks.par_iter().map_init(init, apply).collect()
+        blocks
+            .par_iter()
+            .enumerate()
+            .map_init(init, apply)
+            .collect()
     }
     #[cfg(not(feature = "parallel"))]
     {
         let mut scratch = init();
         blocks
             .iter()
+            .enumerate()
             .map(|block| apply(&mut scratch, block))
             .collect()
     }
@@ -203,7 +218,7 @@ pub(super) fn mat_vec_mul_digits_i8_block_parallel_chunked<
 
 pub(super) fn mat_vec_mul_blocks_i8_single_row_with_params<
     F: Field + CanonicalEncoding,
-    S: BlockDigits<F, D>,
+    S: I8Rows<D>,
     W: PrimeWidth,
     const K: usize,
     const D: usize,
@@ -250,37 +265,48 @@ pub(super) fn mat_vec_mul_blocks_i8_single_row_with_params<
         );
     }
     let lut = DigitMontLut::<W, K>::new_with_digit_bound(params, digit_bound);
+    let decode_rings = params.pointwise_dot_batch_size();
     blocks
         .iter()
-        .map(|block| {
+        .enumerate()
+        .map(|(block_index, block)| {
             let live_width = inner_width.min(block.len() * shape.num_digits);
             let (out, _, _) = cfg_try_fold_reduce!(
                 0..live_width.div_ceil(chunk_width),
                 || (
                     CyclotomicRing::<F, D>::zero(),
-                    source.scratch(shape, chunk_width.div_ceil(shape.num_digits) + 1),
+                    source.i8_scratch(shape, decode_rings),
                     I8ColumnScratch::new()
                 ),
                 |(mut out, mut digits, mut scratch), chunk_idx| {
                     let start = chunk_idx * chunk_width;
                     let end = (start + chunk_width).min(live_width);
-                    let offset = start % shape.num_digits;
-                    let rows = source.i8_rows(
-                        block.start + start / shape.num_digits
-                            ..block.start + end.div_ceil(shape.num_digits),
-                        shape,
-                        &mut digits,
-                    )?;
                     let mut acc = CyclotomicCrtNtt::<W, K, D>::zero();
-                    accumulate_i8_columns::<W, K, D, false>(
-                        std::slice::from_mut(&mut acc),
-                        ntt_mat,
-                        start,
-                        &rows[offset..offset + end - start],
-                        params,
-                        &lut,
-                        &mut scratch,
-                    );
+                    let mut column = start;
+                    while column < end {
+                        let ring_start = column / shape.num_digits;
+                        let ring_end =
+                            (ring_start + decode_rings).min(end.div_ceil(shape.num_digits));
+                        let batch_end = (ring_end * shape.num_digits).min(end);
+                        let offset = column % shape.num_digits;
+                        let rows = source.i8_rows(
+                            block_index,
+                            block.start,
+                            ring_start..ring_end,
+                            shape,
+                            &mut digits,
+                        )?;
+                        accumulate_i8_columns::<W, K, D, false>(
+                            std::slice::from_mut(&mut acc),
+                            ntt_mat,
+                            column,
+                            &rows[offset..offset + batch_end - column],
+                            params,
+                            &lut,
+                            &mut scratch,
+                        );
+                        column = batch_end;
+                    }
                     out += acc.to_ring(params);
                     Ok::<_, AkitaError>((out, digits, scratch))
                 },

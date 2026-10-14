@@ -303,7 +303,7 @@ enum FoldAccumulator<'a, const D: usize> {
 }
 
 impl<const D: usize> FoldAccumulator<'_, D> {
-    fn accumulate<F: Field, S: BlockDigits<F, D>>(
+    fn accumulate<S: BlockDigits<D>>(
         &mut self,
         source: &S,
         scratch: &mut S::Scratch,
@@ -409,7 +409,7 @@ impl<const D: usize> FoldAccumulator<'_, D> {
     }
 }
 
-pub(crate) fn element_partitioned_decompose_fold<F: Field, S: BlockDigits<F, D>, const D: usize>(
+pub(crate) fn element_partitioned_decompose_fold<S: BlockDigits<D>, const D: usize>(
     source: &S,
     challenges: &[SparseChallenge],
     chunk_ranges: &[Range<usize>],
@@ -480,7 +480,7 @@ pub(crate) fn element_partitioned_decompose_fold<F: Field, S: BlockDigits<F, D>,
                             continue;
                         }
                         let end = (prepared.block_start + elem_end).min(ring_end);
-                        accumulator.accumulate::<F, S>(
+                        accumulator.accumulate::<S>(
                             source,
                             &mut digit_scratch,
                             start..end,
@@ -504,7 +504,7 @@ pub fn balanced_ring_decompose_fold_partitioned<F: Field + CanonicalEncoding, co
     params: &BalancedDecomposePow2Params<F>,
 ) -> Result<Vec<[i32; D]>, AkitaError> {
     let basis = SignedDigitBasis::new(params.log_basis())?;
-    element_partitioned_decompose_fold::<F, _, D>(
+    element_partitioned_decompose_fold::<_, D>(
         &LiveRings {
             coeffs,
             params,
@@ -534,7 +534,7 @@ pub(crate) fn packed_tight_digit_fold_partitioned<const D: usize>(
             .negative_abs_max()
             .max(digits.bounds().positive_max()),
     );
-    element_partitioned_decompose_fold::<jolt_field::Prime32Offset99, _, D>(
+    element_partitioned_decompose_fold::<_, D>(
         &PackedDigits {
             digits,
             num_rings,

@@ -1,5 +1,5 @@
 use super::CpuPreparedSetup;
-use crate::sources::block_digits::{BlockDigits, DigitShape};
+use crate::sources::block_digits::{DigitShape, I16Rows};
 use crate::sources::packed_digits::PackedSignedDigitView;
 use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
 use akita_algebra::CyclotomicRing;
@@ -23,7 +23,7 @@ pub(super) fn commit_rows_i16<F, S, const D: usize>(
 ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError>
 where
     F: Field + CanonicalEncoding,
-    S: BlockDigits<F, D>,
+    S: I16Rows<D>,
 {
     let rhs_abs_bound = balanced_signed_digit_abs_bound(shape.log_basis)
         .ok_or_else(|| AkitaError::InvalidSetup("invalid signed digit basis".into()))?;
@@ -38,11 +38,11 @@ where
             },
         )?,
         |ntt| {
-            let fill = |scratch: &mut S::Scratch, rings: &Range<usize>| {
+            let fill = |scratch: &mut S::I16Scratch, rings: &Range<usize>| {
                 let rhs = source.i16_rows(rings.clone(), shape, scratch)?;
                 ntt.mat_vec_i16::<F>(shape.log_basis, n_a, rhs)
             };
-            let scratch = || source.scratch(shape, row_width / shape.num_digits);
+            let scratch = || source.i16_scratch(shape, row_width / shape.num_digits);
             #[cfg(feature = "parallel")]
             {
                 cfg_iter!(block_ranges).map_init(scratch, fill).collect()

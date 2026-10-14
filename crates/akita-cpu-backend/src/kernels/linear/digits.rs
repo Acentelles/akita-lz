@@ -40,7 +40,7 @@ pub(super) fn mat_vec_mul_digits_i8_with_params<
 #[allow(clippy::too_many_arguments)]
 pub(super) fn mat_vec_mul_blocks_i8_with_params_impl<
     F: Field + CanonicalEncoding,
-    S: BlockDigits<F, D>,
+    S: I8Rows<D>,
     W: PrimeWidth,
     const K: usize,
     const D: usize,
@@ -118,7 +118,7 @@ pub(super) fn mat_vec_mul_blocks_i8_with_params_impl<
         params,
         || {
             (
-                source.scratch(shape, max_rings),
+                source.i8_scratch(shape, max_rings),
                 vec![
                     vec![CyclotomicCrtNtt::<W, K, D>::zero(); batch.max(shape.num_digits)];
                     num_live_blocks
@@ -141,7 +141,9 @@ pub(super) fn mat_vec_mul_blocks_i8_with_params_impl<
                     let ring_end = batch_end.div_ceil(shape.num_digits).min(block.len());
                     let offset = batch_start % shape.num_digits;
                     let rows = source.i8_rows(
-                        block.start + ring_start..block.start + ring_end,
+                        block_idx,
+                        block.start,
+                        ring_start..ring_end,
                         shape,
                         scratch,
                     )?;

@@ -73,7 +73,7 @@ pub(crate) fn mat_vec_mul_ntt_i8<F: Field + CanonicalEncoding, const D: usize>(
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn mat_vec_mul_ntt_blocks_i8<
     F: Field + CanonicalEncoding,
-    S: BlockDigits<F, D>,
+    S: I8Rows<D>,
     const D: usize,
 >(
     slot: &PreparedNttCache<D>,
@@ -103,7 +103,7 @@ pub(crate) fn mat_vec_mul_ntt_blocks_i8<
         ($zero:literal) => {{
             fn driver<
                 F: Field + CanonicalEncoding,
-                S: BlockDigits<F, D>,
+                S: I8Rows<D>,
                 W: PrimeWidth,
                 const K: usize,
                 const D: usize,

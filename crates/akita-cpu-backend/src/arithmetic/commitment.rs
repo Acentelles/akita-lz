@@ -14,7 +14,7 @@ use crate::kernels::linear::{
 };
 use crate::opaque::CommitInnerPlan;
 use crate::opaque::{commit_onehot_sources, OneHotSource};
-use crate::sources::block_digits::{BlockDigits, DigitShape, LiveRings};
+use crate::sources::block_digits::{DigitShape, I16Rows, I8Rows, LiveRings};
 use crate::sources::packed_digits::PackedSignedDigitView;
 use crate::sources::poly_helpers::SignedDigitBasis;
 use crate::validation::signed_digit_kernel_for_setup;
@@ -233,7 +233,7 @@ impl<F: Field, E> CpuBackend<F, E> {
     ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError>
     where
         F: Field + CanonicalEncoding,
-        S: BlockDigits<F, D>,
+        S: I8Rows<D> + I16Rows<D>,
     {
         let use_exact_ifma52 = signed_digit_kernel == SignedDigitKernel::I8
             && dense_i8_exact_ifma52_preferred::<F, D>(row_width, shape.log_basis)?;
