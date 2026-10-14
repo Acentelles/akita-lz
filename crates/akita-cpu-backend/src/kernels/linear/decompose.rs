@@ -1,26 +1,6 @@
 use super::*;
 use akita_types::DigitBlocks;
 
-/// Convert a field element to a centered signed byte when it fits.
-#[inline(always)]
-pub(crate) fn try_centered_i8<F: Field + CanonicalEncoding>(
-    coeff: F,
-    q: u128,
-    half_q: u128,
-) -> Option<i8> {
-    let canonical = coeff.to_u128_checked()?;
-    let centered = if canonical > half_q {
-        -((q - canonical) as i128)
-    } else {
-        canonical as i128
-    };
-    if (i8::MIN as i128..=i8::MAX as i128).contains(&centered) {
-        Some(centered as i8)
-    } else {
-        None
-    }
-}
-
 /// Decompose a block of ring elements into signed byte digit planes.
 pub(crate) fn decompose_block_i8<F: Field + CanonicalEncoding, const D: usize>(
     block: &[CyclotomicRing<F, D>],

@@ -1,18 +1,16 @@
 use super::exact_i16::{
-    dense_commit_cached_digit_rows as dense_commit_cached_digit_rows_i16,
     dense_commit_rows as dense_commit_rows_i16,
     recursive_packed_witness_commit_rows as recursive_packed_witness_commit_rows_i16,
 };
 use super::{CpuBackend, CpuPreparedSetup};
 use crate::commitment::{
     CommitSourceDescriptor, DenseCoefficientSource, DenseRepresentation, DenseType,
-    OneHotIndexWidth, PolynomialRepresentation, PolynomialType, PredecomposedDigitPlanes,
-    ResolvedCommitSource, UnitPositionSlice,
+    OneHotIndexWidth, PolynomialRepresentation, PolynomialType, ResolvedCommitSource,
+    UnitPositionSlice,
 };
 use crate::kernels::linear::{
-    mat_vec_mul_ntt_dense_digits_i8, mat_vec_mul_ntt_i8, mat_vec_mul_ntt_i8_dense,
-    mat_vec_mul_ntt_i8_dense_single_row, mat_vec_mul_ntt_packed_digits_i8,
-    mat_vec_mul_ntt_packed_raw_i8,
+    mat_vec_mul_ntt_i8, mat_vec_mul_ntt_i8_dense, mat_vec_mul_ntt_i8_dense_single_row,
+    mat_vec_mul_ntt_packed_digits_i8, mat_vec_mul_ntt_packed_raw_i8,
 };
 use crate::opaque::plans::DenseCommitInput;
 use crate::opaque::CommitInnerPlan;
@@ -106,22 +104,6 @@ impl<F: Field, E> CpuBackend<F, E> {
                     )?)
                 })
                 .collect(),
-            Some(PolynomialType::Dense(DenseType::PredecomposedDigits)) => sources
-                .iter()
-                .map(|source| {
-                    let Some(PolynomialRepresentation::Dense(
-                        DenseRepresentation::PredecomposedDigits(planes),
-                    )) = source.representation()
-                    else {
-                        return Err(AkitaError::Internal(
-                            "compiled dense-digit group contains another representation".into(),
-                        ));
-                    };
-                    crate::typed_inner_rows(
-                        self.predecomposed_dense_commit_rows::<D>(prepared, planes, plan)?,
-                    )
-                })
-                .collect(),
             Some(PolynomialType::ShortNorm(_)) => sources
                 .iter()
                 .map(|source| {
@@ -153,51 +135,6 @@ impl<F: Field, E> CpuBackend<F, E> {
                 "CPU standard inner stage cannot execute an external source path".into(),
             )),
         }
-    }
-
-    fn predecomposed_dense_commit_rows<const D: usize>(
-        &self,
-        prepared: &CpuPreparedSetup<F>,
-        planes: &PredecomposedDigitPlanes<'_>,
-        plan: CommitInnerPlan,
-    ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError>
-    where
-        F: Field + CanonicalEncoding,
-    {
-        if planes.ring_dimension != D
-            || planes.num_digits != plan.num_digits_inner
-            || planes.log_basis != plan.log_basis_inner
-        {
-            return Err(AkitaError::Internal(
-                "predecomposed dense planes disagree with the inner stage plan".into(),
-            ));
-        }
-        let (digit_planes, remainder) = planes.bytes.as_chunks::<D>();
-        if !remainder.is_empty() {
-            return Err(AkitaError::Internal(format!(
-                "predecomposed dense ring remainder length: expected {D}, actual {}",
-                remainder.len(),
-            )));
-        }
-        let blocks = dense_digit_block_slices(
-            digit_planes,
-            planes.logical_ring_count,
-            plan.num_positions_per_block,
-            plan.num_digits_inner,
-        );
-        if blocks.len() != plan.num_live_blocks {
-            return Err(AkitaError::Internal(
-                "predecomposed dense block count disagrees with the inner stage plan".into(),
-            ));
-        }
-        self.dense_commit_rows(
-            prepared,
-            plan.n_a,
-            DenseCommitInput::CachedDigits {
-                digit_block_slices: blocks,
-                log_basis_inner: plan.log_basis_inner,
-            },
-        )
     }
 
     pub(crate) fn dense_coefficient_commit_rows<const D: usize>(
@@ -265,104 +202,59 @@ impl<F: Field, E> CpuBackend<F, E> {
     where
         F: Field + CanonicalEncoding,
     {
-        match input {
-            DenseCommitInput::CachedDigits {
-                digit_block_slices,
-                log_basis_inner,
-            } => {
-                let row_width = digit_block_slices.first().map_or(0, |digits| digits.len());
-                if dense_i8_exact_ifma52_preferred::<F, D>(row_width, log_basis_inner)? {
-                    return dense_commit_cached_digit_rows_i16(
-                        prepared,
-                        n_a,
-                        row_width,
-                        &digit_block_slices,
-                        log_basis_inner,
-                    );
-                }
-                prepared.with_shared_ntt::<D, _>(
-                    NttCacheKey::from_matrix_shape(
-                        D,
-                        n_a,
-                        row_width,
-                        NttTransformDomain::Negacyclic,
-                    )?,
-                    |ntt| {
-                        mat_vec_mul_ntt_dense_digits_i8(
-                            ntt,
-                            n_a,
-                            row_width,
-                            &digit_block_slices,
-                            log_basis_inner,
-                        )
-                    },
-                )
-            }
-            DenseCommitInput::CoeffBlocks {
-                block_slices,
+        let DenseCommitInput::CoeffBlocks {
+            block_slices,
+            num_digits_inner,
+            log_basis_inner,
+        } = input;
+        let row_width = block_slices.first().map_or(Ok(0usize), |block| {
+            block.len().checked_mul(num_digits_inner).ok_or_else(|| {
+                AkitaError::InvalidSetup("dense coefficient row width overflow".into())
+            })
+        })?;
+        let signed_digit_kernel =
+            signed_digit_kernel_for_setup(log_basis_inner, "for dense commitment")?;
+        let use_exact_ifma52 = signed_digit_kernel == SignedDigitKernel::I8
+            && dense_i8_exact_ifma52_preferred::<F, D>(row_width, log_basis_inner)?;
+        if signed_digit_kernel == SignedDigitKernel::I16 || use_exact_ifma52 {
+            dense_commit_rows_i16(
+                prepared,
+                n_a,
+                row_width,
+                &block_slices,
                 num_digits_inner,
                 log_basis_inner,
-            } => {
-                let row_width = block_slices.first().map_or(Ok(0usize), |block| {
-                    block.len().checked_mul(num_digits_inner).ok_or_else(|| {
-                        AkitaError::InvalidSetup("dense coefficient row width overflow".into())
-                    })
-                })?;
-                let signed_digit_kernel =
-                    signed_digit_kernel_for_setup(log_basis_inner, "for dense commitment")?;
-                let use_exact_ifma52 = signed_digit_kernel == SignedDigitKernel::I8
-                    && dense_i8_exact_ifma52_preferred::<F, D>(row_width, log_basis_inner)?;
-                if signed_digit_kernel == SignedDigitKernel::I16 || use_exact_ifma52 {
-                    dense_commit_rows_i16(
-                        prepared,
+            )
+        } else if n_a == 1 {
+            prepared.with_shared_ntt::<D, _>(
+                NttCacheKey::from_matrix_shape(D, 1, row_width, NttTransformDomain::Negacyclic)?,
+                |ntt| {
+                    Ok(mat_vec_mul_ntt_i8_dense_single_row(
+                        ntt,
+                        row_width,
+                        &block_slices,
+                        num_digits_inner,
+                        log_basis_inner,
+                    )?
+                    .into_iter()
+                    .map(|ring| vec![ring])
+                    .collect())
+                },
+            )
+        } else {
+            prepared.with_shared_ntt::<D, _>(
+                NttCacheKey::from_matrix_shape(D, n_a, row_width, NttTransformDomain::Negacyclic)?,
+                |ntt| {
+                    mat_vec_mul_ntt_i8_dense(
+                        ntt,
                         n_a,
                         row_width,
                         &block_slices,
                         num_digits_inner,
                         log_basis_inner,
                     )
-                } else if n_a == 1 {
-                    prepared.with_shared_ntt::<D, _>(
-                        NttCacheKey::from_matrix_shape(
-                            D,
-                            1,
-                            row_width,
-                            NttTransformDomain::Negacyclic,
-                        )?,
-                        |ntt| {
-                            Ok(mat_vec_mul_ntt_i8_dense_single_row(
-                                ntt,
-                                row_width,
-                                &block_slices,
-                                num_digits_inner,
-                                log_basis_inner,
-                            )?
-                            .into_iter()
-                            .map(|ring| vec![ring])
-                            .collect())
-                        },
-                    )
-                } else {
-                    prepared.with_shared_ntt::<D, _>(
-                        NttCacheKey::from_matrix_shape(
-                            D,
-                            n_a,
-                            row_width,
-                            NttTransformDomain::Negacyclic,
-                        )?,
-                        |ntt| {
-                            mat_vec_mul_ntt_i8_dense(
-                                ntt,
-                                n_a,
-                                row_width,
-                                &block_slices,
-                                num_digits_inner,
-                                log_basis_inner,
-                            )
-                        },
-                    )
-                }
-            }
+                },
+            )
         }
     }
 
@@ -505,24 +397,6 @@ pub(crate) fn dense_coefficient_block_slices<const D: usize, F: Field>(
     num_positions_per_block: usize,
 ) -> Vec<&[CyclotomicRing<F, D>]> {
     rings.chunks(num_positions_per_block).collect()
-}
-
-pub(crate) fn dense_digit_block_slices<const D: usize>(
-    digit_planes: &[[i8; D]],
-    num_rings: usize,
-    num_positions_per_block: usize,
-    num_digits: usize,
-) -> Vec<&[[i8; D]]> {
-    let num_live_blocks = num_rings.div_ceil(num_positions_per_block);
-    (0..num_live_blocks)
-        .map(|block_idx| {
-            let ring_start = block_idx * num_positions_per_block;
-            let ring_end = (ring_start + num_positions_per_block).min(num_rings);
-            let digit_start = ring_start * num_digits;
-            let digit_end = ring_end * num_digits;
-            &digit_planes[digit_start..digit_end]
-        })
-        .collect()
 }
 
 fn dense_i8_exact_ifma52_preferred<F: Field + CanonicalEncoding, const D: usize>(

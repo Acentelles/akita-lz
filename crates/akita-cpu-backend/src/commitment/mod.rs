@@ -49,8 +49,8 @@ pub(crate) use resources::{
 
 pub(crate) use source::{
     compile_commitment_request, CompiledCommitmentRequest, DenseCoefficientSource,
-    DenseRepresentation, DenseType, OneHotIndexWidth, PolynomialType, PredecomposedDigitPlanes,
-    ResolvedCommitSource, UnitPositionSlice,
+    DenseRepresentation, DenseType, OneHotIndexWidth, PolynomialType, ResolvedCommitSource,
+    UnitPositionSlice,
 };
 
 pub use external::{

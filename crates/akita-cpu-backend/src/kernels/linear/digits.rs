@@ -14,20 +14,6 @@ pub(super) fn mat_vec_mul_digits_i8_with_params<
     mat_vec_mul_digits_i8_with_params_impl::<F, W, K, D, true>(ntt_mat, blocks, log_basis, params)
 }
 
-pub(super) fn mat_vec_mul_dense_digits_i8_with_params<
-    F: Field + CanonicalEncoding,
-    W: PrimeWidth,
-    const K: usize,
-    const D: usize,
->(
-    ntt_mat: &[&[CyclotomicCrtNtt<W, K, D>]],
-    blocks: &[&[[i8; D]]],
-    log_basis: u32,
-    params: &CrtNttParamSet<W, K, D>,
-) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
-    mat_vec_mul_digits_i8_with_params_impl::<F, W, K, D, false>(ntt_mat, blocks, log_basis, params)
-}
-
 pub(super) fn mat_vec_mul_digits_i8_with_params_impl<
     F: Field + CanonicalEncoding,
     W: PrimeWidth,

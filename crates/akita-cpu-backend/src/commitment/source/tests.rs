@@ -277,69 +277,6 @@ fn request_compilation_finishes_discovery_before_materialization() {
     assert_eq!(dense.materializations.load(Ordering::SeqCst), 1);
 }
 
-struct OfferingSource {
-    offers: Vec<PolynomialType>,
-}
-
-impl CommitmentSource<F> for OfferingSource {
-    fn descriptor(&self) -> Result<CommitSourceDescriptor, AkitaError> {
-        CommitSourceDescriptor::new(6, 64, 64, CommitSourceClass::Dense, "offering_source")
-    }
-
-    fn committed_centered_reach(
-        &self,
-        _modulus: u128,
-        _centering_threshold: u128,
-    ) -> Result<(u128, u128), AkitaError> {
-        Ok((0, 1))
-    }
-
-    fn available_polynomial_types(
-        &self,
-        _plan: &CommitInnerPlan,
-    ) -> Result<AvailablePolynomialTypes, AkitaError> {
-        AvailablePolynomialTypes::new(self.offers.clone())
-    }
-
-    fn represent_as(
-        &self,
-        _selected: PolynomialTypeSelection,
-        _plan: &CommitInnerPlan,
-    ) -> Result<PolynomialRepresentation<'_, F>, AkitaError> {
-        unreachable!("selection tests do not materialize")
-    }
-}
-
-#[test]
-fn request_selects_one_common_representation_for_the_group() {
-    let coefficients = PolynomialType::Dense(DenseType::Coefficients);
-    let digits = PolynomialType::Dense(DenseType::PredecomposedDigits);
-    let first = OfferingSource {
-        offers: vec![digits, coefficients],
-    };
-    let second = OfferingSource {
-        offers: vec![coefficients, digits],
-    };
-    let sources: [&dyn CommitmentSource<F>; 2] = [&first, &second];
-    struct TestBackend;
-    let backend = BackendKindId::of::<TestBackend>("test").unwrap();
-
-    let preferred = CommitmentRequestCapabilities::split::<()>(backend, vec![coefficients, digits]);
-    let compiled = compile_commitment_request(&plan(), &sources, &preferred).unwrap();
-    assert_eq!(
-        compiled.selected_polynomial_types().collect::<Vec<_>>(),
-        vec![coefficients]
-    );
-
-    let mut accept_any = CommitmentRequestCapabilities::split::<()>(backend, Vec::new());
-    accept_any.accept_any_standard_type();
-    let compiled = compile_commitment_request(&plan(), &sources, &accept_any).unwrap();
-    assert_eq!(
-        compiled.selected_polynomial_types().collect::<Vec<_>>(),
-        vec![digits]
-    );
-}
-
 #[test]
 fn onehot_materialization_rejects_positions_outside_the_chunk() {
     let source = CountingSource {

@@ -170,32 +170,6 @@ where
     )
 }
 
-/// Dense pre-decomposed digit mat-vec for the backend-owned digit cache.
-///
-/// The generic pre-decomposed digit kernel skips all-zero planes, which is
-/// profitable for sparse witnesses. Dense witnesses pay that scan on almost
-/// every plane, so this kernel uses the same math without the zero checks. The
-/// cache is produced by Akita's validated decomposer and does not need a second
-/// full scan at each commit.
-#[tracing::instrument(skip_all, name = "mat_vec_mul_ntt_dense_digits_i8")]
-pub(crate) fn mat_vec_mul_ntt_dense_digits_i8<F: Field + CanonicalEncoding, const D: usize>(
-    slot: &PreparedNttCache<D>,
-    num_rows: usize,
-    num_cols: usize,
-    blocks: &[&[[i8; D]]],
-    log_basis: u32,
-) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
-    validate_i8_log_basis(log_basis)?;
-    dispatch_slot!(
-        slot,
-        num_rows,
-        num_cols,
-        mat_vec_mul_dense_digits_i8_with_params,
-        blocks,
-        log_basis
-    )
-}
-
 /// Fold-major (block) direct-signed-i8 variant for recursive witnesses.
 ///
 /// The block/column layout and output shape match

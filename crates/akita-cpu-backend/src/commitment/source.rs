@@ -105,8 +105,6 @@ impl CommitSourceDescriptor {
 pub(crate) enum DenseType {
     /// Borrowed canonical field coefficients.
     Coefficients,
-    /// Borrowed exact-plan balanced digit planes.
-    PredecomposedDigits,
 }
 
 /// Packed short-norm source representation.
@@ -173,7 +171,7 @@ impl OneHotType {
 /// Akita-owned semantic polynomial types understood by commitment operations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum PolynomialType {
-    /// General dense coefficients or exact-plan cached digit planes.
+    /// General dense field coefficients.
     Dense(DenseType),
     /// Packed bounded signed coefficients.
     ShortNorm(ShortNormType),
@@ -253,22 +251,6 @@ pub(crate) trait DenseCoefficientSource<F: Field>: Send + Sync {
 pub(crate) enum DenseRepresentation<'a, F: Field> {
     /// Canonical field coefficients.
     Coefficients(&'a dyn DenseCoefficientSource<F>),
-    /// Exact-plan balanced digit planes in `[ring][digit][coefficient]` order.
-    PredecomposedDigits(PredecomposedDigitPlanes<'a>),
-}
-
-/// Checked borrowed dense digit planes.
-pub(crate) struct PredecomposedDigitPlanes<'a> {
-    /// Flat signed digits in `[ring][digit][coefficient]` order.
-    pub bytes: &'a [i8],
-    /// Ring dimension of each digit plane.
-    pub ring_dimension: usize,
-    /// Number of digit planes per ring.
-    pub num_digits: usize,
-    /// Logarithm of the balanced decomposition basis.
-    pub log_basis: u32,
-    /// Logical number of source rings.
-    pub logical_ring_count: usize,
 }
 
 /// Borrowed packed bounded signed coefficients.
@@ -447,7 +429,7 @@ pub(crate) struct OneHotRepresentation<'a> {
 /// Materialized representation selected by request compilation.
 #[allow(private_interfaces)]
 pub enum PolynomialRepresentation<'a, F: Field> {
-    /// Dense coefficients or predecomposed digit planes.
+    /// Dense field coefficients.
     Dense(DenseRepresentation<'a, F>),
     /// Packed bounded signed coefficients.
     ShortNorm(ShortNormRepresentation<'a>),
@@ -460,9 +442,6 @@ impl<F: Field> PolynomialRepresentation<'_, F> {
         match self {
             Self::Dense(DenseRepresentation::Coefficients(_)) => {
                 Ok(PolynomialType::Dense(DenseType::Coefficients))
-            }
-            Self::Dense(DenseRepresentation::PredecomposedDigits(_)) => {
-                Ok(PolynomialType::Dense(DenseType::PredecomposedDigits))
             }
             Self::ShortNorm(representation) => Ok(PolynomialType::ShortNorm(ShortNormType::new(
                 representation.signed_bit_width(),
