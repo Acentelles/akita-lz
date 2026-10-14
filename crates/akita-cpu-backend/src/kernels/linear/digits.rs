@@ -11,21 +11,6 @@ pub(super) fn mat_vec_mul_digits_i8_with_params<
     log_basis: u32,
     params: &CrtNttParamSet<W, K, D>,
 ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
-    mat_vec_mul_digits_i8_with_params_impl::<F, W, K, D, true>(ntt_mat, blocks, log_basis, params)
-}
-
-pub(super) fn mat_vec_mul_digits_i8_with_params_impl<
-    F: Field + CanonicalEncoding,
-    W: PrimeWidth,
-    const K: usize,
-    const D: usize,
-    const CHECK_ZERO: bool,
->(
-    ntt_mat: &[&[CyclotomicCrtNtt<W, K, D>]],
-    blocks: &[&[[i8; D]]],
-    log_basis: u32,
-    params: &CrtNttParamSet<W, K, D>,
-) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
     let num_live_blocks = blocks.len();
     if num_live_blocks == 0 {
         return Ok(vec![]);
@@ -61,22 +46,14 @@ pub(super) fn mat_vec_mul_digits_i8_with_params_impl<
         && inner_width == max_data_width
     {
         if inner_width <= safe_width {
-            return Ok(
-                mat_vec_mul_digits_i8_block_parallel::<F, W, K, D, CHECK_ZERO>(
-                    ntt_mat,
-                    blocks,
-                    digit_bound,
-                    params,
-                ),
-            );
+            return Ok(mat_vec_mul_digits_i8_block_parallel::<F, W, K, D>(
+                ntt_mat,
+                blocks,
+                digit_bound,
+                params,
+            ));
         }
-        return Ok(mat_vec_mul_digits_i8_block_parallel_chunked::<
-            F,
-            W,
-            K,
-            D,
-            CHECK_ZERO,
-        >(
+        return Ok(mat_vec_mul_digits_i8_block_parallel_chunked::<F, W, K, D>(
             ntt_mat,
             blocks,
             inner_width,
@@ -106,13 +83,12 @@ pub(super) fn mat_vec_mul_digits_i8_with_params_impl<
                     // Keep one matrix sub-tile hot while applying it to every
                     // right-hand side. Fall back to the sparse order below if
                     // any input can skip an all-zero plane.
-                    let has_zero_plane = CHECK_ZERO
-                        && blocks.iter().any(|block| {
-                            batch_start < block.len()
-                                && block[batch_start..batch_end.min(block.len())]
-                                    .iter()
-                                    .any(is_zero_plane)
-                        });
+                    let has_zero_plane = blocks.iter().any(|block| {
+                        batch_start < block.len()
+                            && block[batch_start..batch_end.min(block.len())]
+                                .iter()
+                                .any(is_zero_plane)
+                    });
                     if has_zero_plane {
                         for (block_idx, block) in blocks.iter().enumerate() {
                             let block_batch_end = batch_end.min(block.len());
@@ -163,7 +139,7 @@ pub(super) fn mat_vec_mul_digits_i8_with_params_impl<
                         }
                     }
                 }
-            } else if CHECK_ZERO {
+            } else {
                 for (block_idx, block) in blocks.iter().enumerate() {
                     if start >= block.len() {
                         continue;
@@ -174,22 +150,6 @@ pub(super) fn mat_vec_mul_digits_i8_with_params_impl<
                         if is_zero_plane(digit) {
                             continue;
                         }
-                        let col = start + i;
-                        ntt_d.assign_i8_with_lut(digit, params, &lut);
-                        for (acc, mat_row) in accs[block_idx].iter_mut().zip(ntt_mat.iter()) {
-                            accumulate_pointwise_product_into(acc, &mat_row[col], &ntt_d, params);
-                        }
-                    }
-                }
-            } else {
-                for block_idx in 0..num_live_blocks {
-                    let block = blocks[block_idx];
-                    if start >= block.len() {
-                        continue;
-                    }
-                    let block_tile_end = end.min(block.len());
-                    let tile = &block[start..block_tile_end];
-                    for (i, digit) in tile.iter().enumerate() {
                         let col = start + i;
                         ntt_d.assign_i8_with_lut(digit, params, &lut);
                         for (acc, mat_row) in accs[block_idx].iter_mut().zip(ntt_mat.iter()) {
