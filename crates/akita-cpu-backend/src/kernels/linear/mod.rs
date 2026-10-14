@@ -1,5 +1,6 @@
 //! Linear algebra helpers for ring commitment.
 
+use crate::sources::block_digits::{BlockDigits, DigitRows, DigitShape, LiveRings};
 use akita_algebra::ntt::{MontCoeff, PrimeWidth, I32_LAZY_DOT_BATCH};
 use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
 use akita_algebra::{
@@ -11,6 +12,7 @@ use jolt_field::solinas::parallel::*;
 use jolt_field::{CanonicalEncoding, Field};
 use std::array::from_fn;
 use std::mem::size_of;
+use std::ops::Range;
 
 use akita_types::{select_crt_ntt_params, PreparedNttCache, ProtocolCrtNttParams};
 
@@ -24,7 +26,6 @@ mod decompose;
 mod digit_relation;
 mod digits;
 mod fused_quotients;
-mod i8_matvec;
 mod ntt_matvec;
 mod single_cyclic;
 #[cfg(test)]
@@ -41,7 +42,9 @@ pub(crate) use compression::validate_compression_batch_shape;
 use crt_matvec::precompute_dense_mat_ntt_with_params;
 #[cfg(test)]
 pub(crate) use crt_matvec::{mat_vec_mul_crt_ntt, mat_vec_mul_crt_ntt_many, mat_vec_mul_unchecked};
-pub(crate) use decompose::{decompose_block_i8, decompose_commit_blocks_into};
+#[cfg(test)]
+pub(crate) use decompose::decompose_block_i8;
+pub(crate) use decompose::decompose_commit_blocks_into;
 pub(crate) use digit_relation::{
     digit_relation_matrix_extent, digit_relation_rows_cached_prover_bounds,
     digit_relation_rows_streamed_prover_bounds, DigitRelationRows,
@@ -55,13 +58,11 @@ pub use fused_quotients::{
 pub(crate) use fused_quotients::{
     fused_quotient_matrix_extent, fused_split_eq_quotients_streamed_prover_bounds,
 };
-use i8_matvec::*;
 pub use ntt_matvec::mat_vec_mul_ntt_digits_i8;
 pub(crate) use ntt_matvec::mat_vec_mul_ntt_i8;
 #[cfg(test)]
 pub(crate) use ntt_matvec::mat_vec_mul_ntt_raw_digits_i8;
 pub(crate) use ntt_matvec::{
-    mat_vec_mul_ntt_i8_dense, mat_vec_mul_ntt_i8_dense_single_row,
-    mat_vec_mul_ntt_packed_digits_i8, mat_vec_mul_ntt_packed_raw_i8,
+    mat_vec_mul_ntt_blocks_i8, mat_vec_mul_ntt_packed_digits_i8, mat_vec_mul_ntt_packed_raw_i8,
 };
 pub(crate) use single_cyclic::{mat_vec_mul_ntt_single_i8, mat_vec_mul_ntt_single_i8_cyclic};

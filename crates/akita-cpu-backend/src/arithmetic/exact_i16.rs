@@ -1,4 +1,5 @@
 use super::CpuPreparedSetup;
+use crate::sources::block_digits::{BlockDigits, DigitShape};
 use crate::sources::packed_digits::PackedSignedDigitView;
 use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
 use akita_algebra::CyclotomicRing;
@@ -9,19 +10,23 @@ use akita_types::{NttCacheKey, NttTransformDomain};
 use jolt_field::solinas::parallel::*;
 use jolt_field::{CanonicalEncoding, Field};
 use std::array::from_fn;
+use std::ops::Range;
 
 #[tracing::instrument(skip_all, name = "dense_commit_rows_exact_i16")]
-pub(super) fn dense_commit_rows<F: Field + CanonicalEncoding, const D: usize>(
+pub(super) fn commit_rows_i16<F, S, const D: usize>(
     prepared: &CpuPreparedSetup<F>,
     n_a: usize,
     row_width: usize,
-    block_slices: &[&[CyclotomicRing<F, D>]],
-    num_digits_inner: usize,
-    log_basis_inner: u32,
-) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
-    let rhs_abs_bound = balanced_signed_digit_abs_bound(log_basis_inner)
+    source: &S,
+    block_ranges: &[Range<usize>],
+    shape: DigitShape,
+) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError>
+where
+    F: Field + CanonicalEncoding,
+    S: BlockDigits<F, D>,
+{
+    let rhs_abs_bound = balanced_signed_digit_abs_bound(shape.log_basis)
         .ok_or_else(|| AkitaError::InvalidSetup("invalid signed digit basis".into()))?;
-    let params = BalancedDecomposePow2Params::new(num_digits_inner, log_basis_inner);
     prepared.with_shared_ntt::<D, _>(
         NttCacheKey::from_matrix_shape(
             D,
@@ -33,19 +38,23 @@ pub(super) fn dense_commit_rows<F: Field + CanonicalEncoding, const D: usize>(
             },
         )?,
         |ntt| {
-            cfg_iter!(block_slices)
-                .map(|block| {
-                    let mut rhs = vec![[0i16; D]; row_width];
-                    for (ring_idx, ring) in block.iter().enumerate() {
-                        let start = ring_idx * num_digits_inner;
-                        ring.balanced_decompose_pow2_i16_into(
-                            &mut rhs[start..start + num_digits_inner],
-                            &params,
-                        );
-                    }
-                    ntt.mat_vec_i16::<F>(log_basis_inner, n_a, &rhs)
-                })
-                .collect()
+            let fill = |scratch: &mut S::Scratch, rings: &Range<usize>| {
+                let rhs = source.i16_rows(rings.clone(), shape, scratch)?;
+                ntt.mat_vec_i16::<F>(shape.log_basis, n_a, rhs)
+            };
+            let scratch = || source.scratch(shape, row_width / shape.num_digits);
+            #[cfg(feature = "parallel")]
+            {
+                cfg_iter!(block_ranges).map_init(scratch, fill).collect()
+            }
+            #[cfg(not(feature = "parallel"))]
+            {
+                let mut rhs = scratch();
+                block_ranges
+                    .iter()
+                    .map(|rings| fill(&mut rhs, rings))
+                    .collect()
+            }
         },
     )
 }

@@ -30,17 +30,6 @@ macro_rules! dispatch_slot {
     }};
 }
 
-/// Column-tiled A*x across multiple blocks simultaneously.
-///
-/// Each rayon thread owns one column tile of `ntt_mat` (sized to fit in L2
-/// cache) and iterates over all blocks, accumulating partial NTT results.
-/// The matrix is loaded from DRAM exactly once. A final reduction sums
-/// partial accumulators across tiles for each block.
-///
-/// Accepts raw ring-coefficient slices per block. Decomposes to i8 digits
-/// on-the-fly per tile to avoid materializing all digits at once.
-/// Tile width is auto-computed from ring parameters and target L2 cache size.
-#[tracing::instrument(skip_all, name = "mat_vec_mul_ntt_i8")]
 pub(crate) fn mat_vec_mul_ntt_i8<F: Field + CanonicalEncoding, const D: usize>(
     slot: &PreparedNttCache<D>,
     num_rows: usize,
@@ -50,61 +39,98 @@ pub(crate) fn mat_vec_mul_ntt_i8<F: Field + CanonicalEncoding, const D: usize>(
     log_basis: u32,
 ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
     validate_i8_log_basis(log_basis)?;
-    Ok(dispatch_slot!(
-        slot,
-        num_rows,
-        num_cols,
-        mat_vec_mul_i8_with_params,
-        blocks,
+    let params = BalancedDecomposePow2Params::new(num_digits, log_basis);
+    let basis = crate::sources::poly_helpers::SignedDigitBasis::new(log_basis)?;
+    let shape = DigitShape {
         num_digits,
-        log_basis
-    )?)
+        log_basis,
+    };
+    blocks
+        .iter()
+        .map(|coeffs| {
+            let source = LiveRings {
+                coeffs,
+                params: &params,
+                basis,
+            };
+            mat_vec_mul_ntt_blocks_i8(
+                slot,
+                num_rows,
+                num_cols,
+                &source,
+                std::slice::from_ref(&(0..coeffs.len())),
+                shape,
+                true,
+            )?
+            .pop()
+            .ok_or_else(|| {
+                AkitaError::Internal("single-block commitment matvec returned no batch".into())
+            })
+        })
+        .collect()
 }
 
-/// Dense-optimized matrix-vector multiplication over i8 digit planes.
-///
-/// Skips the full-plane zero scans that are useful for sparse inputs but are
-/// almost always wasted work on dense witnesses.
-#[tracing::instrument(skip_all, name = "mat_vec_mul_ntt_i8_dense")]
-pub(crate) fn mat_vec_mul_ntt_i8_dense<F: Field + CanonicalEncoding, const D: usize>(
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn mat_vec_mul_ntt_blocks_i8<
+    F: Field + CanonicalEncoding,
+    S: BlockDigits<F, D>,
+    const D: usize,
+>(
     slot: &PreparedNttCache<D>,
     num_rows: usize,
     num_cols: usize,
-    blocks: &[&[CyclotomicRing<F, D>]],
-    num_digits: usize,
-    log_basis: u32,
+    source: &S,
+    blocks: &[Range<usize>],
+    shape: DigitShape,
+    check_zero: bool,
 ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
-    validate_i8_log_basis(log_basis)?;
-    Ok(dispatch_slot!(
-        slot,
-        num_rows,
-        num_cols,
-        mat_vec_mul_i8_dense_with_params,
-        blocks,
-        num_digits,
-        log_basis
-    )?)
-}
-
-/// Single-row dense variant of [`mat_vec_mul_ntt_i8_dense`].
-#[tracing::instrument(skip_all, name = "mat_vec_mul_ntt_i8_dense_single_row")]
-pub(crate) fn mat_vec_mul_ntt_i8_dense_single_row<F: Field + CanonicalEncoding, const D: usize>(
-    slot: &PreparedNttCache<D>,
-    num_cols: usize,
-    blocks: &[&[CyclotomicRing<F, D>]],
-    num_digits: usize,
-    log_basis: u32,
-) -> Result<Vec<CyclotomicRing<F, D>>, AkitaError> {
-    validate_i8_log_basis(log_basis)?;
-    Ok(dispatch_slot!(
-        slot,
-        1usize,
-        num_cols,
-        mat_vec_mul_i8_dense_single_row_with_params,
-        blocks,
-        num_digits,
-        log_basis
-    )?)
+    validate_i8_log_basis(shape.log_basis)?;
+    if !check_zero && num_rows == 1 {
+        return Ok(dispatch_slot!(
+            slot,
+            1usize,
+            num_cols,
+            mat_vec_mul_blocks_i8_single_row_with_params,
+            source,
+            blocks,
+            shape
+        )?
+        .into_iter()
+        .map(|ring| vec![ring])
+        .collect());
+    }
+    macro_rules! run {
+        ($zero:literal) => {{
+            fn driver<
+                F: Field + CanonicalEncoding,
+                S: BlockDigits<F, D>,
+                W: PrimeWidth,
+                const K: usize,
+                const D: usize,
+            >(
+                matrix: &[&[CyclotomicCrtNtt<W, K, D>]],
+                source: &S,
+                blocks: &[Range<usize>],
+                shape: DigitShape,
+                params: &CrtNttParamSet<W, K, D>,
+            ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
+                mat_vec_mul_blocks_i8_with_params_impl::<F, S, W, K, D, $zero>(
+                    matrix,
+                    source,
+                    blocks,
+                    shape,
+                    "i8 matvec CRT capacity cannot fit a single term",
+                    params,
+                )
+            }
+            dispatch_slot!(slot, num_rows, num_cols, driver, source, blocks, shape)
+        }};
+    }
+    if check_zero {
+        run!(true)
+    } else {
+        run!(false)
+    }
 }
 
 /// Column-tiled A*x across multiple blocks of pre-decomposed i8 digit planes.

@@ -5,11 +5,8 @@
 
 use super::poly::DensePoly;
 use crate::opaque::DecomposeFoldWitness;
-use crate::sources::poly_helpers::{
-    balanced_ring_decompose_fold_chunked, balanced_ring_decompose_fold_partitioned,
-    cached_digit_decompose_fold_partitioned, sparse_mul_acc, SignedDigitBasis,
-    ValidatedSparseChallenges,
-};
+use crate::sources::block_digits::{CachedDigits, DigitShape, LiveRings};
+use crate::sources::poly_helpers::{element_partitioned_decompose_fold, SignedDigitBasis};
 use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
 use akita_algebra::CyclotomicRing;
 use akita_challenges::SparseChallenge;
@@ -44,30 +41,37 @@ where
     ) -> Result<Vec<DecomposeFoldWitness>, AkitaError> {
         validate_digit_shape(num_digits, log_basis)?;
         let coeffs = self.ring_coeffs::<D>()?;
-        let Some((planes, basis)) = self.digit_planes_for::<D>(num_digits, log_basis) else {
-            return balanced_ring_decompose_fold_chunked(
-                coeffs,
+        let shape = DigitShape {
+            num_digits,
+            log_basis,
+        };
+        let rows = if let Some((planes, basis)) = self.digit_planes_for::<D>(num_digits, log_basis)
+        {
+            element_partitioned_decompose_fold::<F, _, D>(
+                &CachedDigits::new(planes, num_digits, basis)?,
                 challenges,
                 chunk_ranges,
                 num_positions_per_block,
-                &BalancedDecomposePow2Params::new(num_digits, log_basis),
-            );
+                shape,
+            )?
+        } else {
+            let params = BalancedDecomposePow2Params::new(num_digits, log_basis);
+            element_partitioned_decompose_fold::<F, _, D>(
+                &LiveRings {
+                    coeffs,
+                    params: &params,
+                    basis: SignedDigitBasis::new(log_basis)?,
+                },
+                challenges,
+                chunk_ranges,
+                num_positions_per_block,
+                shape,
+            )?
         };
-        chunk_ranges
-            .iter()
-            .map(|range| {
-                let ring_start = range.start * num_positions_per_block;
-                let ring_end = (range.end * num_positions_per_block).min(coeffs.len());
-                let coefficients = cached_digit_decompose_fold_partitioned::<D>(
-                    &planes[ring_start.min(coeffs.len()) * num_digits..ring_end * num_digits],
-                    &challenges[range.clone()],
-                    num_positions_per_block,
-                    num_digits,
-                    basis,
-                )?;
-                Ok(DecomposeFoldWitness::from_centered_rows(coefficients))
-            })
-            .collect::<Result<Vec<_>, AkitaError>>()
+        Ok(rows
+            .into_iter()
+            .map(DecomposeFoldWitness::from_centered_rows)
+            .collect())
     }
 
     pub(crate) fn fold_blocks<const D: usize>(
@@ -149,68 +153,15 @@ where
         num_digits: usize,
         log_basis: u32,
     ) -> Result<DecomposeFoldWitness, AkitaError> {
-        validate_digit_shape(num_digits, log_basis)?;
-        let coeffs = self.ring_coeffs::<D>()?;
-        let n = coeffs.len();
-
-        if let Some((digit_planes, basis)) = self.digit_planes_for::<D>(num_digits, log_basis) {
-            let coeff_accum = {
-                let _span = tracing::info_span!("dense_cached_digit_accumulate").entered();
-                cached_digit_decompose_fold_partitioned::<D>(
-                    digit_planes,
-                    challenges,
-                    num_positions_per_block,
-                    num_digits,
-                    basis,
-                )?
-            };
-            return Ok(DecomposeFoldWitness::from_centered_rows(coeff_accum));
-        }
-
-        let params = BalancedDecomposePow2Params::new(num_digits, log_basis);
-
-        // The single-digit scratch is i8; wider bases need the checked i16 kernel below.
-        if num_digits == 1 && log_basis <= akita_params::MAX_I8_LOG_BASIS {
-            let challenges =
-                ValidatedSparseChallenges::<D>::new(challenges, n, num_positions_per_block)?;
-            let coeff_accum: Vec<[i32; D]> = {
-                let _span = tracing::info_span!("dense_single_digit_accumulate").entered();
-                cfg_into_iter!(0..num_positions_per_block)
-                    .map(|elem_idx| {
-                        let mut z_local = [0i32; D];
-                        let mut digit_plane = [[0i8; D]];
-
-                        for (block_idx, c_i) in challenges.iter().enumerate() {
-                            let global_idx = block_idx * num_positions_per_block + elem_idx;
-                            if global_idx >= n {
-                                continue;
-                            }
-                            let ring = &coeffs[global_idx];
-                            ring.balanced_decompose_pow2_i8_into_with_params(
-                                &mut digit_plane,
-                                &params,
-                            );
-                            sparse_mul_acc::<D>(&digit_plane[0], c_i, &mut z_local);
-                        }
-
-                        z_local
-                    })
-                    .collect()
-            };
-
-            return Ok(DecomposeFoldWitness::from_centered_rows(coeff_accum));
-        }
-
-        let centered_coeffs = {
-            let _span = tracing::info_span!("dense_multi_digit_accumulate").entered();
-            balanced_ring_decompose_fold_partitioned::<F, D>(
-                coeffs,
-                challenges,
-                num_positions_per_block,
-                &params,
-            )?
-        };
-
-        Ok(DecomposeFoldWitness::from_centered_rows(centered_coeffs))
+        self.decompose_fold_chunked::<D>(
+            challenges,
+            std::slice::from_ref(&(0..challenges.len())),
+            num_positions_per_block,
+            num_digits,
+            log_basis,
+        )?
+        .into_iter()
+        .next()
+        .ok_or_else(|| AkitaError::InvalidInput("dense fold produced no chunk".into()))
     }
 }

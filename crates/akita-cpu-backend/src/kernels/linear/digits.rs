@@ -11,13 +11,59 @@ pub(super) fn mat_vec_mul_digits_i8_with_params<
     log_basis: u32,
     params: &CrtNttParamSet<W, K, D>,
 ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
+    let source = DigitRows {
+        blocks,
+        digit_abs_bound: balanced_digit_abs_bound(log_basis),
+    };
+    let mut start = 0;
+    let ranges = blocks
+        .iter()
+        .map(|block| {
+            let range = start..start + block.len();
+            start = range.end;
+            range
+        })
+        .collect::<Vec<_>>();
+    mat_vec_mul_blocks_i8_with_params_impl::<F, _, W, K, D, true>(
+        ntt_mat,
+        &source,
+        &ranges,
+        DigitShape {
+            num_digits: 1,
+            log_basis,
+        },
+        "digit matvec CRT capacity cannot fit a single term",
+        params,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn mat_vec_mul_blocks_i8_with_params_impl<
+    F: Field + CanonicalEncoding,
+    S: BlockDigits<F, D>,
+    W: PrimeWidth,
+    const K: usize,
+    const D: usize,
+    const CHECK_ZERO: bool,
+>(
+    ntt_mat: &[&[CyclotomicCrtNtt<W, K, D>]],
+    source: &S,
+    blocks: &[Range<usize>],
+    shape: DigitShape,
+    capacity_error: &str,
+    params: &CrtNttParamSet<W, K, D>,
+) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
     let num_live_blocks = blocks.len();
     if num_live_blocks == 0 {
         return Ok(vec![]);
     }
     let n_a = ntt_mat.len();
     let mat_width = ntt_mat.first().map_or(0, |row| row.len());
-    let max_data_width = blocks.iter().map(|b| b.len()).max().unwrap_or(0);
+    let max_data_width = blocks
+        .iter()
+        .map(|b| b.len().saturating_mul(shape.num_digits))
+        .max()
+        .unwrap_or(0);
     let inner_width = mat_width.min(max_data_width);
     if inner_width == 0 || n_a == 0 {
         return Ok(vec![
@@ -25,141 +71,123 @@ pub(super) fn mat_vec_mul_digits_i8_with_params<
             num_live_blocks
         ]);
     }
-
-    let digit_bound = balanced_digit_abs_bound(log_basis);
-    debug_assert!(
-        blocks
-            .iter()
-            .all(|block| digit_rows_within_digit_bound::<D>(
-                block,
-                inner_width.min(block.len()),
-                digit_bound
-            )),
-        "predecomposed digit block contains digits outside its log_basis range"
-    );
+    let digit_bound = source.digit_abs_bound(shape);
     let safe_width = safe_crt_chunk_width::<F, W, K, D>(params, inner_width, digit_bound)
-        .ok_or_else(|| {
-            AkitaError::InvalidSetup("digit matvec CRT capacity cannot fit a single term".into())
-        })?;
+        .ok_or_else(|| AkitaError::InvalidSetup(capacity_error.into()))?;
+    let chunk_width = capacity_safe_i8_chunk_width(safe_width, inner_width, shape.num_digits);
     if n_a <= DENSE_I8_BLOCK_PARALLEL_MAX_ROWS
         && num_live_blocks >= DENSE_I8_BLOCK_PARALLEL_MIN_BLOCKS
         && inner_width == max_data_width
     {
         if inner_width <= safe_width {
-            return Ok(mat_vec_mul_digits_i8_block_parallel::<F, W, K, D>(
+            return mat_vec_mul_digits_i8_block_parallel::<F, S, W, K, D, CHECK_ZERO>(
                 ntt_mat,
+                source,
                 blocks,
+                shape,
                 digit_bound,
                 params,
-            ));
+            );
         }
-        return Ok(mat_vec_mul_digits_i8_block_parallel_chunked::<F, W, K, D>(
+        return mat_vec_mul_digits_i8_block_parallel_chunked::<F, S, W, K, D, CHECK_ZERO>(
             ntt_mat,
+            source,
             blocks,
+            shape,
             inner_width,
-            safe_width,
+            chunk_width,
             digit_bound,
             params,
-        ));
+        );
     }
-
     let lut = DigitMontLut::<W, K>::new_with_digit_bound(params, digit_bound);
-    let pointwise_dot_batch_size = params.pointwise_dot_batch_size();
-    Ok(drive_block_chunked_matvec(
+    let batch = params.pointwise_dot_batch_size();
+    let tile_width = aligned_i8_tile_width(
+        base_tile_width::<W, K, D>(n_a),
+        inner_width,
+        shape.num_digits,
+    );
+    let max_rings = batch.max(shape.num_digits).div_ceil(shape.num_digits) + 1;
+    drive_block_chunked_matvec(
         num_live_blocks,
         n_a,
         inner_width,
         safe_width,
-        base_tile_width::<W, K, D>(n_a),
-        safe_width,
+        tile_width,
+        chunk_width,
         params,
-        |accs, start, end| {
-            let mut ntt_d = CyclotomicCrtNtt::<W, K, D>::zero();
-            if pointwise_dot_batch_size > 1 {
-                let mut transformed =
-                    vec![(vec![ntt_d.clone(); pointwise_dot_batch_size], 0usize,); num_live_blocks];
-                for batch_start in (start..end).step_by(pointwise_dot_batch_size) {
-                    let batch_end = (batch_start + pointwise_dot_batch_size).min(end);
-                    // Keep one matrix sub-tile hot while applying it to every
-                    // right-hand side. Fall back to the sparse order below if
-                    // any input can skip an all-zero plane.
-                    let has_zero_plane = blocks.iter().any(|block| {
-                        batch_start < block.len()
-                            && block[batch_start..batch_end.min(block.len())]
-                                .iter()
-                                .any(is_zero_plane)
-                    });
-                    if has_zero_plane {
-                        for (block_idx, block) in blocks.iter().enumerate() {
-                            let block_batch_end = batch_end.min(block.len());
-                            if batch_start >= block_batch_end {
-                                continue;
-                            }
-                            for (offset, digit) in
-                                block[batch_start..block_batch_end].iter().enumerate()
-                            {
-                                if is_zero_plane(digit) {
-                                    continue;
-                                }
-                                let col = batch_start + offset;
-                                ntt_d.assign_i8_with_lut(digit, params, &lut);
-                                for (acc, mat_row) in accs[block_idx].iter_mut().zip(ntt_mat.iter())
-                                {
-                                    accumulate_pointwise_product_into(
-                                        acc,
-                                        &mat_row[col],
-                                        &ntt_d,
-                                        params,
-                                    );
-                                }
-                            }
-                        }
+        || {
+            (
+                source.scratch(shape, max_rings),
+                vec![
+                    vec![CyclotomicCrtNtt::<W, K, D>::zero(); batch.max(shape.num_digits)];
+                    num_live_blocks
+                ],
+                vec![0usize; num_live_blocks],
+            )
+        },
+        |accs, (scratch, transformed, live), start, end| {
+            // Decode a ring-aligned batch once for each right-hand side, then
+            // reuse its transforms across every matrix row.
+            let batch_width = aligned_i8_tile_width(batch, end - start, shape.num_digits);
+            for batch_start in (start..end).step_by(batch_width) {
+                let batch_end = (batch_start + batch_width).min(end);
+                for (block_idx, block) in blocks.iter().enumerate() {
+                    let ring_start = batch_start / shape.num_digits;
+                    if ring_start >= block.len() {
+                        live[block_idx] = 0;
                         continue;
                     }
-
-                    for ((digits_ntt, live), &block) in transformed.iter_mut().zip(blocks) {
-                        *live = batch_end.min(block.len()).saturating_sub(batch_start);
-                        for (slot, digit) in digits_ntt
-                            .iter_mut()
-                            .zip(&block[batch_start.min(block.len())..][..*live])
-                        {
+                    let ring_end = batch_end.div_ceil(shape.num_digits).min(block.len());
+                    let offset = batch_start % shape.num_digits;
+                    let rows = source.i8_rows(
+                        block.start + ring_start..block.start + ring_end,
+                        shape,
+                        scratch,
+                    )?;
+                    let n = (batch_end - batch_start).min(rows.len() - offset);
+                    let digits = &rows[offset..offset + n];
+                    if CHECK_ZERO && digits.iter().any(is_zero_plane) {
+                        for (i, digit) in digits.iter().enumerate() {
+                            if is_zero_plane(digit) {
+                                continue;
+                            }
+                            transformed[block_idx][i].assign_i8_with_lut(digit, params, &lut);
+                            for (acc, mat_row) in accs[block_idx].iter_mut().zip(ntt_mat) {
+                                accumulate_pointwise_product_into(
+                                    acc,
+                                    &mat_row[batch_start + i],
+                                    &transformed[block_idx][i],
+                                    params,
+                                );
+                            }
+                        }
+                        live[block_idx] = 0;
+                    } else {
+                        live[block_idx] = n;
+                        for (slot, digit) in transformed[block_idx].iter_mut().zip(digits) {
                             slot.assign_i8_with_lut(digit, params, &lut);
                         }
                     }
-                    for (row_idx, mat_row) in ntt_mat.iter().enumerate() {
-                        for (block_idx, (digits_ntt, live)) in transformed.iter().enumerate() {
-                            if *live == 0 {
-                                continue;
-                            }
+                }
+                for (row_idx, mat_row) in ntt_mat.iter().enumerate() {
+                    for (block_idx, (&n, digits_ntt)) in
+                        live.iter().zip(transformed.iter()).enumerate()
+                    {
+                        for offset in (0..n).step_by(batch) {
+                            let len = batch.min(n - offset);
                             accs[block_idx][row_idx].add_assign_pointwise_dot(
-                                &mat_row[batch_start..batch_start + *live],
-                                &digits_ntt[..*live],
+                                &mat_row[batch_start + offset..batch_start + offset + len],
+                                &digits_ntt[offset..offset + len],
                                 params,
                             );
                         }
                     }
                 }
-            } else {
-                for (block_idx, block) in blocks.iter().enumerate() {
-                    if start >= block.len() {
-                        continue;
-                    }
-                    let block_tile_end = end.min(block.len());
-                    let tile = &block[start..block_tile_end];
-                    for (i, digit) in tile.iter().enumerate() {
-                        if is_zero_plane(digit) {
-                            continue;
-                        }
-                        let col = start + i;
-                        ntt_d.assign_i8_with_lut(digit, params, &lut);
-                        for (acc, mat_row) in accs[block_idx].iter_mut().zip(ntt_mat.iter()) {
-                            accumulate_pointwise_product_into(acc, &mat_row[col], &ntt_d, params);
-                        }
-                    }
-                }
             }
+            Ok(())
         },
-    ))
+    )
 }
 
 enum PackedI8Lift<W: PrimeWidth, const K: usize> {
@@ -431,7 +459,7 @@ pub(super) fn mat_vec_mul_raw_digits_i8_with_params<
                     .to_string(),
             )
         })?;
-    Ok(drive_block_chunked_matvec(
+    drive_block_chunked_matvec(
         num_live_blocks,
         n_a,
         inner_width,
@@ -439,7 +467,8 @@ pub(super) fn mat_vec_mul_raw_digits_i8_with_params<
         base_tile_width::<W, K, D>(n_a),
         safe_width,
         params,
-        |accs, start, end| {
+        || (),
+        |accs, _, start, end| {
             for block_idx in 0..num_live_blocks {
                 let block = blocks[block_idx];
                 if start >= block.len() {
@@ -458,8 +487,9 @@ pub(super) fn mat_vec_mul_raw_digits_i8_with_params<
                     }
                 }
             }
+            Ok(())
         },
-    ))
+    )
 }
 
 /// Raw signed-i8 counterpart of

@@ -1,11 +1,12 @@
 use super::rotated_accum::{accumulate_rotated_digit_plane, should_use_rotated_challenge};
 use super::windowed_accum::{I8DigitSpan, WindowedChallenge};
 use super::{
-    balanced_ring_decompose_fold_partitioned, cached_digit_decompose_fold_partitioned,
+    balanced_ring_decompose_fold_partitioned, element_partitioned_decompose_fold,
     fill_rotated_challenge, packed_tight_digit_fold_partitioned, sparse_mul_acc,
     sparse_mul_acc_i16, sparse_mul_acc_i16_pm1, sparse_mul_acc_i16_scalar, sparse_mul_acc_pm1,
     sparse_mul_acc_scalar, SignedDigitBasis, ValidatedSparseChallenge, ValidatedSparseChallenges,
 };
+use crate::sources::block_digits::{CachedDigits, DigitShape};
 use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
 use akita_algebra::CyclotomicRing;
 use akita_challenges::SparseChallenge;
@@ -51,13 +52,24 @@ fn partitioned_fold_matches_scalar_for_embedded_subring_challenges() {
     for (ring, planes) in rings.iter().zip(digit_planes.chunks_exact_mut(num_digits)) {
         ring.balanced_decompose_pow2_i8_into_with_params(planes, &params);
     }
-    let cached = cached_digit_decompose_fold_partitioned::<D>(
+    let cached = CachedDigits::new(
         &digit_planes,
-        &challenges,
-        POSITIONS,
         num_digits,
         SignedDigitBasis::new(log_basis).unwrap(),
     )
+    .and_then(|source| {
+        element_partitioned_decompose_fold::<jolt_field::Prime32Offset99, _, D>(
+            &source,
+            &challenges,
+            std::slice::from_ref(&(0..challenges.len())),
+            POSITIONS,
+            DigitShape {
+                num_digits,
+                log_basis,
+            },
+        )
+    })
+    .map(|mut chunks| chunks.pop().unwrap_or_default())
     .unwrap();
     let mut expected = vec![[0i32; D]; POSITIONS * num_digits];
     let mut digit_buf = vec![[0i8; D]; num_digits];
@@ -162,13 +174,24 @@ fn partitioned_fold_matches_scalar_for_window_grid_challenges() {
             balanced_ring_decompose_fold_partitioned(&rings, &challenges, POSITIONS, &params)
                 .unwrap();
         assert_eq!(live, expected, "live rings, log_basis {log_basis}");
-        let cached = cached_digit_decompose_fold_partitioned::<D>(
+        let cached = CachedDigits::new(
             &digit_planes,
-            &challenges,
-            POSITIONS,
             num_digits,
             SignedDigitBasis::new(log_basis).unwrap(),
         )
+        .and_then(|source| {
+            element_partitioned_decompose_fold::<jolt_field::Prime32Offset99, _, D>(
+                &source,
+                &challenges,
+                std::slice::from_ref(&(0..challenges.len())),
+                POSITIONS,
+                DigitShape {
+                    num_digits,
+                    log_basis,
+                },
+            )
+        })
+        .map(|mut chunks| chunks.pop().unwrap_or_default())
         .unwrap();
         assert_eq!(cached, expected, "cached digits, log_basis {log_basis}");
 
@@ -235,14 +258,21 @@ fn all_fold_sources_share_rotated_narrow_and_chunked_results() {
     let params = BalancedDecomposePow2Params::new(1, 8);
     let live =
         balanced_ring_decompose_fold_partitioned(&rings, &challenges, POSITIONS, &params).unwrap();
-    let cached = cached_digit_decompose_fold_partitioned::<D>(
-        &planes,
-        &challenges,
-        POSITIONS,
-        1,
-        SignedDigitBasis::new(8).unwrap(),
-    )
-    .unwrap();
+    let cached = CachedDigits::new(&planes, 1, SignedDigitBasis::new(8).unwrap())
+        .and_then(|source| {
+            element_partitioned_decompose_fold::<jolt_field::Prime32Offset99, _, D>(
+                &source,
+                &challenges,
+                std::slice::from_ref(&(0..challenges.len())),
+                POSITIONS,
+                DigitShape {
+                    num_digits: 1,
+                    log_basis: 8,
+                },
+            )
+        })
+        .map(|mut chunks| chunks.pop().unwrap_or_default())
+        .unwrap();
     let packed = packed_tight_digit_fold_partitioned::<D>(
         packed.view(),
         rings.len(),
@@ -518,14 +548,23 @@ fn signed_digit_basis_rejects_unsupported_exponents() {
 #[test]
 fn partitioned_fold_returns_inner_width_overflow() {
     assert_eq!(
-        cached_digit_decompose_fold_partitioned::<64>(
-            &[],
-            &[],
-            usize::MAX,
-            2,
-            SignedDigitBasis::new(4).unwrap(),
-        )
-        .unwrap_err(),
+        CachedDigits::new(&[], 2, SignedDigitBasis::new(4).unwrap())
+            .and_then(|source| element_partitioned_decompose_fold::<
+                jolt_field::Prime32Offset99,
+                _,
+                64,
+            >(
+                &source,
+                &[],
+                std::slice::from_ref(&(0..0)),
+                usize::MAX,
+                DigitShape {
+                    num_digits: 2,
+                    log_basis: 4
+                },
+            ))
+            .map(|mut chunks| chunks.pop().unwrap_or_default())
+            .unwrap_err(),
         akita_error::AkitaError::InvalidInput("partitioned fold inner width overflow".into()),
     );
 }
@@ -533,14 +572,23 @@ fn partitioned_fold_returns_inner_width_overflow() {
 #[test]
 fn cached_fold_rejects_zero_digit_count() {
     assert_eq!(
-        cached_digit_decompose_fold_partitioned::<64>(
-            &[],
-            &[],
-            1,
-            0,
-            SignedDigitBasis::new(4).unwrap(),
-        )
-        .unwrap_err(),
+        CachedDigits::new(&[], 0, SignedDigitBasis::new(4).unwrap())
+            .and_then(|source| element_partitioned_decompose_fold::<
+                jolt_field::Prime32Offset99,
+                _,
+                64,
+            >(
+                &source,
+                &[],
+                std::slice::from_ref(&(0..0)),
+                1,
+                DigitShape {
+                    num_digits: 0,
+                    log_basis: 4
+                },
+            ))
+            .map(|mut chunks| chunks.pop().unwrap_or_default())
+            .unwrap_err(),
         akita_error::AkitaError::InvalidInput("cached fold digit count must be nonzero".into()),
     );
 }
@@ -968,14 +1016,21 @@ fn partitioned_fold_preserves_unused_malformed_challenges() {
         positions: vec![64].into(),
         coeffs: vec![1].into(),
     }];
-    let output = cached_digit_decompose_fold_partitioned::<64>(
-        &[],
-        &challenges,
-        2,
-        1,
-        SignedDigitBasis::new(4).unwrap(),
-    )
-    .unwrap();
+    let output = CachedDigits::new(&[], 1, SignedDigitBasis::new(4).unwrap())
+        .and_then(|source| {
+            element_partitioned_decompose_fold::<jolt_field::Prime32Offset99, _, 64>(
+                &source,
+                &challenges,
+                std::slice::from_ref(&(0..challenges.len())),
+                2,
+                DigitShape {
+                    num_digits: 1,
+                    log_basis: 4,
+                },
+            )
+        })
+        .map(|mut chunks| chunks.pop().unwrap_or_default())
+        .unwrap();
     assert_eq!(output, vec![[0; 64]; 2]);
     assert_eq!(
         ValidatedSparseChallenges::<64>::new(&challenges, 0, 2)

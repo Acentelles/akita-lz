@@ -1,7 +1,9 @@
 use super::prepared_tests::{prepared, D, F};
 use super::CpuBackend;
-use crate::opaque::plans::DenseCommitInput;
+use crate::sources::block_digits::{DigitShape, LiveRings};
 use crate::sources::packed_digits::PackedSignedDigits;
+use crate::sources::poly_helpers::SignedDigitBasis;
+use crate::validation::signed_digit_kernel_for_setup;
 use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
 use akita_algebra::CyclotomicRing;
 use akita_params::sis::compute_num_digits_field_width;
@@ -59,15 +61,27 @@ fn dense_coeff_commit_selects_exact_i16_from_inner_basis_inner() {
         CyclotomicRing::from_coefficients([F::from_i8(-1); D]),
     ];
     let commit = |log_basis_inner| {
+        let signed_digit_kernel =
+            signed_digit_kernel_for_setup(log_basis_inner, "for dense commitment").unwrap();
+        let params = BalancedDecomposePow2Params::new(1, log_basis_inner);
+        let source = LiveRings {
+            coeffs: &block,
+            params: &params,
+            basis: SignedDigitBasis::new(log_basis_inner).unwrap(),
+        };
         CpuBackend::<F, F>::for_arithmetic_tests()
-            .dense_commit_rows(
+            .commit_rows(
                 &prepared,
                 1,
-                DenseCommitInput::CoeffBlocks {
-                    block_slices: vec![block.as_slice()],
-                    num_digits_inner: 1,
-                    log_basis_inner,
+                block.len(),
+                &source,
+                std::slice::from_ref(&(0..block.len())),
+                DigitShape {
+                    num_digits: 1,
+                    log_basis: log_basis_inner,
                 },
+                signed_digit_kernel,
+                false,
             )
             .expect("dense commit rows")
     };
@@ -109,19 +123,30 @@ fn dense_i16_commit_matches_schoolbook_composition_inner() {
         let num_digits_inner =
             compute_num_digits_field_width(<F as CanonicalEncoding>::MODULUS_BITS, log_basis_inner);
         let row_width = block.len() * num_digits_inner;
+        let signed_digit_kernel =
+            signed_digit_kernel_for_setup(log_basis_inner, "for dense commitment").unwrap();
+        let params = BalancedDecomposePow2Params::new(num_digits_inner, log_basis_inner);
+        let source = LiveRings {
+            coeffs: &block,
+            params: &params,
+            basis: SignedDigitBasis::new(log_basis_inner).unwrap(),
+        };
         let actual = CpuBackend::<F, F>::for_arithmetic_tests()
-            .dense_commit_rows(
+            .commit_rows(
                 &prepared,
                 n_a,
-                DenseCommitInput::CoeffBlocks {
-                    block_slices: vec![block.as_slice()],
-                    num_digits_inner,
-                    log_basis_inner,
+                row_width,
+                &source,
+                std::slice::from_ref(&(0..block.len())),
+                DigitShape {
+                    num_digits: num_digits_inner,
+                    log_basis: log_basis_inner,
                 },
+                signed_digit_kernel,
+                false,
             )
             .expect("dense i16 commit");
 
-        let params = BalancedDecomposePow2Params::new(num_digits_inner, log_basis_inner);
         let mut digit_planes = vec![[0i16; D]; row_width];
         for (ring_index, ring) in block.iter().enumerate() {
             let start = ring_index * num_digits_inner;

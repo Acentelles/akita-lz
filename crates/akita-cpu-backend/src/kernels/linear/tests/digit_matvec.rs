@@ -548,17 +548,38 @@ macro_rules! block_parallel_matches_column_tiled_wide_rows_test {
                                 &params,
                             )
                             .unwrap();
+                        let source = crate::sources::block_digits::DigitRows {
+                            blocks: &digit_block_slices,
+                            digit_abs_bound: super::balanced_digit_abs_bound(log_basis),
+                        };
+                        let mut start = 0;
+                        let ranges = digit_block_slices
+                            .iter()
+                            .map(|block| {
+                                let range = start..start + block.len();
+                                start = range.end;
+                                range
+                            })
+                            .collect::<Vec<_>>();
                         let block_parallel = super::mat_vec_mul_digits_i8_block_parallel::<
                             F,
+                            _,
                             $width,
                             $num_primes,
                             D,
+                            true,
                         >(
                             &ntt_mat[..n_a],
-                            &digit_block_slices,
+                            &source,
+                            &ranges,
+                            crate::sources::block_digits::DigitShape {
+                                num_digits: 1,
+                                log_basis,
+                            },
                             super::balanced_digit_abs_bound(log_basis),
                             &params,
-                        );
+                        )
+                        .unwrap();
                         assert_eq!(
                             block_parallel, column_tiled,
                             "block-parallel must match column-tiled for n_a={n_a}"

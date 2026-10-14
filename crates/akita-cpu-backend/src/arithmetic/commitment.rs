@@ -1,5 +1,5 @@
 use super::exact_i16::{
-    dense_commit_rows as dense_commit_rows_i16,
+    commit_rows_i16,
     recursive_packed_witness_commit_rows as recursive_packed_witness_commit_rows_i16,
 };
 use super::{CpuBackend, CpuPreparedSetup};
@@ -9,14 +9,16 @@ use crate::commitment::{
     UnitPositionSlice,
 };
 use crate::kernels::linear::{
-    mat_vec_mul_ntt_i8, mat_vec_mul_ntt_i8_dense, mat_vec_mul_ntt_i8_dense_single_row,
-    mat_vec_mul_ntt_packed_digits_i8, mat_vec_mul_ntt_packed_raw_i8,
+    mat_vec_mul_ntt_blocks_i8, mat_vec_mul_ntt_i8, mat_vec_mul_ntt_packed_digits_i8,
+    mat_vec_mul_ntt_packed_raw_i8,
 };
-use crate::opaque::plans::DenseCommitInput;
 use crate::opaque::CommitInnerPlan;
 use crate::opaque::{commit_onehot_sources, OneHotSource};
+use crate::sources::block_digits::{BlockDigits, DigitShape, LiveRings};
 use crate::sources::packed_digits::PackedSignedDigitView;
+use crate::sources::poly_helpers::SignedDigitBasis;
 use crate::validation::signed_digit_kernel_for_setup;
+use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
 use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
 use akita_params::{balanced_signed_digit_abs_bound, field_modulus, SignedDigitKernel};
@@ -25,6 +27,7 @@ use akita_types::{dense_i8_commit_prefers_exact_ifma52, NttCacheKey, NttTransfor
 use jolt_field::solinas::parallel::*;
 use jolt_field::{CanonicalEncoding, Field, Unreduced, WithCommitAccumulator};
 use std::array::from_fn;
+use std::ops::Range;
 
 impl<F: Field, E> CpuBackend<F, E> {
     /// Execute the standard CPU inner stage over request-compiled sources.
@@ -174,84 +177,80 @@ impl<F: Field, E> CpuBackend<F, E> {
                 ring_count,
             )
         };
-        let block_slices = dense_coefficient_block_slices(rings, plan.num_positions_per_block);
-        if block_slices.len() != plan.num_live_blocks {
+        let block_ranges = (0..ring_count)
+            .step_by(plan.num_positions_per_block)
+            .map(|start| start..(start + plan.num_positions_per_block).min(ring_count))
+            .collect::<Vec<_>>();
+        if block_ranges.len() != plan.num_live_blocks {
             return Err(AkitaError::Internal(format!(
                 "dense source produced {} live blocks, expected {}",
-                block_slices.len(),
+                block_ranges.len(),
                 plan.num_live_blocks
             )));
         }
-        self.dense_commit_rows(
+        let shape = DigitShape {
+            num_digits: plan.num_digits_inner,
+            log_basis: plan.log_basis_inner,
+        };
+        let row_width = rings
+            .len()
+            .min(plan.num_positions_per_block)
+            .checked_mul(shape.num_digits)
+            .ok_or_else(|| {
+                AkitaError::InvalidSetup("dense coefficient row width overflow".into())
+            })?;
+        let signed_digit_kernel =
+            signed_digit_kernel_for_setup(shape.log_basis, "for dense commitment")?;
+        let params = BalancedDecomposePow2Params::new(shape.num_digits, shape.log_basis);
+        let source = LiveRings {
+            coeffs: rings,
+            params: &params,
+            basis: SignedDigitBasis::new(shape.log_basis)?,
+        };
+        self.commit_rows(
             prepared,
             plan.n_a,
-            DenseCommitInput::CoeffBlocks {
-                block_slices,
-                num_digits_inner: plan.num_digits_inner,
-                log_basis_inner: plan.log_basis_inner,
-            },
+            row_width,
+            &source,
+            &block_ranges,
+            shape,
+            signed_digit_kernel,
+            false,
         )
     }
 
-    pub(crate) fn dense_commit_rows<const D: usize>(
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn commit_rows<S, const D: usize>(
         &self,
         prepared: &CpuPreparedSetup<F>,
         n_a: usize,
-        input: DenseCommitInput<'_, F, D>,
+        row_width: usize,
+        source: &S,
+        block_ranges: &[Range<usize>],
+        shape: DigitShape,
+        signed_digit_kernel: SignedDigitKernel,
+        check_zero: bool,
     ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError>
     where
         F: Field + CanonicalEncoding,
+        S: BlockDigits<F, D>,
     {
-        let DenseCommitInput::CoeffBlocks {
-            block_slices,
-            num_digits_inner,
-            log_basis_inner,
-        } = input;
-        let row_width = block_slices.first().map_or(Ok(0usize), |block| {
-            block.len().checked_mul(num_digits_inner).ok_or_else(|| {
-                AkitaError::InvalidSetup("dense coefficient row width overflow".into())
-            })
-        })?;
-        let signed_digit_kernel =
-            signed_digit_kernel_for_setup(log_basis_inner, "for dense commitment")?;
         let use_exact_ifma52 = signed_digit_kernel == SignedDigitKernel::I8
-            && dense_i8_exact_ifma52_preferred::<F, D>(row_width, log_basis_inner)?;
+            && dense_i8_exact_ifma52_preferred::<F, D>(row_width, shape.log_basis)?;
         if signed_digit_kernel == SignedDigitKernel::I16 || use_exact_ifma52 {
-            dense_commit_rows_i16(
-                prepared,
-                n_a,
-                row_width,
-                &block_slices,
-                num_digits_inner,
-                log_basis_inner,
-            )
-        } else if n_a == 1 {
-            prepared.with_shared_ntt::<D, _>(
-                NttCacheKey::from_matrix_shape(D, 1, row_width, NttTransformDomain::Negacyclic)?,
-                |ntt| {
-                    Ok(mat_vec_mul_ntt_i8_dense_single_row(
-                        ntt,
-                        row_width,
-                        &block_slices,
-                        num_digits_inner,
-                        log_basis_inner,
-                    )?
-                    .into_iter()
-                    .map(|ring| vec![ring])
-                    .collect())
-                },
-            )
+            commit_rows_i16(prepared, n_a, row_width, source, block_ranges, shape)
         } else {
             prepared.with_shared_ntt::<D, _>(
                 NttCacheKey::from_matrix_shape(D, n_a, row_width, NttTransformDomain::Negacyclic)?,
                 |ntt| {
-                    mat_vec_mul_ntt_i8_dense(
+                    mat_vec_mul_ntt_blocks_i8::<F, S, D>(
                         ntt,
                         n_a,
                         row_width,
-                        &block_slices,
-                        num_digits_inner,
-                        log_basis_inner,
+                        source,
+                        block_ranges,
+                        shape,
+                        check_zero,
                     )
                 },
             )
@@ -390,13 +389,6 @@ impl<F: Field, E> CpuBackend<F, E> {
             )
         }
     }
-}
-
-pub(crate) fn dense_coefficient_block_slices<const D: usize, F: Field>(
-    rings: &[CyclotomicRing<F, D>],
-    num_positions_per_block: usize,
-) -> Vec<&[CyclotomicRing<F, D>]> {
-    rings.chunks(num_positions_per_block).collect()
 }
 
 fn dense_i8_exact_ifma52_preferred<F: Field + CanonicalEncoding, const D: usize>(

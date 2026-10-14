@@ -15,19 +15,21 @@ use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
 use akita_algebra::CyclotomicRing;
 use akita_challenges::SparseChallenge;
 use akita_error::{checked, AkitaError};
-use akita_params::SignedDigitKernel;
 use jolt_field::solinas::parallel::*;
 use jolt_field::{CanonicalEncoding, Field};
 use std::ops::Range;
 
+use crate::sources::block_digits::{
+    BlockDigits, DigitPlaneSet, DigitPlanes, DigitShape, LiveRings, PackedDigits,
+};
 use crate::sources::packed_digits::PackedSignedDigitView;
 
-struct PreparedPm1Challenge {
+pub(crate) struct PreparedPm1Challenge {
     positive: Vec<u32>,
     negative: Vec<u32>,
 }
 
-enum WidePlan<const D: usize> {
+pub(crate) enum WidePlan<const D: usize> {
     Rotated(Box<[[i16; D]; D]>),
     Pm1(PreparedPm1Challenge),
     Generic,
@@ -121,15 +123,6 @@ fn partition_thread_count(num_positions_per_block: usize) -> usize {
     num_threads.min(num_positions_per_block.max(1)).max(1)
 }
 
-/// Span of stored `i8` digits known only by their absolute bound.
-fn bounded_i8_digit_span(digit_abs_bound: u64) -> I8DigitSpan {
-    if digit_abs_bound <= 63 {
-        I8DigitSpan::Half
-    } else {
-        I8DigitSpan::Full
-    }
-}
-
 fn position_tile_len(num_positions_per_block: usize) -> usize {
     let actual_threads = partition_thread_count(num_positions_per_block);
     if actual_threads <= 8 {
@@ -140,205 +133,6 @@ fn position_tile_len(num_positions_per_block: usize) -> usize {
     num_positions_per_block
         .div_ceil(actual_threads.saturating_mul(tiles_per_thread))
         .max(1)
-}
-
-/// Source preparation is monomorphized per witness representation. The
-/// associated scratch type makes the source/scratch pairing a type invariant.
-trait FoldSource<const D: usize>: Sync {
-    type Scratch;
-    type Planes<'a>: DigitPlaneSet<D>
-    where
-        Self: 'a;
-
-    fn num_rings(&self) -> usize;
-    fn digit_abs_bound(&self) -> u64;
-    /// Value range of the digit planes when all of them are `i8`, the storage
-    /// the window-gathered narrow kernel reads.
-    fn i8_digit_span(&self) -> Option<I8DigitSpan>;
-    fn scratch(&self, num_digits: usize) -> Self::Scratch;
-    fn digit_planes<'a>(
-        &'a self,
-        ring_idx: usize,
-        num_digits: usize,
-        scratch: &'a mut Self::Scratch,
-    ) -> Self::Planes<'a>;
-}
-
-struct CachedDigits<'a, const D: usize> {
-    digit_planes: &'a [[i8; D]],
-    num_rings: usize,
-    digit_abs_bound: u64,
-}
-
-impl<const D: usize> FoldSource<D> for CachedDigits<'_, D> {
-    type Scratch = ();
-    type Planes<'a>
-        = DigitPlanes<'a, D>
-    where
-        Self: 'a;
-
-    fn num_rings(&self) -> usize {
-        self.num_rings
-    }
-
-    fn digit_abs_bound(&self) -> u64 {
-        self.digit_abs_bound
-    }
-
-    fn i8_digit_span(&self) -> Option<I8DigitSpan> {
-        Some(bounded_i8_digit_span(self.digit_abs_bound))
-    }
-
-    fn scratch(&self, _num_digits: usize) {}
-
-    #[inline]
-    fn digit_planes<'a>(
-        &'a self,
-        ring_idx: usize,
-        num_digits: usize,
-        _scratch: &'a mut (),
-    ) -> Self::Planes<'a> {
-        let start = ring_idx * num_digits;
-        DigitPlanes::I8(&self.digit_planes[start..start + num_digits])
-    }
-}
-
-struct LiveRings<'a, F: Field + CanonicalEncoding, const D: usize> {
-    coeffs: &'a [CyclotomicRing<F, D>],
-    params: &'a BalancedDecomposePow2Params<F>,
-    basis: SignedDigitBasis,
-}
-
-enum LiveDigitScratch<const D: usize> {
-    I8(Vec<[i8; D]>),
-    I16(Vec<[i16; D]>),
-}
-
-impl<F: Field + CanonicalEncoding, const D: usize> FoldSource<D> for LiveRings<'_, F, D> {
-    type Scratch = LiveDigitScratch<D>;
-    type Planes<'a>
-        = DigitPlanes<'a, D>
-    where
-        Self: 'a;
-
-    fn num_rings(&self) -> usize {
-        self.coeffs.len()
-    }
-
-    fn digit_abs_bound(&self) -> u64 {
-        self.basis.abs_bound
-    }
-
-    fn i8_digit_span(&self) -> Option<I8DigitSpan> {
-        // Balanced base-`2^k` digits are `[-2^(k-1), 2^(k-1) - 1]`, one short
-        // of the absolute bound on the positive side.
-        matches!(self.basis.kernel, SignedDigitKernel::I8).then(|| {
-            if self.basis.abs_bound <= 64 {
-                I8DigitSpan::Half
-            } else {
-                I8DigitSpan::Full
-            }
-        })
-    }
-
-    fn scratch(&self, num_digits: usize) -> Self::Scratch {
-        match self.basis.kernel {
-            SignedDigitKernel::I8 => LiveDigitScratch::I8(vec![[0i8; D]; num_digits]),
-            SignedDigitKernel::I16 => LiveDigitScratch::I16(vec![[0i16; D]; num_digits]),
-        }
-    }
-
-    #[inline]
-    fn digit_planes<'a>(
-        &'a self,
-        ring_idx: usize,
-        _num_digits: usize,
-        scratch: &'a mut Self::Scratch,
-    ) -> Self::Planes<'a> {
-        match scratch {
-            LiveDigitScratch::I8(planes) => {
-                self.coeffs[ring_idx]
-                    .balanced_decompose_pow2_i8_into_with_params(planes, self.params);
-                DigitPlanes::I8(planes)
-            }
-            LiveDigitScratch::I16(planes) => {
-                self.coeffs[ring_idx].balanced_decompose_pow2_i16_into(planes, self.params);
-                DigitPlanes::I16(planes)
-            }
-        }
-    }
-}
-
-struct PackedDigits<'a> {
-    digits: PackedSignedDigitView<'a>,
-    num_rings: usize,
-    digit_abs_bound: u64,
-}
-
-impl<const D: usize> FoldSource<D> for PackedDigits<'_> {
-    type Scratch = [i8; D];
-    type Planes<'a>
-        = &'a [i8; D]
-    where
-        Self: 'a;
-
-    fn num_rings(&self) -> usize {
-        self.num_rings
-    }
-
-    fn digit_abs_bound(&self) -> u64 {
-        self.digit_abs_bound
-    }
-
-    fn i8_digit_span(&self) -> Option<I8DigitSpan> {
-        Some(bounded_i8_digit_span(self.digit_abs_bound))
-    }
-
-    fn scratch(&self, _num_digits: usize) -> Self::Scratch {
-        [0i8; D]
-    }
-
-    #[inline]
-    fn digit_planes<'a>(
-        &'a self,
-        ring_idx: usize,
-        num_digits: usize,
-        scratch: &'a mut Self::Scratch,
-    ) -> Self::Planes<'a> {
-        debug_assert_eq!(num_digits, 1);
-        self.digits
-            .decode_range(ring_idx * D, scratch)
-            .expect("validated packed recursive ring");
-        scratch
-    }
-}
-
-/// A ring's digit planes, independent of how the source supplied them.
-enum DigitPlanes<'a, const D: usize> {
-    I8(&'a [[i8; D]]),
-    I16(&'a [[i16; D]]),
-}
-
-trait DigitPlaneSet<const D: usize> {
-    fn accumulate_wide(
-        self,
-        acc: &mut [[i32; D]],
-        challenge: ValidatedSparseChallenge<'_, D>,
-        plan: &WidePlan<D>,
-    );
-    fn accumulate_narrow(
-        self,
-        acc: &mut [[i16; D]],
-        challenge: &SparseChallenge,
-        windowed: Option<&WindowedChallenge>,
-    );
-    fn accumulate_chunked_narrow(
-        self,
-        narrow: &mut [[i16; D]],
-        wide: &mut [[i32; D]],
-        challenge: &SparseChallenge,
-        term_ranges: &[Range<usize>],
-    );
 }
 
 impl<const D: usize> DigitPlaneSet<D> for &[i8; D] {
@@ -509,14 +303,15 @@ enum FoldAccumulator<'a, const D: usize> {
 }
 
 impl<const D: usize> FoldAccumulator<'_, D> {
-    fn accumulate<S: FoldSource<D>>(
+    fn accumulate<F: Field, S: BlockDigits<F, D>>(
         &mut self,
         source: &S,
         scratch: &mut S::Scratch,
         ring_range: Range<usize>,
-        num_digits: usize,
+        shape: DigitShape,
         prepared: &PreparedChallenge<'_, D>,
-    ) {
+    ) -> Result<(), AkitaError> {
+        let num_digits = shape.num_digits;
         let challenge = prepared.challenge.challenge();
         match (&mut *self, &prepared.plan) {
             (
@@ -532,7 +327,7 @@ impl<const D: usize> FoldAccumulator<'_, D> {
                     *bound = 0;
                 }
                 for (local, ring) in ring_range.enumerate() {
-                    let planes = source.digit_planes(ring, num_digits, scratch);
+                    let planes = source.digit_planes(ring, shape, scratch)?;
                     let base = local * num_digits;
                     planes.accumulate_narrow(
                         &mut narrow[base..base + num_digits],
@@ -555,7 +350,7 @@ impl<const D: usize> FoldAccumulator<'_, D> {
                     *bound = 0;
                 }
                 for (local, ring) in ring_range.enumerate() {
-                    let planes = source.digit_planes(ring, num_digits, scratch);
+                    let planes = source.digit_planes(ring, shape, scratch)?;
                     let base = local * num_digits;
                     planes.accumulate_chunked_narrow(
                         &mut narrow[base..base + num_digits],
@@ -587,7 +382,7 @@ impl<const D: usize> FoldAccumulator<'_, D> {
                     }
                 };
                 for (local, ring) in ring_range.enumerate() {
-                    let planes = source.digit_planes(ring, num_digits, scratch);
+                    let planes = source.digit_planes(ring, shape, scratch)?;
                     let base = local * num_digits;
                     planes.accumulate_wide(
                         &mut wide[base..base + num_digits],
@@ -597,6 +392,7 @@ impl<const D: usize> FoldAccumulator<'_, D> {
                 }
             }
         }
+        Ok(())
     }
 
     fn finish(self) {
@@ -613,107 +409,91 @@ impl<const D: usize> FoldAccumulator<'_, D> {
     }
 }
 
-fn element_partitioned_decompose_fold<S: FoldSource<D>, const D: usize>(
-    source: S,
+pub(crate) fn element_partitioned_decompose_fold<F: Field, S: BlockDigits<F, D>, const D: usize>(
+    source: &S,
     challenges: &[SparseChallenge],
+    chunk_ranges: &[Range<usize>],
     num_positions_per_block: usize,
-    num_digits: usize,
-) -> Result<Vec<[i32; D]>, AkitaError> {
+    shape: DigitShape,
+) -> Result<Vec<Vec<[i32; D]>>, AkitaError> {
+    let num_digits = shape.num_digits;
     let inner_width = checked::product([num_positions_per_block, num_digits])
         .ok_or_else(|| AkitaError::InvalidInput("partitioned fold inner width overflow".into()))?;
-    if inner_width == 0 || num_digits == 0 {
-        return Ok(Vec::new());
-    }
-
-    let digit_abs_bound = source.digit_abs_bound();
-    let window_span = source.i8_digit_span().filter(|_| gathers_windows());
-    let challenges = ValidatedSparseChallenges::<D>::new(
-        challenges,
-        source.num_rings(),
-        num_positions_per_block,
-    )?;
-    let plans = challenges
-        .iter()
-        .enumerate()
-        .map(|(block_idx, challenge)| PreparedChallenge {
-            challenge,
-            plan: prepare_challenge::<D>(digit_abs_bound, window_span, challenge.challenge()),
-            block_start: block_idx * num_positions_per_block,
-        })
-        .collect::<Vec<_>>();
-    let uses_narrow_accumulation = plans.iter().any(|prepared| {
-        matches!(
-            prepared.plan,
-            ChallengePlan::NarrowFull(..) | ChallengePlan::NarrowChunked(_)
-        )
-    });
+    let digit_abs_bound = source.digit_abs_bound(shape);
+    let window_span = source.i8_digit_span(shape).filter(|_| gathers_windows());
     let position_tile = position_tile_len(num_positions_per_block);
-    let mut out = vec![[0i32; D]; inner_width];
-
-    cfg_chunks_mut!(out, position_tile * num_digits)
-        .enumerate()
-        .for_each(|(tile_idx, acc)| {
-            let elem_start = tile_idx * position_tile;
-            if elem_start >= num_positions_per_block {
-                return;
+    chunk_ranges
+        .iter()
+        .map(|range| {
+            if inner_width == 0 || num_digits == 0 {
+                return Ok(Vec::new());
             }
-            let elems_in_chunk = acc.len() / num_digits;
-            let elem_end = elem_start + elems_in_chunk;
-            let mut digit_scratch = source.scratch(num_digits);
-            let mut accumulator = if uses_narrow_accumulation {
-                let narrow = vec![[0i16; D]; acc.len()];
-                FoldAccumulator::Narrow {
-                    wide: acc,
-                    narrow,
-                    bound: 0,
-                }
-            } else {
-                FoldAccumulator::Wide(acc)
-            };
-
-            for prepared in &plans {
-                let block_start = prepared.block_start;
-                let ring_start = block_start + elem_start;
-                if ring_start >= source.num_rings() {
-                    continue;
-                }
-                let ring_end = (block_start + elem_end).min(source.num_rings());
-                accumulator.accumulate(
-                    &source,
-                    &mut digit_scratch,
-                    ring_start..ring_end,
-                    num_digits,
-                    prepared,
-                );
-            }
-            accumulator.finish();
-        });
-
-    Ok(out)
-}
-
-/// Element-partitioned accumulation for predecomposed dense digit caches.
-pub(crate) fn cached_digit_decompose_fold_partitioned<const D: usize>(
-    digit_planes: &[[i8; D]],
-    challenges: &[SparseChallenge],
-    num_positions_per_block: usize,
-    num_digits: usize,
-    basis: SignedDigitBasis,
-) -> Result<Vec<[i32; D]>, AkitaError> {
-    let num_rings = digit_planes.len().checked_div(num_digits).ok_or_else(|| {
-        AkitaError::InvalidInput("cached fold digit count must be nonzero".into())
-    })?;
-    let digit_abs_bound = basis.abs_bound.min(u64::from(i8::MIN.unsigned_abs()));
-    element_partitioned_decompose_fold(
-        CachedDigits {
-            digit_planes,
-            num_rings,
-            digit_abs_bound,
-        },
-        challenges,
-        num_positions_per_block,
-        num_digits,
-    )
+            let ring_start = (range.start * num_positions_per_block).min(source.num_rings());
+            let ring_end = (range.end * num_positions_per_block).min(source.num_rings());
+            let challenges = ValidatedSparseChallenges::<D>::new(
+                &challenges[range.clone()],
+                ring_end - ring_start,
+                num_positions_per_block,
+            )?;
+            let plans = challenges
+                .iter()
+                .enumerate()
+                .map(|(block_idx, challenge)| PreparedChallenge {
+                    challenge,
+                    plan: prepare_challenge::<D>(
+                        digit_abs_bound,
+                        window_span,
+                        challenge.challenge(),
+                    ),
+                    block_start: ring_start + block_idx * num_positions_per_block,
+                })
+                .collect::<Vec<_>>();
+            let uses_narrow_accumulation = plans.iter().any(|prepared| {
+                matches!(
+                    prepared.plan,
+                    ChallengePlan::NarrowFull(..) | ChallengePlan::NarrowChunked(_)
+                )
+            });
+            let mut out = vec![[0i32; D]; inner_width];
+            cfg_chunks_mut!(out, position_tile * num_digits)
+                .enumerate()
+                .try_for_each(|(tile_idx, acc)| {
+                    let elem_start = tile_idx * position_tile;
+                    if elem_start >= num_positions_per_block {
+                        return Ok(());
+                    }
+                    let elem_end = elem_start + acc.len() / num_digits;
+                    let mut digit_scratch = source.scratch(shape, 1);
+                    let mut accumulator = if uses_narrow_accumulation {
+                        let narrow = vec![[0i16; D]; acc.len()];
+                        FoldAccumulator::Narrow {
+                            wide: acc,
+                            narrow,
+                            bound: 0,
+                        }
+                    } else {
+                        FoldAccumulator::Wide(acc)
+                    };
+                    for prepared in &plans {
+                        let start = prepared.block_start + elem_start;
+                        if start >= ring_end {
+                            continue;
+                        }
+                        let end = (prepared.block_start + elem_end).min(ring_end);
+                        accumulator.accumulate::<F, S>(
+                            source,
+                            &mut digit_scratch,
+                            start..end,
+                            shape,
+                            prepared,
+                        )?;
+                    }
+                    accumulator.finish();
+                    Ok::<(), AkitaError>(())
+                })?;
+            Ok(out)
+        })
+        .collect()
 }
 
 /// Element-partitioned accumulation for multi-digit dense witnesses.
@@ -724,16 +504,21 @@ pub fn balanced_ring_decompose_fold_partitioned<F: Field + CanonicalEncoding, co
     params: &BalancedDecomposePow2Params<F>,
 ) -> Result<Vec<[i32; D]>, AkitaError> {
     let basis = SignedDigitBasis::new(params.log_basis())?;
-    element_partitioned_decompose_fold(
-        LiveRings {
+    element_partitioned_decompose_fold::<F, _, D>(
+        &LiveRings {
             coeffs,
             params,
             basis,
         },
         challenges,
+        std::slice::from_ref(&(0..challenges.len())),
         num_positions_per_block,
-        params.levels(),
+        DigitShape {
+            num_digits: params.levels(),
+            log_basis: params.log_basis(),
+        },
     )
+    .map(|mut chunks| chunks.pop().unwrap_or_default())
 }
 
 /// Position-partitioned accumulation over a packed tight recursive witness.
@@ -749,14 +534,19 @@ pub(crate) fn packed_tight_digit_fold_partitioned<const D: usize>(
             .negative_abs_max()
             .max(digits.bounds().positive_max()),
     );
-    element_partitioned_decompose_fold(
-        PackedDigits {
+    element_partitioned_decompose_fold::<jolt_field::Prime32Offset99, _, D>(
+        &PackedDigits {
             digits,
             num_rings,
             digit_abs_bound,
         },
         challenges,
+        std::slice::from_ref(&(0..challenges.len())),
         num_positions_per_block,
-        1,
+        DigitShape {
+            num_digits: 1,
+            log_basis: 1,
+        },
     )
+    .map(|mut chunks| chunks.pop().unwrap_or_default())
 }
