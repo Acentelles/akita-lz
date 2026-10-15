@@ -17,14 +17,12 @@ pub(super) struct CoefficientPackingGroupSemanticInputs<'authority, 'output, F: 
 }
 
 /// Packing-specific E and quotient events over the checked flat witness domain.
+#[cfg(test)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct CoefficientPackingRelationEvents<E: Field> {
     pub(super) events: Vec<RelationWeightEvent<E>>,
-    #[cfg(test)]
     pub(super) alpha_powers: Arc<[E]>,
-    #[cfg(test)]
     pub(super) relation_coefficient_block_len: usize,
-    #[cfg(test)]
     pub(super) physical_field_len: usize,
 }
 
@@ -159,9 +157,14 @@ impl<E: Field> CoefficientPackingRelationEvents<E> {
 /// factors from which a compute backend can prepare its own execution plan.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CoefficientPackingGroupSemantics<'a, E: Field> {
+    // Challenges share their immutable storage with the relation. Keep only
+    // compact inputs here; CPU consumers evaluate and expand them on demand.
+    pub(super) canonical_challenges: Challenges,
+    pub(super) quotient_row: akita_params::witness::WitnessQuotientRowLayout,
+    pub(super) quotient_gadget: Vec<E>,
+    pub(super) denominator: E,
     pub(super) group_index: usize,
     pub(super) geometry: SubringCoefficientPackingGeometry,
-    pub(super) relation_events: CoefficientPackingRelationEvents<E>,
     pub(super) witness_units: Vec<WitnessUnitLayout>,
     pub(super) prepared_point: &'a PreparedSubringCoefficientPackingPoint<E>,
     pub(super) group_claim_range: Range<usize>,
@@ -222,18 +225,6 @@ impl<'a, E: Field> CoefficientPackingGroupSemantics<'a, E> {
     #[must_use]
     pub const fn geometry(&self) -> SubringCoefficientPackingGeometry {
         self.geometry
-    }
-
-    #[cfg(test)]
-    #[must_use]
-    pub(super) const fn relation_events(&self) -> &CoefficientPackingRelationEvents<E> {
-        &self.relation_events
-    }
-
-    /// Relation events prepared from this group's validated packing authority.
-    #[must_use]
-    pub fn relation_weight_events(&self) -> &[RelationWeightEvent<E>] {
-        &self.relation_events.events
     }
 
     #[must_use]

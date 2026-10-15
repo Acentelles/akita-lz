@@ -12,4 +12,4 @@ mod views;
 
 pub use poly::DensePoly;
 
-pub(crate) use kernels::dense_coefficient_packing_partials;
+pub(crate) use kernels::{dense_coefficient_packing_partials, seam_packing_partials};

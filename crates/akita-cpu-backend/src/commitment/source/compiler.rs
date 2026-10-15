@@ -25,7 +25,10 @@ impl<'a, F: Field> CompiledCommitmentRequest<'a, F> {
     }
 
     /// Materialize only the representations selected during request compilation.
-    pub(crate) fn materialize(self) -> Result<Vec<ResolvedCommitSource<'a, F>>, AkitaError> {
+    pub(crate) fn materialize(
+        self,
+        accepted: Option<AcceptedReach>,
+    ) -> Result<Vec<ResolvedCommitSource<'a, F>>, AkitaError> {
         self.sources
             .iter()
             .zip(self.descriptors)
@@ -37,7 +40,6 @@ impl<'a, F: Field> CompiledCommitmentRequest<'a, F> {
                         let representation = source.represent_as(selection, &self.plan)?;
                         validate_materialized_representation(
                             &descriptor,
-                            &self.plan,
                             selected,
                             &representation,
                         )?;
@@ -60,6 +62,7 @@ impl<'a, F: Field> CompiledCommitmentRequest<'a, F> {
                 Ok(ResolvedCommitSource {
                     descriptor,
                     inner_plan: self.plan,
+                    accepted,
                     path,
                 })
             })
@@ -69,7 +72,6 @@ impl<'a, F: Field> CompiledCommitmentRequest<'a, F> {
 
 fn validate_materialized_representation<F: Field>(
     descriptor: &CommitSourceDescriptor,
-    plan: &CommitInnerPlan,
     selected: PolynomialType,
     representation: &PolynomialRepresentation<'_, F>,
 ) -> Result<(), AkitaError> {
@@ -87,22 +89,12 @@ fn validate_materialized_representation<F: Field>(
                 });
             }
         }
-        PolynomialRepresentation::Dense(DenseRepresentation::PredecomposedDigits(planes)) => {
-            let logical_len = checked_logical_len(descriptor.num_vars())?;
-            let expected_rings = logical_len.div_ceil(plan.ring_dimension);
-            let expected_bytes =
-                checked::product([expected_rings, plan.num_digits_inner, plan.ring_dimension])
-                    .ok_or_else(|| {
-                        AkitaError::InvalidInput("dense digit-plane length overflow".into())
-                    })?;
-            if planes.ring_dimension != plan.ring_dimension
-                || planes.num_digits != plan.num_digits_inner
-                || planes.log_basis != plan.log_basis_inner
-                || planes.logical_ring_count != expected_rings
-                || planes.bytes.len() != expected_bytes
+        PolynomialRepresentation::Dense(DenseRepresentation::SignedBlocks(blocks)) => {
+            if blocks.num_vars() != descriptor.num_vars()
+                || blocks.len() > descriptor.total_coefficient_len()
             {
                 return Err(AkitaError::InvalidInput(
-                    "predecomposed dense planes do not match the compiled inner plan".into(),
+                    "signed blocks disagree with their source descriptor".into(),
                 ));
             }
         }

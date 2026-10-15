@@ -257,6 +257,17 @@ fn layout_rejects_out_of_range_semantic_indices() {
     assert!(layout
         .r_coefficient_index(layout.r_rows().len(), 0, 0, 0)
         .is_err());
+    let row = &layout.r_rows()[0];
+    assert!(row
+        .coefficient_index(layout.quotient_depth().unwrap(), 0, 0)
+        .is_err());
+    assert!(row
+        .coefficient_index(0, row.geometry().coordinate_plane_count(), 0)
+        .is_err());
+    assert!(row
+        .coefficient_index(0, 0, row.geometry().polynomial_modulus_dimension())
+        .is_err());
+    assert!(row.coefficient_index(usize::MAX, 0, 0).is_err());
 }
 
 #[test]
