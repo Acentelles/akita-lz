@@ -1,14 +1,12 @@
 use akita_error::AkitaError;
 
 use super::{candidate_schedule_descriptor_bytes, CandidateMetrics, ScheduleCandidate};
-use crate::{PlannerPolicy, SelectionPolicyId};
+use crate::PlannerPolicy;
 
-/// Complete-schedule ordering: numeric policy coordinates, an optional legacy
-/// root output-witness tie-break, then the canonical descriptor.
+/// Complete-schedule ordering: numeric coordinates, then the canonical descriptor.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct CompleteScheduleScore {
     objective: CompleteObjectiveBound,
-    legacy_root_output_witness_len: Option<usize>,
     descriptor: Vec<u8>,
 }
 
@@ -17,12 +15,6 @@ pub(crate) struct CompleteScheduleScore {
 /// worse than an already completed candidate.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum CompleteObjectiveBound {
-    SetupFirst {
-        first_direct_setup_capacity: usize,
-        exact_score: u128,
-        proof_bytes: usize,
-        setup_field_elements: usize,
-    },
     PaddedSetupEnvelopeFirst {
         setup_envelope_capacity: usize,
         first_direct_setup_capacity: usize,
@@ -42,13 +34,7 @@ impl CompleteObjectiveBound {
         setup_field_elements: usize,
     ) -> Self {
         match policy.selection_policy {
-            SelectionPolicyId::MinFirstDirectSetupThenExactProofAndWorkV5 => Self::SetupFirst {
-                first_direct_setup_capacity,
-                exact_score,
-                proof_bytes,
-                setup_field_elements,
-            },
-            SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6 => {
+            crate::SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6 => {
                 Self::PaddedSetupEnvelopeFirst {
                     setup_envelope_capacity: akita_params::padded_setup_prefix_len(
                         setup_field_elements,
@@ -75,24 +61,6 @@ impl CompleteObjectiveBound {
 
     pub(crate) fn is_strictly_worse_than(self, incumbent: CandidateMetrics) -> bool {
         match self {
-            Self::SetupFirst {
-                first_direct_setup_capacity,
-                exact_score,
-                proof_bytes,
-                setup_field_elements,
-            } => {
-                (
-                    first_direct_setup_capacity,
-                    exact_score,
-                    proof_bytes,
-                    setup_field_elements,
-                ) > (
-                    incumbent.first_direct_setup_capacity.field_elements(),
-                    incumbent.cost.exact_score(),
-                    incumbent.proof_bytes(),
-                    incumbent.setup_field_elements,
-                )
-            }
             Self::PaddedSetupEnvelopeFirst {
                 setup_envelope_capacity,
                 first_direct_setup_capacity,
@@ -126,19 +94,6 @@ impl CompleteObjectiveBound {
         incumbent: CandidateMetrics,
     ) -> bool {
         match self {
-            Self::SetupFirst {
-                first_direct_setup_capacity,
-                exact_score,
-                proof_bytes,
-                ..
-            } => {
-                (first_direct_setup_capacity, exact_score, proof_bytes)
-                    > (
-                        incumbent.first_direct_setup_capacity.field_elements(),
-                        incumbent.cost.exact_score(),
-                        incumbent.proof_bytes(),
-                    )
-            }
             Self::PaddedSetupEnvelopeFirst {
                 setup_envelope_capacity,
                 first_direct_setup_capacity,
@@ -173,13 +128,6 @@ impl CompleteObjectiveBound {
         incumbent: CandidateMetrics,
     ) -> bool {
         match self {
-            Self::SetupFirst {
-                exact_score,
-                proof_bytes,
-                ..
-            } => {
-                (exact_score, proof_bytes) > (incumbent.cost.exact_score(), incumbent.proof_bytes())
-            }
             Self::PaddedSetupEnvelopeFirst {
                 setup_envelope_capacity,
                 exact_score,
@@ -203,7 +151,6 @@ impl CompleteObjectiveBound {
                 setup_envelope_capacity
                     > akita_params::padded_setup_prefix_len(incumbent.setup_field_elements)
             }
-            Self::SetupFirst { .. } => false,
         }
     }
 }
@@ -213,13 +160,9 @@ pub(crate) fn complete_schedule_score(
     candidate: &ScheduleCandidate,
     diagnostics: Option<&crate::diagnostics::PlannerDiagnostics>,
 ) -> Result<CompleteScheduleScore, AkitaError> {
-    let root_output_witness_len = candidate
-        .folds
-        .first()
-        .ok_or_else(|| {
-            AkitaError::InvalidSetup("complete schedule is missing its root fold".into())
-        })?
-        .output_witness_len;
+    candidate.folds.first().ok_or_else(|| {
+        AkitaError::InvalidSetup("complete schedule is missing its root fold".into())
+    })?;
     let descriptor = candidate_schedule_descriptor_bytes(
         None,
         &candidate.folds,
@@ -234,9 +177,6 @@ pub(crate) fn complete_schedule_score(
     }
     Ok(CompleteScheduleScore {
         objective: CompleteObjectiveBound::for_candidate(policy, metrics),
-        legacy_root_output_witness_len: (policy.selection_policy
-            != SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6)
-            .then_some(root_output_witness_len),
         descriptor,
     })
 }

@@ -1,0 +1,39 @@
+{
+  "field": "fp128",
+  "source": "onehot",
+  "chunks": 8,
+  "activated_levels": 2,
+  "num_vars": 24,
+  "command": [
+    "/private/tmp/akita-offload-survey-target/release/examples/offload_boundary_survey",
+    "fp128",
+    "onehot",
+    "8",
+    "2",
+    "24",
+    "artifacts/offload-survey/schedules"
+  ],
+  "timeout_secs": 300,
+  "returncode": 0,
+  "stderr": "",
+  "elapsed_secs": 4.837037958030123,
+  "status": "ok",
+  "metrics": {
+    "family": "fp128_onehot",
+    "chunks": "8",
+    "activated_levels": "2",
+    "num_vars": "24",
+    "offloads": "0",
+    "producer_levels": "",
+    "root_setup_fields": "262144",
+    "first_direct_capacity": "262144",
+    "setup_fields": "262144",
+    "proof_bytes": "478258",
+    "root_witness_fields": "16777216",
+    "fold_levels": "3",
+    "planning_secs": "4.816392",
+    "artifact": "artifacts/offload-survey/schedules/fp128_onehot_w8r2_nv24.aks"
+  },
+  "provenance": "generated",
+  "baseline_commit": "fddf785cf1d6011b508c271d78e69958d1fde4af"
+}

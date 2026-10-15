@@ -157,12 +157,10 @@ fn setup_envelope_score(
     selection_policy: crate::SelectionPolicyId,
     setup_field_elements: usize,
 ) -> usize {
-    if selection_policy
-        == crate::SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6
-    {
-        akita_params::padded_setup_prefix_len(setup_field_elements)
-    } else {
-        setup_field_elements
+    match selection_policy {
+        crate::SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6 => {
+            akita_params::padded_setup_prefix_len(setup_field_elements)
+        }
     }
 }
 
@@ -630,22 +628,19 @@ fn setup_primary_strictly_dominates(
     if !left_admission.admits_every_parent_of(right_admission) {
         return false;
     }
-    if matches!(
-        selection_policy,
-        crate::SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6
-    ) {
-        return left_score.setup_field_elements <= right_score.setup_field_elements
-            && (left_score.first_direct_setup_capacity < right_score.first_direct_setup_capacity
-                || (left_score.first_direct_setup_capacity
-                    == right_score.first_direct_setup_capacity
-                    && (left_score.cost.strictly_better(right_score.cost)
-                        || (left_score.cost.never_worse(right_score.cost)
-                            && left_score.first_direct_output_witness_len
-                                < right_score.first_direct_output_witness_len))));
+    match selection_policy {
+        crate::SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6 => {
+            left_score.setup_field_elements <= right_score.setup_field_elements
+                && (left_score.first_direct_setup_capacity
+                    < right_score.first_direct_setup_capacity
+                    || (left_score.first_direct_setup_capacity
+                        == right_score.first_direct_setup_capacity
+                        && (left_score.cost.strictly_better(right_score.cost)
+                            || (left_score.cost.never_worse(right_score.cost)
+                                && left_score.first_direct_output_witness_len
+                                    < right_score.first_direct_output_witness_len))))
+        }
     }
-    left_score.first_direct_setup_capacity < right_score.first_direct_setup_capacity
-        || (left_score.first_direct_setup_capacity == right_score.first_direct_setup_capacity
-            && left_score.cost.strictly_better(right_score.cost))
 }
 
 #[derive(Clone, Copy)]
@@ -670,27 +665,20 @@ fn setup_projection_dominates(
             == right.score.first_direct_output_witness_len
         && left.context == right.context
         && left.descriptor <= right.descriptor;
-    let equal_later_coordinates_are_canonical =
-        cost_never_worse && left.context == right.context && left.descriptor <= right.descriptor;
-    if matches!(
-        selection_policy,
-        crate::SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6
-    ) {
-        return left.score.setup_field_elements <= right.score.setup_field_elements
-            && (left.score.first_direct_setup_capacity < right.score.first_direct_setup_capacity
-                || (left.score.first_direct_setup_capacity
-                    == right.score.first_direct_setup_capacity
-                    && (left.score.cost.strictly_better(right.score.cost)
-                        || (cost_never_worse
-                            && left.score.first_direct_output_witness_len
-                                < right.score.first_direct_output_witness_len)
-                        || equal_output_is_canonical)));
+    match selection_policy {
+        crate::SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6 => {
+            left.score.setup_field_elements <= right.score.setup_field_elements
+                && (left.score.first_direct_setup_capacity
+                    < right.score.first_direct_setup_capacity
+                    || (left.score.first_direct_setup_capacity
+                        == right.score.first_direct_setup_capacity
+                        && (left.score.cost.strictly_better(right.score.cost)
+                            || (cost_never_worse
+                                && left.score.first_direct_output_witness_len
+                                    < right.score.first_direct_output_witness_len)
+                            || equal_output_is_canonical)))
+        }
     }
-    left.score.first_direct_setup_capacity < right.score.first_direct_setup_capacity
-        || (left.score.first_direct_setup_capacity == right.score.first_direct_setup_capacity
-            && (left.score.cost.strictly_better(right.score.cost)
-                || (equal_later_coordinates_are_canonical
-                    && left.score.setup_field_elements <= right.score.setup_field_elements)))
 }
 
 fn payload_dominates_for_policy(

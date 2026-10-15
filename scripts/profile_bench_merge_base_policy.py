@@ -43,13 +43,10 @@ class BenchCase:
     mode: str
     num_vars: int
     num_polys: int
-    setup_mode: str = "direct"
 
     @property
     def spec(self) -> str:
-        if self.setup_mode == "direct":
-            return f"{self.mode}:{self.num_vars}:{self.num_polys}"
-        return f"{self.mode}:{self.num_vars}:{self.num_polys}:{self.setup_mode}"
+        return f"{self.mode}:{self.num_vars}:{self.num_polys}"
 
 
 @dataclass(frozen=True)
@@ -95,24 +92,14 @@ def parse_case_mode(case_spec: str) -> str:
     return mode
 
 
-def normalize_setup_mode(setup_mode: str) -> str:
-    if setup_mode not in {"direct", "recursive"}:
-        raise ValueError(f"unsupported setup mode: {setup_mode!r}")
-    return setup_mode
-
-
 def parse_case_spec(case_spec: str) -> BenchCase:
     parts = case_spec.split(":")
     if len(parts) == 3:
         mode, num_vars_str, num_polys_str = parts
-        setup_mode = "direct"
-    elif len(parts) == 4:
-        mode, num_vars_str, num_polys_str, setup_mode = parts
-        setup_mode = normalize_setup_mode(setup_mode)
     else:
         raise ValueError(
             f"invalid case spec {case_spec!r}; expected "
-            "MODE:NUM_VARS:NUM_POLYS or MODE:NUM_VARS:NUM_POLYS:SETUP_MODE"
+            "MODE:NUM_VARS:NUM_POLYS"
         )
     num_vars = int(num_vars_str)
     num_polys = int(num_polys_str)
@@ -122,7 +109,6 @@ def parse_case_spec(case_spec: str) -> BenchCase:
         mode=mode.strip(),
         num_vars=num_vars,
         num_polys=num_polys,
-        setup_mode=setup_mode,
     )
 
 
@@ -190,7 +176,6 @@ def smoke_profile_case(binary: Path, case: BenchCase) -> tuple[bool, str]:
     env["AKITA_MODE"] = case.mode
     env["AKITA_NUM_VARS"] = str(case.num_vars)
     env["AKITA_NUM_POLYS"] = str(case.num_polys)
-    env["AKITA_SETUP_MODE"] = case.setup_mode
     env["AKITA_PROFILE_TRACE"] = "0"
     env["AKITA_PROFILE_SPAN_CLOSES"] = "0"
     env["AKITA_PROFILE_LOG"] = "info"
@@ -377,7 +362,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--case",
         action="append",
         default=[],
-        help="Bench case as MODE:NUM_VARS:NUM_POLYS[:SETUP_MODE]. Repeatable.",
+        help="Bench case as MODE:NUM_VARS:NUM_POLYS. Repeatable.",
     )
     resolve.add_argument(
         "--smoke-binary",

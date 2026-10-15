@@ -184,13 +184,6 @@ impl_multi_chunk_companion!(
     "fp128_onehot_multi_chunk"
 );
 
-impl crate::recursive_commitment::RecursiveScheduleConfig for OneHot {
-    const RECURSIVE_SCHEDULE_FAMILY_NAME: &'static str = "fp128_onehot_recursive";
-}
-
-impl crate::recursive_commitment::RecursiveScheduleConfig for OneHotMultiChunk {
-    const RECURSIVE_SCHEDULE_FAMILY_NAME: &'static str = "fp128_onehot_recursive_multi_chunk_w8r2";
-}
 impl_multi_chunk_companion!(
     OneHotMultiChunkW2R2,
     OneHot,
@@ -209,10 +202,6 @@ impl_multi_chunk_companion!(
     akita_params::MultiChunkProfileId::W8R2,
     "fp128_dense_multi_chunk"
 );
-
-impl crate::recursive_commitment::RecursiveScheduleConfig for Dense {
-    const RECURSIVE_SCHEDULE_FAMILY_NAME: &'static str = "fp128_dense_recursive";
-}
 
 impl_multi_chunk_companion!(
     OneHotMultiChunkW2R3,
@@ -242,23 +231,11 @@ impl_multi_chunk_companion!(
     "fp128_dense_multi_chunk_w8r3"
 );
 
-impl crate::recursive_commitment::RecursiveScheduleConfig for OneHotMultiChunkW2R3 {
-    const RECURSIVE_SCHEDULE_FAMILY_NAME: &'static str = "fp128_onehot_recursive_multi_chunk_w2r3";
-}
-
-impl crate::recursive_commitment::RecursiveScheduleConfig for OneHotMultiChunkW4R3 {
-    const RECURSIVE_SCHEDULE_FAMILY_NAME: &'static str = "fp128_onehot_recursive_multi_chunk_w4r3";
-}
-
-impl crate::recursive_commitment::RecursiveScheduleConfig for OneHotMultiChunkW8R3 {
-    const RECURSIVE_SCHEDULE_FAMILY_NAME: &'static str = "fp128_onehot_recursive_multi_chunk_w8r3";
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::schedule_artifact_tests::mutated_row_admission_error;
-    use crate::{CommitmentConfig, RecursiveCommitmentConfig};
+    use crate::CommitmentConfig;
 
     fn assert_r3_catalog<Cfg: CommitmentConfig>() {
         let catalog =
@@ -287,12 +264,6 @@ mod tests {
                     Cfg::schedule_family_name(),
                 );
             }
-            if Cfg::recursive_setup_planning() {
-                assert!(schedule
-                    .recursive_folds
-                    .iter()
-                    .any(|fold| fold.params.setup_prefix().is_some()));
-            }
             let error = mutated_row_admission_error::<Cfg>(row, |schedule| {
                 schedule.recursive_folds[1].params.witness_chunk =
                     akita_params::ChunkedWitnessCfg::default_non_chunked();
@@ -307,8 +278,5 @@ mod tests {
         assert_r3_catalog::<OneHotMultiChunkW4R3>();
         assert_r3_catalog::<OneHotMultiChunkW8R3>();
         assert_r3_catalog::<DenseMultiChunkW8R3>();
-        assert_r3_catalog::<RecursiveCommitmentConfig<OneHotMultiChunkW2R3>>();
-        assert_r3_catalog::<RecursiveCommitmentConfig<OneHotMultiChunkW4R3>>();
-        assert_r3_catalog::<RecursiveCommitmentConfig<OneHotMultiChunkW8R3>>();
     }
 }

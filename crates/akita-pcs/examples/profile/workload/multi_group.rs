@@ -9,7 +9,7 @@ use crate::report::{
     report_setup_sizes, report_timing, report_verifier_ntt_cache_size,
 };
 use crate::workspace_schedules::load_workspace_scheme;
-use akita_config::{derive_transcript_grinding_plan, CommitmentConfig, RecursiveCommitmentConfig};
+use akita_config::{derive_transcript_grinding_plan, CommitmentConfig};
 use akita_cpu_backend::{AkitaProverSetup, CpuBackend};
 use akita_params::{BasisMode, FoldSchedule, PolynomialGroupLayout, SetupContributionMode};
 use akita_serialization::{AkitaDeserialize, AkitaSerialize, Valid};
@@ -42,97 +42,13 @@ where
     Ok(())
 }
 
-/// Setup-contribution mode selected by the benchmark case.
-pub(crate) fn profile_setup_contribution_mode() -> SetupContributionMode {
-    match std::env::var("AKITA_SETUP_MODE").ok().as_deref() {
-        Some("recursive") => SetupContributionMode::Recursive,
-        Some("direct") | None => SetupContributionMode::Direct,
-        Some(other) => {
-            tracing::warn!(
-                value = other,
-                "unknown AKITA_SETUP_MODE; defaulting to direct"
-            );
-            eprintln!("[profile] unknown AKITA_SETUP_MODE={other:?}; defaulting to direct");
-            SetupContributionMode::Direct
-        }
-    }
-}
-
 pub(crate) fn run_recursive_multi_group_onehot<FF, const D: usize, Cfg>(
     label: &str,
     pre_num_vars: usize,
     final_num_vars: usize,
     final_num_polys: usize,
 ) where
-    Cfg: CommitmentConfig<Field = FF> + akita_config::recursive_commitment::RecursiveScheduleConfig,
-    FF: CanonicalEncoding
-        + CanonicalBytes
-        + CanonicalEncoding
-        + Field
-        + Ring
-        + PseudoMersenne
-        + Field
-        + Unreduced
-        + WithCommitAccumulator
-        + Valid
-        + AkitaDeserialize<Context = ()>
-        + AkitaSerialize
-        + 'static,
-    <FF as Unreduced>::Wide: From<FF> + jolt_field::AdditiveGroup,
-    Cfg::ExtField: jolt_field::MulBaseUnreduced<FF>
-        + ExtField<FF>
-        + FpExtEncoding<FF>
-        + Unreduced
-        + Fold
-        + AkitaSerialize
-        + Valid,
-{
-    let setup_contribution_mode = profile_setup_contribution_mode();
-    let base_scheme = load_workspace_scheme::<Cfg>().expect("base workspace schedule artifact");
-    match setup_contribution_mode {
-        SetupContributionMode::Direct => {
-            run_recursive_multi_group_onehot_with_proof_cfg::<FF, D, Cfg, Cfg>(
-                &base_scheme,
-                &base_scheme,
-                label,
-                pre_num_vars,
-                final_num_vars,
-                final_num_polys,
-                setup_contribution_mode,
-            )
-        }
-        SetupContributionMode::Recursive => {
-            let proof_scheme = load_workspace_scheme::<RecursiveCommitmentConfig<Cfg>>()
-                .expect("recursive workspace schedule artifact");
-            run_recursive_multi_group_onehot_with_proof_cfg::<
-                FF,
-                D,
-                Cfg,
-                RecursiveCommitmentConfig<Cfg>,
-            >(
-                &base_scheme,
-                &proof_scheme,
-                label,
-                pre_num_vars,
-                final_num_vars,
-                final_num_polys,
-                setup_contribution_mode,
-            )
-        }
-    }
-}
-
-fn run_recursive_multi_group_onehot_with_proof_cfg<FF, const D: usize, Cfg, ProofCfg>(
-    base_scheme: &akita_pcs::AkitaCommitmentScheme<Cfg>,
-    proof_scheme: &akita_pcs::AkitaCommitmentScheme<ProofCfg>,
-    label: &str,
-    pre_num_vars: usize,
-    final_num_vars: usize,
-    final_num_polys: usize,
-    setup_contribution_mode: SetupContributionMode,
-) where
     Cfg: CommitmentConfig<Field = FF>,
-    ProofCfg: CommitmentConfig<Field = FF, ExtField = Cfg::ExtField>,
     FF: CanonicalEncoding
         + CanonicalBytes
         + CanonicalEncoding
@@ -155,6 +71,7 @@ fn run_recursive_multi_group_onehot_with_proof_cfg<FF, const D: usize, Cfg, Proo
         + AkitaSerialize
         + Valid,
 {
+    let scheme = load_workspace_scheme::<Cfg>().expect("workspace schedule artifact");
     const PRE_GROUPS: usize = 2;
     const PRE_POLYS_PER_GROUP: usize = 1;
 
@@ -163,7 +80,7 @@ fn run_recursive_multi_group_onehot_with_proof_cfg<FF, const D: usize, Cfg, Proo
 
     let mut point_rng = StdRng::seed_from_u64(0xfeed_face);
     let pre_key = PolynomialGroupLayout::new(pre_num_vars, PRE_POLYS_PER_GROUP);
-    let pre_descriptor = base_scheme
+    let pre_descriptor = scheme
         .schedules()
         .resolve_key(&akita_params::ScheduleLookupKey::single(pre_key))
         .expect("independent profile")
@@ -177,12 +94,18 @@ fn run_recursive_multi_group_onehot_with_proof_cfg<FF, const D: usize, Cfg, Proo
     let opening_layout = multi_group_key
         .opening_layout()
         .expect("multi-group layout");
-    let schedule = proof_scheme
+    let schedule = scheme
         .schedules()
         .resolve_key(&multi_group_key)
         .expect("multi-group runtime schedule")
         .schedule()
         .clone();
+    let setup_contribution_mode = schedule
+        .recursive_folds
+        .first()
+        .map_or(SetupContributionMode::Direct, |fold| {
+            fold.predecessor_setup_contribution_mode()
+        });
     let pre_points = (0..PRE_GROUPS)
         .map(|_| random_claim_point::<FF, Cfg::ExtField>(pre_num_vars, &mut point_rng))
         .collect::<Vec<_>>();
@@ -199,9 +122,7 @@ fn run_recursive_multi_group_onehot_with_proof_cfg<FF, const D: usize, Cfg, Proo
         setup,
     ) = {
         let t0 = Instant::now();
-        let mut setup = proof_scheme
-            .setup_prover(final_num_vars, total_polys)
-            .unwrap();
+        let mut setup = scheme.setup_prover(final_num_vars, total_polys).unwrap();
         let setup_expand_secs = t0.elapsed().as_secs_f64();
         let t_prepare = Instant::now();
         let backend = CpuBackend::new(setup.expanded.clone()).unwrap();
@@ -280,7 +201,7 @@ fn run_recursive_multi_group_onehot_with_proof_cfg<FF, const D: usize, Cfg, Proo
                 private_handle: hint,
             } = backend
                 .commit(
-                    proof_scheme.schedules(),
+                    scheme.schedules(),
                     &source,
                     akita_cpu_backend::GroupContext::explicit(&pre_descriptor),
                 )
@@ -306,7 +227,7 @@ fn run_recursive_multi_group_onehot_with_proof_cfg<FF, const D: usize, Cfg, Proo
             private_handle: final_hint,
         } = backend
             .commit(
-                proof_scheme.schedules(),
+                scheme.schedules(),
                 &source,
                 akita_cpu_backend::GroupContext::scheduler_with_precommitted_groups(&precommitteds),
             )
@@ -341,15 +262,14 @@ fn run_recursive_multi_group_onehot_with_proof_cfg<FF, const D: usize, Cfg, Proo
             "profile setup-contribution mode"
         );
         eprintln!("[{label}] setup_contribution_mode: {setup_contribution_mode:?}");
-        let prover_data =
-            akita_prover::SelectedProverOpeningData::from_committed_claims::<ProofCfg>(
-                OpeningClaims::from_groups(prover_groups).expect("prover claims"),
-                prover_hints,
-                proof_scheme.schedules(),
-            )
-            .expect("multi-group prover data");
+        let prover_data = akita_prover::SelectedProverOpeningData::from_committed_claims::<Cfg>(
+            OpeningClaims::from_groups(prover_groups).expect("prover claims"),
+            prover_hints,
+            scheme.schedules(),
+        )
+        .expect("multi-group prover data");
         let selection = prover_data.selection();
-        let proof = proof_scheme
+        let proof = scheme
             .batched_prove(
                 &setup,
                 prover_data,
@@ -376,13 +296,13 @@ fn run_recursive_multi_group_onehot_with_proof_cfg<FF, const D: usize, Cfg, Proo
     };
 
     assert_observed_proof_size(label, &proof);
-    let grinding_plan = derive_transcript_grinding_plan::<ProofCfg>(&schedule, &opening_layout)
+    let grinding_plan = derive_transcript_grinding_plan::<Cfg>(&schedule, &opening_layout)
         .expect("profile grinding plan");
     print_proof_summary(label, &proof, &schedule, &grinding_plan);
     report_proof_size_against_planner(
         label,
         &proof,
-        proof_size_budgets::<ProofCfg>(&schedule, final_group),
+        proof_size_budgets::<Cfg>(&schedule, final_group),
         "planned",
         setup_contribution_mode,
     );
@@ -404,7 +324,7 @@ fn run_recursive_multi_group_onehot_with_proof_cfg<FF, const D: usize, Cfg, Proo
 
     let t_verifier_setup = Instant::now();
     let verifier_setup = pools.in_verify_multi(|| {
-        proof_scheme
+        scheme
             .setup_verifier_for_schedule(&setup, &schedule, &opening_layout)
             .expect("verifier setup")
     });
@@ -439,7 +359,7 @@ fn run_recursive_multi_group_onehot_with_proof_cfg<FF, const D: usize, Cfg, Proo
         )
         .expect("verifier statement")
     };
-    let verifier = proof_scheme
+    let verifier = scheme
         .verifier(verifier_setup.clone())
         .expect("verifier for the profile setup");
     let verify =

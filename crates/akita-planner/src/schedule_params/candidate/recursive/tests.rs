@@ -2,12 +2,10 @@ use super::*;
 
 #[test]
 fn combined_terminal_and_fold_views_match_independent_searches() {
-    use akita_config::{
-        policy_of, proof_optimized::fp128::OneHot, CommitmentConfig, RecursiveCommitmentConfig,
-    };
+    use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
     use akita_params::InnerCommitSecurityRoute;
 
-    type Recursive = RecursiveCommitmentConfig<OneHot>;
+    type Recursive = OneHot;
     let policy = policy_of::<Recursive>();
     let opening = PlannerOpeningCandidate::evaluation_trace(
         Recursive::ring_challenge_config(64).expect("challenge config"),
@@ -61,11 +59,9 @@ fn combined_terminal_and_fold_views_match_independent_searches() {
 
 #[test]
 fn guided_search_forces_a_split_outside_the_bounded_domain() {
-    use akita_config::{
-        policy_of, proof_optimized::fp128::OneHot, CommitmentConfig, RecursiveCommitmentConfig,
-    };
+    use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-    type Recursive = RecursiveCommitmentConfig<OneHot>;
+    type Recursive = OneHot;
     let policy = policy_of::<Recursive>();
     let base_request = RecursiveCandidateRequest {
         input_chunks: None,
@@ -137,12 +133,10 @@ fn guided_search_forces_a_split_outside_the_bounded_domain() {
 
 #[test]
 fn guided_recursive_l2_survives_the_profitability_filter() {
-    use akita_config::{
-        policy_of, proof_optimized::fp128::OneHot, CommitmentConfig, RecursiveCommitmentConfig,
-    };
+    use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
     use akita_params::InnerCommitSecurityRoute;
 
-    type Recursive = RecursiveCommitmentConfig<OneHot>;
+    type Recursive = OneHot;
     let policy = policy_of::<Recursive>();
     for source_bound in [
         1_000,
@@ -228,12 +222,10 @@ fn guided_recursive_l2_survives_the_profitability_filter() {
 
 #[test]
 fn combined_relation_views_match_mode_specific_searches() {
-    use akita_config::{
-        policy_of, proof_optimized::fp128::OneHot, CommitmentConfig, RecursiveCommitmentConfig,
-    };
+    use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
     use akita_params::RingRelationMode::{QuotientLift, ReducedEvaluation};
 
-    type Recursive = RecursiveCommitmentConfig<OneHot>;
+    type Recursive = OneHot;
     let policy = policy_of::<Recursive>();
     let request = RecursiveCandidateRequest {
         input_chunks: None,
@@ -289,12 +281,10 @@ fn combined_relation_views_match_mode_specific_searches() {
 
 #[test]
 fn reduced_only_views_keep_quotient_terminal_and_exclusively_reduced_folds() {
-    use akita_config::{
-        policy_of, proof_optimized::fp128::OneHot, CommitmentConfig, RecursiveCommitmentConfig,
-    };
+    use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
     use akita_params::RingRelationMode::{QuotientLift, ReducedEvaluation};
 
-    type Recursive = RecursiveCommitmentConfig<OneHot>;
+    type Recursive = OneHot;
     let policy = policy_of::<Recursive>();
     let request = RecursiveCandidateRequest {
         input_chunks: None,
@@ -335,11 +325,9 @@ fn reduced_only_views_keep_quotient_terminal_and_exclusively_reduced_folds() {
 
 #[test]
 fn combined_views_keep_a_noncontracting_terminal_candidate() {
-    use akita_config::{
-        policy_of, proof_optimized::fp128::OneHot, CommitmentConfig, RecursiveCommitmentConfig,
-    };
+    use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-    type Recursive = RecursiveCommitmentConfig<OneHot>;
+    type Recursive = OneHot;
     let policy = policy_of::<Recursive>();
     let opening = PlannerOpeningCandidate::evaluation_trace(
         Recursive::ring_challenge_config(64).expect("challenge config"),
@@ -380,11 +368,9 @@ fn combined_views_keep_a_noncontracting_terminal_candidate() {
 
 #[test]
 fn late_consumer_keeps_setup_prefix_slices_eligible() {
-    use akita_config::{
-        policy_of, proof_optimized::fp128::OneHot, CommitmentConfig, RecursiveCommitmentConfig,
-    };
+    use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-    type Recursive = RecursiveCommitmentConfig<OneHot>;
+    type Recursive = OneHot;
     let policy = policy_of::<Recursive>();
     let challenge = Recursive::ring_challenge_config(64).expect("challenge config");
     let mut cache = SetupPrefixSearchCache::default();

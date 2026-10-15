@@ -176,7 +176,7 @@ fn fixed_root_packing_round_trips_in_both_bases() {
             let polynomial =
                 akita_cpu_backend::DensePoly::from_field_evals(num_vars, &evaluations).unwrap();
 
-            let mut setup = scheme.setup_prover(num_vars, 1).unwrap();
+            let setup = scheme.setup_prover(num_vars, 1).unwrap();
             let setup_prefix = row.schedule().recursive_folds[0]
                 .params
                 .setup_prefix()
@@ -184,15 +184,10 @@ fn fixed_root_packing_round_trips_in_both_bases() {
                 .unwrap()
                 .slot_id()
                 .expect("setup prefix group");
-            let prefix_backend =
-                CpuBackend::<PackingField, PackingExt>::new(setup.expanded.clone()).unwrap();
-            let artifacts = prefix_backend
-                .export_setup_prefixes(std::slice::from_ref(&setup_prefix))
-                .unwrap();
-            setup
-                .prefix_slots
-                .insert(artifacts.get(&setup_prefix).unwrap().clone())
-                .unwrap();
+            assert!(
+                setup.prefix_slots.get(&setup_prefix).is_some(),
+                "setup must provision the selected offload prefix automatically"
+            );
             let stack = CpuBackend::new(setup.expanded.clone()).expect("backend");
             let verifier_setup = scheme.setup_verifier(&setup).unwrap();
             let akita_cpu_backend::CommitOutput {

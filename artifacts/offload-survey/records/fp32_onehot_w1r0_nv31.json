@@ -1,0 +1,39 @@
+{
+  "field": "fp32",
+  "source": "onehot",
+  "chunks": 1,
+  "activated_levels": 0,
+  "num_vars": 31,
+  "command": [
+    "/private/tmp/akita-offload-survey-target/release/examples/offload_boundary_survey",
+    "fp32",
+    "onehot",
+    "1",
+    "0",
+    "31",
+    "artifacts/offload-survey/schedules"
+  ],
+  "timeout_secs": 300,
+  "returncode": 0,
+  "stderr": "",
+  "elapsed_secs": 65.07514224998886,
+  "status": "ok",
+  "metrics": {
+    "family": "fp32_onehot",
+    "chunks": "1",
+    "activated_levels": "0",
+    "num_vars": "31",
+    "offloads": "1",
+    "producer_levels": "0",
+    "root_setup_fields": "4194304",
+    "first_direct_capacity": "1048576",
+    "setup_fields": "4194304",
+    "proof_bytes": "69136",
+    "root_witness_fields": "2147483648",
+    "fold_levels": "7",
+    "planning_secs": "65.033973",
+    "artifact": "artifacts/offload-survey/schedules/fp32_onehot_w1r0_nv31.aks"
+  },
+  "provenance": "generated",
+  "baseline_commit": "fddf785cf1d6011b508c271d78e69958d1fde4af"
+}

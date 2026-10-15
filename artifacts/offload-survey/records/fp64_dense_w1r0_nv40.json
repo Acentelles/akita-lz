@@ -1,0 +1,21 @@
+{
+  "field": "fp64",
+  "source": "dense",
+  "chunks": 1,
+  "activated_levels": 0,
+  "num_vars": 40,
+  "command": [
+    "/private/tmp/akita-offload-survey-target/release/examples/offload_boundary_survey",
+    "fp64",
+    "dense",
+    "1",
+    "0",
+    "40",
+    "artifacts/offload-survey/schedules"
+  ],
+  "timeout_secs": 600,
+  "status": "timeout",
+  "elapsed_secs": 600.1929056249792,
+  "provenance": "generated",
+  "baseline_commit": "fddf785cf1d6011b508c271d78e69958d1fde4af"
+}

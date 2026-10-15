@@ -1,6 +1,6 @@
 use akita_config::{
-    policy_of, proof_optimized::fp128, CommitmentConfig, RecursiveCommitmentConfig,
-    TrustedScheduleCatalog, ValidatedScheduleCatalog, MAX_TRUSTED_SCHEDULE_ARTIFACT_BYTES,
+    policy_of, proof_optimized::fp128, CommitmentConfig, TrustedScheduleCatalog,
+    ValidatedScheduleCatalog, MAX_TRUSTED_SCHEDULE_ARTIFACT_BYTES,
     MAX_TRUSTED_SCHEDULE_ARTIFACT_ROW_BYTES,
 };
 use akita_params::{
@@ -52,10 +52,6 @@ impl CommitmentConfig for CountingDense {
 
     fn committed_source_class() -> akita_params::sis::CommittedSourceClass {
         fp128::Dense::committed_source_class()
-    }
-
-    fn recursive_setup_planning() -> bool {
-        fp128::Dense::recursive_setup_planning()
     }
 
     fn chunked_witness_cfg() -> ChunkedWitnessCfg {
@@ -351,11 +347,11 @@ fn trusted_artifact_round_trip_preserves_rows_and_selection() {
         loaded.resolve_profiles(loaded_row.profiles()).unwrap()
     ));
     assert_eq!(loaded_row.schedule(), checked_in_row.schedule());
-    assert!(loaded_row
+    assert!(loaded.rows().any(|row| row
         .schedule()
         .recursive_folds
         .iter()
-        .any(|fold| fold.params.ring_relation_mode.is_reduced_evaluation()));
+        .any(|fold| fold.params.ring_relation_mode.is_reduced_evaluation())));
 }
 
 #[test]
@@ -617,21 +613,20 @@ fn catalog_constructor_enforces_family_and_row_count_bounds() {
 #[test]
 fn recursive_prefix_slot_id_fixture() {
     // These setup-prefix identities bind the generated schedule and policy.
-    let onehot = recursive_prefix_fixture::<RecursiveCommitmentConfig<fp128::OneHot>>();
-    let multichunk =
-        recursive_prefix_fixture::<RecursiveCommitmentConfig<fp128::OneHotMultiChunk>>();
+    let onehot = recursive_prefix_fixture::<fp128::OneHot>();
+    let multichunk = recursive_prefix_fixture::<fp128::OneHotMultiChunk>();
     assert_eq!(
         onehot,
         (
-            3,
-            "643eb959607f2fa91a51cb4e445ac706c291481c02edc47d3e6836d6185ea58d".to_string(),
+            12,
+            "526d166d62c45f75fd322a8ac79971afed6a596250435e43a1fc41f1df4ac07a".to_string(),
         )
     );
     assert_eq!(
         multichunk,
         (
-            3,
-            "0ea09bafa95cc857b27075caefeaa5dda6c8fb07ade9216198aac783c6384a59".to_string(),
+            4,
+            "523116bcbb12c42126091be91b5f200b6dd09c26f9916072f431fc247d6e3549".to_string(),
         )
     );
 }
@@ -644,10 +639,12 @@ fn setup_prefix_planning_rejects_invalid_capacity_metadata() {
         .expect_err("zero-batch setup metadata must reject for nonrecursive configs");
     assert!(format!("{zero_batch}").contains("at least 1"));
 
-    let recursive = checked_in_catalog::<RecursiveCommitmentConfig<fp128::OneHot>>();
-    let oversized_vars = akita_config::SetupRequirements::from_catalog::<
-        RecursiveCommitmentConfig<fp128::OneHot>,
-    >(&recursive, usize::BITS as usize, 1)
+    let recursive = checked_in_catalog::<fp128::OneHot>();
+    let oversized_vars = akita_config::SetupRequirements::from_catalog::<fp128::OneHot>(
+        &recursive,
+        usize::BITS as usize,
+        1,
+    )
     .map(|requirements| requirements.prefix_slot_ids().to_vec())
     .expect_err("oversized setup metadata must reject for recursive configs");
     assert!(format!("{oversized_vars}").contains("exceeds preprocessing limits"));
@@ -700,8 +697,8 @@ fn setup_requirements_keep_precommits_when_the_grouped_row_does_not_fit() {
 
 #[test]
 fn setup_requirements_union_covers_both_families_at_one_bound() {
-    type OneHot = RecursiveCommitmentConfig<fp128::OneHot>;
-    type MultiChunk = RecursiveCommitmentConfig<fp128::OneHotMultiChunk>;
+    type OneHot = fp128::OneHot;
+    type MultiChunk = fp128::OneHotMultiChunk;
     let requirements_at = |max_num_vars, max_num_batched_polys| {
         (
             akita_config::SetupRequirements::from_catalog::<OneHot>(
@@ -835,7 +832,7 @@ fn unsupported_terminal_inner_log_basis_is_rejected_not_panicking() {
 
 #[test]
 fn unsupported_fold_group_log_basis_is_rejected_not_panicking() {
-    type Cfg = RecursiveCommitmentConfig<akita_config::proof_optimized::fp32::Dense>;
+    type Cfg = akita_config::proof_optimized::fp32::Dense;
     const GROUP: &str = "recursive fold 0 final group";
     for log_basis in [0, 17, 128] {
         let edited = format!("log_basis {log_basis} ");
@@ -875,7 +872,7 @@ fn out_of_range_digit_depths_are_rejected_before_digit_formulas() {
     });
     assert_digit_range_rejection::<fp128::Dense>(&terminal_fold, "terminal fold", "fold", &edited);
 
-    type Cfg = RecursiveCommitmentConfig<akita_config::proof_optimized::fp32::Dense>;
+    type Cfg = akita_config::proof_optimized::fp32::Dense;
     for (key, role) in [("num_digits_open", "opening"), ("num_digits_fold", "fold")] {
         let bytes = edited_artifact::<Cfg>(|value| {
             first_recursive_group(value)["opening"][key] = u64::MAX.into();

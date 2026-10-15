@@ -1,6 +1,6 @@
 //! Portable extension-field imports and executor-local setup-prefix ownership.
 use super::common;
-use akita_config::{proof_optimized::fp32, CommitmentConfig, RecursiveCommitmentConfig};
+use akita_config::{proof_optimized::fp32, CommitmentConfig};
 use akita_cpu_backend::{
     CpuBackend, CpuImportPacket, CpuSource, DensePoly, GroupContext, OneHotPoly, SuccessorSection,
 };
@@ -24,11 +24,11 @@ fn portable_tensor_import_matches_homogeneous_proof() {
     common::run_on_large_stack(|| {
         let chunk_size = akita_config::unit_onehot_source_chunk_size::<fp32::OneHot>().unwrap();
         let poly =
-            OneHotPoly::<F, u8>::new(chunk_size, vec![Some(0); (1 << 16) / chunk_size]).unwrap();
+            OneHotPoly::<F, u8>::new(chunk_size, vec![Some(0); (1 << 28) / chunk_size]).unwrap();
         let expected =
             akita_params::lagrange_weights(&vec![E::from_u64(2); chunk_size.ilog2() as usize])
                 .unwrap()[0];
-        run::<fp32::OneHot, _>(16, vec![poly; 2], expected);
+        run::<fp32::OneHot, _>(28, vec![poly], expected);
     });
 }
 
@@ -38,7 +38,7 @@ fn offloaded_route_uses_only_local_prefix_handles() {
     common::run_on_large_stack(|| {
         // The smallest shipped fp32 recursive row with an offloaded setup prefix.
         let poly = DensePoly::from_field_evals(24, vec![F::from_u64(1); 1 << 24]).unwrap();
-        run::<RecursiveCommitmentConfig<fp32::Dense>, _>(24, vec![poly], E::from_u64(1));
+        run::<fp32::Dense, _>(24, vec![poly], E::from_u64(1));
     });
 }
 
@@ -81,7 +81,10 @@ where
     let all_ids =
         akita_config::required_setup_prefix_slot_ids_for_schedule(schedule, input.opening_layout())
             .unwrap();
-    assert_eq!(!all_ids.is_empty(), Cfg::recursive_setup_planning());
+    assert!(
+        !all_ids.is_empty(),
+        "fixture must exercise setup offloading"
+    );
     assert!(schedule.recursive_folds.iter().any(|fold| matches!(
         fold.params.source_encoding,
         CommittedSourceEncoding::TensorSubfieldProjection { .. }

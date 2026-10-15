@@ -109,14 +109,6 @@ impl RelationSearchDomain {
         self.transitions().contains(&transition)
     }
 
-    #[must_use]
-    pub(crate) const fn including_terminal_quotient(self) -> Self {
-        match self {
-            Self::ReducedOnly | Self::QuotientAndReduced => Self::QuotientAndReduced,
-            Self::QuotientOnly => Self::QuotientOnly,
-        }
-    }
-
     pub(crate) fn only_transition(self) -> Result<RingRelationMode, AkitaError> {
         let [transition] = self.transitions() else {
             return Err(AkitaError::InvalidSetup(

@@ -67,7 +67,11 @@ pub(crate) fn run_batched_onehot<FF, const D: usize, Cfg: CommitmentConfig<Field
         .collect();
 
     let pools = ProfileThreadPools::get();
-    let setup_contribution_mode = SetupContributionMode::Direct;
+    let setup_contribution_mode = plan
+        .and_then(|schedule| schedule.recursive_folds.first())
+        .map_or(SetupContributionMode::Direct, |fold| {
+            fold.predecessor_setup_contribution_mode()
+        });
     let (commitments, proof, setup) = {
         let t0 = Instant::now();
         let setup = scheme.setup_prover(nv, num_polys).unwrap();

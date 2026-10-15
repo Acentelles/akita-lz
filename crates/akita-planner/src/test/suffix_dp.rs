@@ -376,7 +376,8 @@ fn restricted_search_recovers_pruned_query_tradeoff() {
         potential_b_dimensions: &[256],
         potential_d_dimensions: &[256],
     };
-    policy.selection_policy = crate::SelectionPolicyId::MinFirstDirectSetupThenExactProofAndWorkV5;
+    policy.selection_policy =
+        crate::SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6;
     policy.selective_l2_response_model = crate::SelectiveL2ResponseModelId::Disabled;
     let key =
         akita_params::ScheduleLookupKey::single(akita_params::PolynomialGroupLayout::singleton(14));

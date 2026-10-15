@@ -399,11 +399,9 @@ mod tests {
 
     #[test]
     fn guided_setup_prefix_survives_pareto_pruning() {
-        use akita_config::{
-            policy_of, proof_optimized::fp128::OneHot, CommitmentConfig, RecursiveCommitmentConfig,
-        };
+        use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-        type Recursive = RecursiveCommitmentConfig<OneHot>;
+        type Recursive = OneHot;
         let policy = policy_of::<Recursive>();
         let n_prefix = 1usize << 14;
         let opening = PlannerOpeningCandidate::evaluation_trace(

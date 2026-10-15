@@ -1,0 +1,115 @@
+{
+  "baseline_commit": "fddf785cf1d6011b508c271d78e69958d1fde4af",
+  "objective": "MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6",
+  "offload_domain": "RootAndFirstChildV1",
+  "root_shape": "single polynomial, single group",
+  "build": "release; catalog-gen; default transcript-blake2b",
+  "automatic_threshold": false,
+  "initial_grid": {
+    "num_vars": [
+      16,
+      24,
+      32,
+      40
+    ],
+    "fields": [
+      "fp32",
+      "fp64",
+      "fp128"
+    ],
+    "sources": [
+      "dense",
+      "onehot"
+    ],
+    "layouts": [
+      [
+        1,
+        0
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        4,
+        2
+      ],
+      [
+        8,
+        2
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        4,
+        3
+      ],
+      [
+        8,
+        3
+      ]
+    ]
+  },
+  "source_contracts": {
+    "onehot": "one nonzero per 256 source entries (stock K=256); independent of witness W",
+    "dense": "stock full-width balanced signed digits"
+  },
+  "search_limits": {
+    "per_new_cell_timeout_secs": 300,
+    "timeout_is_unsupported": false
+  },
+  "additional_sweeps": [
+    "All integer unchunked nvs 16..32 around the crossover, stock rows reused",
+    "Adjacent fp128 onehot W8R2 probes near 28..36",
+    "Onehot high endpoint nv48 across every surveyed layout",
+    "W2R1/W4R1/W8R1 over the same initial variable grid",
+    "Complete fp128 onehot W8R2 curve at every integer nv16..48"
+  ],
+  "adaptive_refinement": {
+    "assumes_monotonicity": false,
+    "note": "Narrows differing observed endpoints only; equal endpoints may hide untested islands.",
+    "priority": "Initially widest observed changes; remaining probes prioritize changes involving zero offloads.",
+    "planned_cell_budget": 200,
+    "execution": "Initial bounded probes, then zero-involving changes first; freed workers stream remaining cells after the initial grid.",
+    "actual_adaptive_cells": 200,
+    "additional_manual_boundary_cells": 4
+  },
+  "validation": {
+    "scoped_release_clippy": "passed",
+    "cargo_fmt_all": "passed",
+    "taplo_fmt": "passed",
+    "python_repository_tests": "179 passed with native Python",
+    "catalog_admission": "each newly generated successful cell audited",
+    "serialized_count_check": "every successful record checked when report is rendered",
+    "stock_generator": "fp128_dense_recursive regenerated identically",
+    "policy_digest_consistency": "passed for every field/source/layout series",
+    "documentation_guardrails": "passed; mdbook build skipped because mdbook is unavailable",
+    "replay_manifest": "passed; cached replay recovered every captured cell"
+  },
+  "capture_status": "complete_with_search_limits",
+  "finished_at_utc": "2026-10-15T06:21:06+00:00",
+  "results": {
+    "cells": 584,
+    "successful": 561,
+    "timeout": 23,
+    "planner_or_admission_errors": 0,
+    "configurations": 60,
+    "configurations_with_zero_and_positive_observations": 60,
+    "configurations_with_two_offload_observations": 46,
+    "configurations_with_adjacent_zero_to_positive_change": 60,
+    "configurations_with_adjacent_one_to_two_change": 2,
+    "initial_grid_attempts": 240,
+    "stock_rows_reused": 16,
+    "new_successful_rows": 545,
+    "full_curve": "fp128 onehot W8R2; every integer nv16..48",
+    "canonical_survey_files": 546
+  },
+  "metric_semantics": {
+    "offloads": "setup-offloaded folds, not total proof folds or Stage 3 sumcheck rounds",
+    "proof_bytes": "modeled proof payload bytes",
+    "planning_secs": "DP wall time under concurrent load; not a verifier benchmark",
+    "blank_stock_estimates": "not measured in this survey; never interpreted as zero"
+  }
+}

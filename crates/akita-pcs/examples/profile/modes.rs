@@ -5,15 +5,14 @@
 
 use crate::report::print_layout;
 use crate::workload::{
-    onehot_k_for_num_vars, profile_setup_contribution_mode, run_batched_onehot, run_dense_for,
-    run_onehot, run_recursive_multi_group_onehot,
+    onehot_k_for_num_vars, run_batched_onehot, run_dense_for, run_onehot,
+    run_recursive_multi_group_onehot,
 };
 use crate::workspace_schedules::load_workspace_scheme;
 use akita_config::proof_optimized::{fp128, fp32, fp64};
-use akita_config::{CommitmentConfig, RecursiveCommitmentConfig};
+use akita_config::CommitmentConfig;
 use akita_params::{
     CommittedGroupParams, MultiChunkProfileId, PolynomialGroupLayout, ScheduleLookupKey,
-    SetupContributionMode,
 };
 use akita_pcs::AkitaCommitmentScheme;
 use akita_serialization::{AkitaDeserialize, AkitaSerialize, Valid};
@@ -209,19 +208,14 @@ const PROFILE_SELECTED_MODES: &[ProfileMode] = &[
         name: "onehot_fp128",
         run: run_profile_onehot_fp128,
     },
-    #[cfg(feature = "profile-ci-multi-group-direct")]
+    #[cfg(feature = "profile-ci-multi-group")]
     ProfileMode {
         name: "onehot_fp128_multi_group",
         run: run_profile_onehot_fp128_multi_group,
     },
-    #[cfg(feature = "profile-ci-multi-group-recursive")]
+    #[cfg(feature = "profile-ci-multi-group-w8r2")]
     ProfileMode {
-        name: "onehot_fp128_multi_group_recursive",
-        run: run_profile_onehot_fp128_multi_group_recursive,
-    },
-    #[cfg(feature = "profile-ci-multi-group-recursive-w8r2")]
-    ProfileMode {
-        name: "onehot_fp128_multi_group_recursive_multi_chunk_w8r2",
+        name: "onehot_fp128_multi_group_multi_chunk_w8r2",
         run: run_profile_onehot_fp128_multi_group_recursive_multi_chunk_w8r2,
     },
     #[cfg(feature = "profile-ci-distributed")]
@@ -283,11 +277,7 @@ const PROFILE_ALL_MODES: &[ProfileMode] = &[
         run: run_profile_onehot_fp128_multi_group,
     },
     ProfileMode {
-        name: "onehot_fp128_multi_group_recursive",
-        run: run_profile_onehot_fp128_multi_group_recursive,
-    },
-    ProfileMode {
-        name: "onehot_fp128_multi_group_recursive_multi_chunk_w8r2",
+        name: "onehot_fp128_multi_group_multi_chunk_w8r2",
         run: run_profile_onehot_fp128_multi_group_recursive_multi_chunk_w8r2,
     },
     ProfileMode {
@@ -340,8 +330,7 @@ const EXCLUDED_FROM_ALL_SWEEP: &[&str] = &[
     "onehot_fp128_multi_chunk_w2r2",
     "onehot_fp128_multi_chunk_w4r2",
     "onehot_fp128_multi_chunk_w8r2",
-    "onehot_fp128_multi_group_recursive",
-    "onehot_fp128_multi_group_recursive_multi_chunk_w8r2",
+    "onehot_fp128_multi_group_multi_chunk_w8r2",
     // Small-field adaptive presets are heavy and cover narrow generated key sets.
     // Keep them out of the default `all` smoke sweep. They remain selectable
     // with an explicit compatible `AKITA_MODE=` and `AKITA_NUM_VARS=`.
@@ -416,17 +405,7 @@ fn run_profile_dense_fp128_multi_chunk_w8r2(nv: usize, num_polys: usize) {
 }
 
 fn run_profile_onehot_fp128(nv: usize, num_polys: usize) {
-    match profile_setup_contribution_mode() {
-        SetupContributionMode::Direct => {
-            type Cfg = fp128::OneHot;
-            run_profile_onehot_fp128_with_cfg::<256, Cfg>("onehot_fp128", nv, num_polys);
-        }
-        SetupContributionMode::Recursive => {
-            type Cfg = RecursiveCommitmentConfig<fp128::OneHot>;
-            assert_eq!(nv, 36, "recursive onehot_fp128 profiles nv=36");
-            run_profile_onehot_fp128_with_cfg::<256, Cfg>("onehot_fp128", nv, num_polys);
-        }
-    }
+    run_profile_onehot_fp128_with_cfg::<256, fp128::OneHot>("onehot_fp128", nv, num_polys);
 }
 
 fn run_profile_onehot_fp128_with_cfg<
@@ -480,11 +459,7 @@ fn run_profile_onehot_fp128_with_cfg<
 /// Shared driver for the multi-group profiles. Every such profile fixes the
 /// shape declared by the `MULTI_GROUP_*` constants above; only the base preset
 /// (`Cfg`) and the `layout_note` describing its witness layout differ.
-fn run_multi_group_mode<
-    const D: usize,
-    Cfg: CommitmentConfig<Field = F, ExtField = F>
-        + akita_config::recursive_commitment::RecursiveScheduleConfig,
->(
+fn run_multi_group_mode<const D: usize, Cfg: CommitmentConfig<Field = F, ExtField = F>>(
     label: &str,
     layout_note: &str,
     nv: usize,
@@ -510,11 +485,6 @@ fn run_multi_group_mode<
 
 fn run_profile_onehot_fp128_multi_group(nv: usize, num_polys: usize) {
     type Cfg = fp128::OneHot;
-    assert_eq!(
-        profile_setup_contribution_mode(),
-        SetupContributionMode::Direct,
-        "onehot_fp128_multi_group supports direct setup contribution only"
-    );
     run_multi_group_mode::<256, Cfg>(
         "onehot_fp128_multi_group",
         "generated per-level dimensions",
@@ -524,21 +494,10 @@ fn run_profile_onehot_fp128_multi_group(nv: usize, num_polys: usize) {
     );
 }
 
-fn run_profile_onehot_fp128_multi_group_recursive(nv: usize, num_polys: usize) {
-    type Cfg = fp128::OneHot;
-    run_multi_group_mode::<256, Cfg>(
-        "onehot_fp128_multi_group_recursive",
-        "adaptive ring dimensions + recursive setup",
-        nv,
-        num_polys,
-        MULTI_GROUP_FINAL_NUM_VARS,
-    );
-}
-
 fn run_profile_onehot_fp128_multi_group_recursive_multi_chunk_w8r2(nv: usize, num_polys: usize) {
     type Cfg = fp128::OneHotMultiChunk;
     run_multi_group_mode::<256, Cfg>(
-        "onehot_fp128_multi_group_recursive_multi_chunk_w8r2",
+        "onehot_fp128_multi_group_multi_chunk_w8r2",
         "adaptive ring dimensions + recursive setup offloading + W8R2 chunked witness: num_chunks=8 x 2 leading levels",
         nv,
         num_polys,
@@ -601,16 +560,7 @@ fn run_profile_onehot_fp32(nv: usize, num_polys: usize) {
 fn run_profile_dense_fp32(nv: usize, num_polys: usize) {
     assert_singleton_mode("dense_fp32", num_polys);
     let title = small_field_dense_title("fp32");
-    match profile_setup_contribution_mode() {
-        SetupContributionMode::Direct => {
-            type Cfg = fp32::Dense;
-            run_dense_mode_for::<fp32::Field, 256, Cfg>("dense_fp32", &title, nv);
-        }
-        SetupContributionMode::Recursive => {
-            type Cfg = RecursiveCommitmentConfig<fp32::Dense>;
-            run_dense_mode_for::<fp32::Field, 256, Cfg>("dense_fp32", &title, nv);
-        }
-    }
+    run_dense_mode_for::<fp32::Field, 256, fp32::Dense>("dense_fp32", &title, nv);
 }
 
 fn run_profile_dense_fp64(nv: usize, num_polys: usize) {

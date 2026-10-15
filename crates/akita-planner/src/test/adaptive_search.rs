@@ -167,7 +167,8 @@ fn policy_for_domain(
         potential_b_dimensions: Box::leak(b.into_boxed_slice()),
         potential_d_dimensions: Box::leak(d.into_boxed_slice()),
     };
-    policy.selection_policy = crate::SelectionPolicyId::for_policy(policy.recursive_setup_planning);
+    policy.selection_policy =
+        crate::SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6;
     policy
 }
 
@@ -210,7 +211,7 @@ fn mixed_domain_search_beats_or_ties_singleton_d64() {
         potential_d_dimensions: &[64],
     };
     singleton_policy.selection_policy =
-        crate::SelectionPolicyId::for_policy(singleton_policy.recursive_setup_planning);
+        crate::SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6;
     let candidate = find_schedule(
         key,
         &singleton_policy,
@@ -265,7 +266,8 @@ fn statically_infeasible_early_packing_domain_is_unsupported() {
         potential_b_dimensions: &[128],
         potential_d_dimensions: &[128],
     };
-    policy.selection_policy = crate::SelectionPolicyId::MinFirstDirectSetupThenExactProofAndWorkV5;
+    policy.selection_policy =
+        crate::SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6;
     policy.selective_l2_response_model = crate::SelectiveL2ResponseModelId::Disabled;
     let error = find_schedule(
         onehot_group(14, 1),
@@ -416,11 +418,9 @@ fn production_suffix_selects_l2_with_the_typed_response_model() {
 #[cfg(feature = "catalog-gen")]
 #[test]
 fn bounded_recursive_setup_search_matches_exhaustive_on_small_fixture() {
-    use akita_config::{
-        policy_of, proof_optimized::fp128::OneHot, CommitmentConfig, RecursiveCommitmentConfig,
-    };
+    use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-    type Recursive = RecursiveCommitmentConfig<OneHot>;
+    type Recursive = OneHot;
 
     let domain = RingDimensionSearchDomain::new([CommitmentRingDims::uniform(64)]).unwrap();
     let bounded = policy_for_domain(policy_of::<Recursive>(), &domain);
@@ -664,8 +664,8 @@ fn adaptive_nv36_minimizes_setup_envelope_before_first_direct_setup() {
     assert_eq!(selected_root.role_dims(), d256_mixed);
     assert_eq!(
         selected.schedule.recursive_folds[0].params.role_dims(),
-        d128_mixed,
-        "the additive work score prices the first packing successor's setup scan"
+        d256_mixed,
+        "the setup-envelope objective retains the selected offloading consumer geometry"
     );
     let opening_methods = std::iter::once(selected_root.opening_method()).chain(
         selected
@@ -689,34 +689,61 @@ fn adaptive_nv36_minimizes_setup_envelope_before_first_direct_setup() {
         let root_layout = akita_params::ScheduleLookupKey::single(onehot_group(36, 1))
             .opening_layout()
             .unwrap();
-        let work: u128 = std::iter::once(&schedule.schedule.root)
+        let folds = std::iter::once(&schedule.schedule.root)
             .chain(schedule.schedule.recursive_folds.iter())
+            .collect::<Vec<_>>();
+        let work: u128 = folds
+            .iter()
             .enumerate()
             .map(|(level, fold)| {
                 let layout = if level == 0 {
                     root_layout.clone()
                 } else {
-                    suffix_opening_layout(fold.input_witness_len, None).unwrap()
+                    suffix_opening_layout(
+                        fold.input_witness_len,
+                        fold.params
+                            .setup_prefix()
+                            .and_then(|prefix| prefix.setup_natural_len),
+                    )
+                    .unwrap()
                 };
                 let natural = akita_params::active_setup_field_len(&fold.params, &layout).unwrap();
-                let scan = direct_setup_scan_work_elements(
-                    natural,
-                    fold.params.role_dims().common_relation_coeff_count(),
-                )
-                .unwrap();
+                let scan = if folds
+                    .get(level + 1)
+                    .is_some_and(|successor| successor.params.setup_prefix().is_some())
+                {
+                    0
+                } else {
+                    direct_setup_scan_work_elements(
+                        natural,
+                        fold.params.role_dims().common_relation_coeff_count(),
+                    )
+                    .unwrap()
+                };
                 (fold.output_witness_len + scan) as u128
             })
             .sum();
         (
+            padded_setup_prefix_len(schedule.estimate.estimated_num_setup_field_elements),
             estimated_first_direct_setup_capacity(schedule),
             (proof_bytes as u128) * WORK_ELEMENTS_PER_OBJECTIVE_BYTE + work,
             proof_bytes,
-            schedule.estimate.estimated_num_setup_field_elements,
+            folds
+                .iter()
+                .enumerate()
+                .find(|(level, _)| {
+                    folds
+                        .get(level + 1)
+                        .is_none_or(|successor| successor.params.setup_prefix().is_none())
+                })
+                .unwrap()
+                .1
+                .output_witness_len,
         )
     };
     assert!(
         score(&selected) <= score(&rank_one_capped),
-        "the expanded domain must not lose on the adaptive direct objective"
+        "the expanded domain must not lose on the setup-envelope objective"
     );
 }
 
@@ -893,16 +920,13 @@ fn adaptive_search_applies_setup_budget_in_physical_fields() {
         akita_params::setup_matrix_field_elements_for_schedule(&budgeted.schedule).unwrap();
     assert_eq!(budgeted_fields, exact_fields);
 
-    let smaller_budget = exact_fields - 1;
-    policy.setup_field_budget = Some(smaller_budget);
-    let tighter = find_schedule(
+    policy.setup_field_budget = Some(1);
+    let error = find_schedule(
         onehot_group(16, 1),
         &policy,
         OneHot::committed_source_contract().unwrap(),
         OneHot::ring_challenge_config,
     )
-    .expect("a tighter feasible budget should select an admitted alternative");
-    let tighter_fields =
-        akita_params::setup_matrix_field_elements_for_schedule(&tighter.schedule).unwrap();
-    assert!(tighter_fields <= smaller_budget);
+    .expect_err("one field element cannot hold an admitted setup matrix");
+    assert!(matches!(error, AkitaError::UnsupportedSchedule(_)));
 }

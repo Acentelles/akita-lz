@@ -91,20 +91,8 @@ pub(super) fn derive_fold_candidate_frontier(
             break;
         }
     }
-    let best_modeled = best_modeled_with_score
-        .into_values()
-        .map(|(_, r, candidate, next)| (r, candidate, next))
-        .collect::<Vec<_>>();
     if !request.opening.is_coefficient_packing() {
-        let l2_seeds = if matches!(
-            request.policy.selection_policy,
-            crate::SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6
-        ) {
-            &all_modeled
-        } else {
-            &best_modeled
-        };
-        for best in l2_seeds {
+        for best in &all_modeled {
             append_selective_l2_candidates(
                 &mut candidates,
                 Some(best),

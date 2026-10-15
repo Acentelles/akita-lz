@@ -1,9 +1,9 @@
 use super::*;
-use akita_config::{CommitmentConfig, RecursiveCommitmentConfig, SetupRequirements};
+use akita_config::{CommitmentConfig, SetupRequirements};
 
 type F = fp32::Field;
 type E = fp32::ExtensionField;
-type RecursiveCfg = RecursiveCommitmentConfig<fp32::Dense>;
+type RecursiveCfg = fp32::Dense;
 
 /// Commit `poly` under `scheme`'s family on `backend`, prove its single-group
 /// opening against the shared `setup`, and verify the proof.

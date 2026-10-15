@@ -1,0 +1,39 @@
+{
+  "field": "fp32",
+  "source": "dense",
+  "chunks": 4,
+  "activated_levels": 3,
+  "num_vars": 26,
+  "command": [
+    "/private/tmp/akita-offload-survey-target/release/examples/offload_boundary_survey",
+    "fp32",
+    "dense",
+    "4",
+    "3",
+    "26",
+    "artifacts/offload-survey/schedules"
+  ],
+  "timeout_secs": 300,
+  "returncode": 0,
+  "stderr": "",
+  "elapsed_secs": 43.16343037498882,
+  "status": "ok",
+  "metrics": {
+    "family": "fp32_dense",
+    "chunks": "4",
+    "activated_levels": "3",
+    "num_vars": "26",
+    "offloads": "0",
+    "producer_levels": "",
+    "root_setup_fields": "1048576",
+    "first_direct_capacity": "1048576",
+    "setup_fields": "1048576",
+    "proof_bytes": "72575",
+    "root_witness_fields": "67108864",
+    "fold_levels": "8",
+    "planning_secs": "43.139404",
+    "artifact": "artifacts/offload-survey/schedules/fp32_dense_w4r3_nv26.aks"
+  },
+  "provenance": "generated",
+  "baseline_commit": "fddf785cf1d6011b508c271d78e69958d1fde4af"
+}

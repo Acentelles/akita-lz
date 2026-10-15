@@ -33,14 +33,16 @@ let offline planning choose the setup-offload edges.
 - Keep the production search bound: only producer levels zero and one may
   offload setup. Two is a maximum, not an exact number.
 - Zero-offload schedules remain candidates, including for small inputs.
-- Preserve direct Stage 3 evaluation and terminal authentication; removing a
+- Preserve direct setup-contribution evaluation and terminal authentication; removing a
   public mode must not remove these necessary protocol operations.
 - Runtime continues to load independently audited trusted catalog rows. Proofs
   cannot choose a schedule, and planner search stays offline.
 - Config, catalog identity, descriptor binding, prover, and verifier agree.
   Retired direct-only artifacts are rejected; objective tags are never reused.
 - Preserve supported source contracts, witness chunk policies, and grouped
-  commitment profiles while consolidating duplicate catalog families.
+  workload shapes while consolidating duplicate catalog families. Grouped keys
+  must use the independent commitment profiles selected by the unified scalar
+  catalog. Regenerating those profiles can change commitment and proof bytes.
 
 ### Non-goals
 
@@ -99,18 +101,28 @@ and update consumers, profiling scripts, report parsers, and CI together.
 Retain the zero-offload branch within suffix search and the shared direct setup
 capacity metrics used by the surviving objective.
 
+Catalog migration preserves all 27 workload shapes from the former offloading
+companions. Twenty-five schedules and their frozen profiles are identical after
+family consolidation. The two W2R3 grouped rows use a newly selected nv16
+precommit profile: A dimension 256 becomes 512, B dimension 128 becomes 64,
+and outer slicing changes from four to two. Their complete keys and schedules
+therefore change. This is an intentional catalog/configuration break; callers
+must regenerate setup and commitments from the new catalogs. The offloading
+objective and its policy digest are unchanged for all eight former companion
+families.
+
 ## Evaluation
 
-- [ ] Only one public setup-offloading policy and configuration family remains.
-- [ ] No direct-only mode or settings remain in active code, profiles, or CI.
-- [ ] Zero, one, and two offloads are covered, and deeper producer levels remain
-      excluded by production policy and audited admission.
-- [ ] Surviving planner choices match prior offloading-enabled choices for
+- [x] Only one public setup-offloading policy and configuration family remains.
+- [x] No direct-only mode or settings remain in active code, profiles, or CI.
+- [x] Zero, one, and two offloads are covered; production search excludes deeper
+      producer levels, and every generated row passes independent admission.
+- [x] Surviving planner choices match prior offloading-enabled choices for
       identical inputs, policy, and commitment profiles.
-- [ ] Catalog regeneration, admission/security checks, round trips, and
+- [x] Catalog regeneration, admission/security checks, round trips, and
       malformed-artifact rejection tests pass for affected families.
-- [ ] CI feature matrices and profiling scripts use the consolidated families.
-- [ ] Book and PR explain zero-offload eligibility, non-monotonicity, all survey
+- [x] CI feature matrices and profiling scripts use the consolidated families.
+- [x] Book and PR explain zero-offload eligibility, non-monotonicity, all survey
       limitations, representative scalar data, and chunked results.
 
 Run cheap repository gates before expensive builds, then focused config,

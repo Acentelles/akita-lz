@@ -495,11 +495,9 @@ impl RecursiveCandidateContext<'_, '_> {
                             mode_slices.push(params);
                         }
                     }
-                    for params in crate::schedule_params::prune_locally_unprofitable_slices(
-                        policy,
-                        &search.opening_layout,
-                        mode_slices,
-                    )? {
+                    for params in
+                        crate::schedule_params::prune_locally_unprofitable_slices(mode_slices)?
+                    {
                         let relation_mode = *transition;
                         let Some((score, params, next_witness_len)) =
                             finalize_recursive_level_candidate(policy, search, params)?
@@ -707,11 +705,7 @@ fn append_selective_l2_candidates(
                 sliced.push(params);
             }
         }
-        let retained_slices = crate::schedule_params::prune_locally_unprofitable_slices(
-            policy,
-            &search.opening_layout,
-            sliced,
-        )?;
+        let retained_slices = crate::schedule_params::prune_locally_unprofitable_slices(sliced)?;
         for params in retained_slices {
             let Some((_, params, next_witness_len)) =
                 finalize_recursive_level_candidate(policy, search, params)?
@@ -791,15 +785,7 @@ pub(crate) fn derive_terminal_candidates(
         source_moment: request.source_moment,
         successor_policy: SuccessorPolicy::AllowNonContracting,
     };
-    let retain_setup_frontier = matches!(
-        request.policy.selection_policy,
-        crate::SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6
-    );
-    let modeled = if retain_setup_frontier {
-        all_linf_candidates_for(&modeled_context, RelationSearchDomain::QuotientOnly)?
-    } else {
-        best_linf_candidates_for(&modeled_context, RelationSearchDomain::QuotientOnly)?
-    };
+    let modeled = all_linf_candidates_for(&modeled_context, RelationSearchDomain::QuotientOnly)?;
     let mut candidates = modeled
         .iter()
         .map(|(_, candidate, next)| (candidate.clone(), *next))
@@ -809,11 +795,8 @@ pub(crate) fn derive_terminal_candidates(
             source_moment: None,
             ..modeled_context
         };
-        let universal = if retain_setup_frontier {
-            all_linf_candidates_for(&universal_context, RelationSearchDomain::QuotientOnly)?
-        } else {
-            best_linf_candidates_for(&universal_context, RelationSearchDomain::QuotientOnly)?
-        };
+        let universal =
+            all_linf_candidates_for(&universal_context, RelationSearchDomain::QuotientOnly)?;
         for (_, candidate, next) in universal {
             let universal = (candidate, next);
             if !candidates.contains(&universal) {

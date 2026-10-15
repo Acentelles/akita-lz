@@ -6,7 +6,6 @@ pub(super) struct RecursiveLevelSearch {
     pub(super) num_ring_elems: usize,
     pub(super) reduced_vars: usize,
     pub(super) current_witness_len: usize,
-    pub(super) opening_layout: OpeningClaimsLayout,
     pub(super) setup_prefixes: Vec<Option<akita_params::GroupOpenPhaseParams>>,
 }
 
@@ -52,7 +51,7 @@ pub(super) fn prepare_recursive_level_search(
         RecursiveSetupPrefix::None => None,
         RecursiveSetupPrefix::Search { natural_len, .. } => Some(*natural_len),
     };
-    let opening_layout = suffix_opening_layout(current_witness_len, incoming_setup_prefix)?;
+    suffix_opening_layout(current_witness_len, incoming_setup_prefix)?;
     let setup_prefixes = match setup_prefix {
         RecursiveSetupPrefix::Search { cache, natural_len } => {
             let n_prefix = padded_setup_prefix_len(natural_len);
@@ -84,7 +83,6 @@ pub(super) fn prepare_recursive_level_search(
         num_ring_elems,
         reduced_vars,
         current_witness_len,
-        opening_layout,
         setup_prefixes,
     }))
 }

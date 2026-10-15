@@ -1,6 +1,4 @@
-use akita_config::{
-    policy_of, proof_optimized::fp128::OneHot, CommitmentConfig, RecursiveCommitmentConfig,
-};
+use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 use akita_params::{GroupCommitPhaseParams, PolynomialGroupLayout, ScheduleLookupKey};
 use akita_planner::find_schedule;
 
@@ -67,7 +65,7 @@ fn main() -> Result<(), akita_error::AkitaError> {
         &direct,
     );
 
-    type Recursive = RecursiveCommitmentConfig<OneHot>;
+    type Recursive = OneHot;
     let recursive_policy = policy_of::<Recursive>();
     let scalar_recursive_key =
         ScheduleLookupKey::single(PolynomialGroupLayout::singleton(num_vars));

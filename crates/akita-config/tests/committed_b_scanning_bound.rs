@@ -18,9 +18,9 @@ fn differing_basis_schedule<Cfg: CommitmentConfig>(
     b_bound: u128,
 ) -> (CommittedGroupBatchProfile, FoldSchedule) {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../artifacts/schedules")
-        .join(format!("{}.aks", Cfg::schedule_family_name()));
-    let bytes = std::fs::read(path).expect("checked-in schedule artifact");
+        .join("tests/fixtures")
+        .join(format!("{}_scanning.aks", Cfg::schedule_family_name()));
+    let bytes = std::fs::read(path).expect("fixed scanning-alphabet fixture");
     let catalog = TrustedScheduleCatalog::<Cfg>::from_artifact_bytes(&bytes).unwrap();
     let row = catalog
         .resolve_key(&ScheduleLookupKey::single(

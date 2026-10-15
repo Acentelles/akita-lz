@@ -3,10 +3,27 @@ use akita_error::AkitaError;
 use akita_params::{FoldSchedule, GroupOpenPhaseParams, InnerCommitSecurityRoute, OpeningMethod};
 
 use crate::proof_optimized::fp128;
-use crate::{
-    policy_of, CommitmentConfig, RecursiveCommitmentConfig, TrustedScheduleCatalog,
-    ValidatedScheduleCatalog,
-};
+use crate::{policy_of, CommitmentConfig, TrustedScheduleCatalog, ValidatedScheduleCatalog};
+
+#[test]
+fn one_catalog_selects_zero_one_or_two_setup_offloads() {
+    let catalog = crate::test_support::workspace_schedule_catalog::<fp128::OneHot>()
+        .expect("unified one-hot catalog");
+    for (nv, expected) in [(14, 0), (30, 1), (40, 2)] {
+        let key = akita_params::ScheduleLookupKey::single(
+            akita_params::PolynomialGroupLayout::singleton(nv),
+        );
+        let schedule = catalog.resolve_key(&key).expect("scalar row").schedule();
+        let producers = schedule
+            .recursive_folds
+            .iter()
+            .enumerate()
+            .filter_map(|(producer, fold)| fold.params.setup_prefix().is_some().then_some(producer))
+            .collect::<Vec<_>>();
+        assert_eq!(producers.len(), expected, "nv={nv}");
+        assert!(producers.iter().all(|&producer| producer <= 1));
+    }
+}
 
 pub(crate) fn mutated_row_admission_error<Cfg: CommitmentConfig>(
     row: &akita_schedules::ResolvedScheduleRow,
@@ -97,7 +114,7 @@ fn replace_schedule_evaluation_trace_challenges(
 
 #[test]
 fn row_admission_audits_recursive_setup_prefix_policy() {
-    type RecursiveOneHot = RecursiveCommitmentConfig<fp128::OneHot>;
+    type RecursiveOneHot = fp128::OneHot;
 
     let row = row_with_setup_prefix::<RecursiveOneHot>(|_| true);
     let prefix_index = row
@@ -127,7 +144,7 @@ fn row_admission_audits_recursive_setup_prefix_policy() {
 
 #[test]
 fn catalog_binding_revalidates_recursive_setup_prefix_challenge_hook() {
-    type RecursiveMultiChunk = RecursiveCommitmentConfig<fp128::OneHotMultiChunk>;
+    type RecursiveMultiChunk = fp128::OneHotMultiChunk;
 
     let row = row_with_setup_prefix::<RecursiveMultiChunk>(|prefix| {
         prefix.opening.opening_method == OpeningMethod::EvaluationTrace
@@ -188,15 +205,12 @@ fn catalog_binding_revalidates_recursive_setup_prefix_challenge_hook() {
 #[test]
 fn dense_recursive_artifacts_cover_benchmark_sizes_and_offload_setup() {
     use crate::proof_optimized::{fp32, fp64};
-    use crate::recursive_commitment::RecursiveScheduleConfig;
     use akita_params::PolynomialGroupLayout;
     use akita_params::ScheduleLookupKey;
 
-    fn check<Cfg: RecursiveScheduleConfig>(sizes: &[usize]) {
-        type Recursive<C> = RecursiveCommitmentConfig<C>;
-        let catalog = crate::test_support::workspace_schedule_catalog::<Recursive<Cfg>>()
+    fn check<Cfg: CommitmentConfig>(sizes: &[usize]) {
+        let catalog = crate::test_support::workspace_schedule_catalog::<Cfg>()
             .expect("dense recursive artifact admitted under current policy");
-        assert_eq!(catalog.rows().count(), sizes.len());
         let mut offloaded = 0;
         for &num_vars in sizes {
             let key = ScheduleLookupKey::single(PolynomialGroupLayout::singleton(num_vars));

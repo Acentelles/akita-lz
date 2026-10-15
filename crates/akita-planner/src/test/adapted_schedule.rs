@@ -278,7 +278,7 @@ fn adapted_schedule_rejects_non_grouped_or_mismatched_requests() {
 #[test]
 fn adapted_schedule_forces_the_frozen_split_after_grouped_growth() {
     let policy = policy_of::<Dense>();
-    let main_group = PolynomialGroupLayout::singleton(14);
+    let main_group = PolynomialGroupLayout::singleton(24);
     let main_row = scalar_row(main_group).expect("scalar main row");
     let pre_profile = scalar_row(PolynomialGroupLayout::singleton(32))
         .expect("large scalar precommit row")
@@ -290,10 +290,11 @@ fn adapted_schedule_forces_the_frozen_split_after_grouped_growth() {
     };
     let request = grouped_request::<Dense>(main_group, &key.precommitteds);
 
-    let adapted = find_adapted_schedule(
+    let adapted = find_adapted_schedule_for_key(
         &main_row,
-        &request,
+        &key,
         Dense::committed_source_contract().unwrap(),
+        &request.source_contracts(),
         &policy,
         Dense::ring_challenge_config,
     )
@@ -398,7 +399,7 @@ fn adapted_schedule_rebuilds_a_checked_in_onehot_group_shape() {
 
 #[test]
 fn adapted_schedule_preserves_recursive_setup_offload_topology() {
-    type RecursiveOneHot = akita_config::RecursiveCommitmentConfig<OneHot>;
+    type RecursiveOneHot = OneHot;
 
     let recursive_catalog =
         akita_config::test_support::workspace_schedule_catalog::<RecursiveOneHot>()

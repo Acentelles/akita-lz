@@ -1,0 +1,58 @@
+{
+  "magic": [
+    65,
+    75,
+    83,
+    67,
+    72,
+    68,
+    48,
+    49
+  ],
+  "version": 1,
+  "protocol_epoch": 5,
+  "policy_digest": [
+    223,
+    157,
+    176,
+    133,
+    242,
+    211,
+    117,
+    104,
+    200,
+    248,
+    255,
+    7,
+    157,
+    151,
+    251,
+    126,
+    230,
+    25,
+    10,
+    176,
+    88,
+    199,
+    34,
+    16,
+    86,
+    58,
+    250,
+    45,
+    182,
+    119,
+    169,
+    47
+  ],
+  "family_name": "fp64_onehot_w8r1",
+  "rows": [
+    {
+      "schedule": {
+        "root": {"params":{"groups":{"entries":[{"profile":{"version":4,"group":{"num_vars":16,"num_polynomials":1},"blocks":{"live_ring_elements_per_claim":128,"positions_per_block":32,"live_blocks":4},"outer_slice_count":4,"inner":{"digits":{"log_basis":3,"num_digits":1},"matrix":{"output_rank":1,"input_width":32,"security_route":{"Linf":{"policy":"Quantum128BitADPS16","table_digest":[221,200,42,161,211,98,188,23,65,105,41,23,104,81,109,63,93,1,155,239,75,4,83,4,155,250,199,85,202,59,228,75],"modulus_profile":"Q64Offset59","role":"Inner","ring_dimension":512,"coeff_linf_bound":104244}}}},"outer":{"digits":{"log_basis":3,"num_digits":22},"matrix":{"output_rank":1,"input_width":176,"sis_table_key":{"policy":"Quantum128BitADPS16","table_digest":[221,200,42,161,211,98,188,23,65,105,41,23,104,81,109,63,93,1,155,239,75,4,83,4,155,250,199,85,202,59,228,75],"modulus_profile":"Q64Offset59","role":"Outer","ring_dimension":64,"coeff_linf_bound":7},"role":null}}},"opening":{"opening_method":{"SubringCoefficientPacking":{"challenge_subring_dimension":64}},"fold_challenge_config":{"count_pm1":31,"count_pm2":10},"log_basis_open":3,"num_digits_open":22,"num_digits_fold":2},"setup_natural_len":null}]},"open_matrix":{"output_rank":1,"input_width":176,"sis_table_key":{"policy":"Quantum128BitADPS16","table_digest":[221,200,42,161,211,98,188,23,65,105,41,23,104,81,109,63,93,1,155,239,75,4,83,4,155,250,199,85,202,59,228,75],"modulus_profile":"Q64Offset59","role":"Open","ring_dimension":64,"coeff_linf_bound":7},"role":null},"payload_mode":"Compressed","ring_relation_mode":"QuotientLift","source_encoding":"CanonicalCoefficientTable","witness_chunk":{"num_chunks":8,"num_activated_levels":1},"successor_block_len":128},"input_witness_len":65536,"output_witness_len":366272},
+        "recursive_folds": [],
+        "terminal": {"blocks":{"live_ring_elements_per_claim":5723,"positions_per_block":2,"live_blocks":2862},"inner":{"digits":{"log_basis":3,"num_digits":1},"matrix":{"output_rank":1,"input_width":2,"security_route":{"Linf":{"policy":"Quantum128BitADPS16","table_digest":[221,200,42,161,211,98,188,23,65,105,41,23,104,81,109,63,93,1,155,239,75,4,83,4,155,250,199,85,202,59,228,75],"modulus_profile":"Q64Offset59","role":"Inner","ring_dimension":64,"coeff_linf_bound":53477172}}}},"fold":{"log_basis":6,"num_digits":3},"fold_challenge_config":{"count_pm1":31,"count_pm2":10},"response_shape":{"layout":{"ring_dimension":64,"groups":[{"z_coords":128,"e_field_elems":183168,"t_field_elems":183168,"z_linf_cap":1937,"z_rice_low_bits":8,"z_payload_bytes":192}],"logical_num_elems":366464}},"input_witness_len":366272}
+      }
+    }
+  ]
+}

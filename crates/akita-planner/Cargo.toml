@@ -67,3 +67,8 @@ required-features = ["catalog-security"]
 
 [lints]
 workspace = true
+
+[[example]]
+name = "offload_boundary_survey"
+path = "examples/offload_boundary_survey.rs"
+required-features = ["catalog-gen"]

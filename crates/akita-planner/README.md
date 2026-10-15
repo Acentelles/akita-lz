@@ -25,34 +25,26 @@ Akita proofs fold the witness at the root, may fold it through more recursive
 levels, and then send the terminal witness directly. The planner chooses the
 best complete schedule under the configured selection policy.
 
-The complete schedule orders are:
+There is one complete-schedule order:
 
 ```text
-direct:          (first-direct padded capacity, proof-and-work score, proof bytes,
-                  total setup, root output witness, descriptor)
-recursive:       (padded total-setup capacity, first-direct padded capacity,
-                  proof-and-work score, proof bytes, first-direct output witness,
-                  descriptor)
+(padded total-setup capacity, first-direct padded capacity,
+ proof-and-work score, proof bytes, first-direct output witness, descriptor)
 ```
 
-For a direct schedule, the first direct edge is the root. For an offloaded
-schedule, it is the first edge after the setup-prefix chain.
+The planner compares schedules with zero, one, or two setup offloads. Only the
+root and its first child may produce an offload under the production policy.
+Zero-offload schedules evaluate setup directly and commonly win for small
+inputs. This is a maximum of two setup offloads, not a limit of two witness
+folds and not a requirement to offload twice.
 
-First-direct capacity is a verifier-cost proxy, not a complete runtime model.
-Its power-of-two bucket permits proof-size improvements within a factor-two
-setup-scan bound and avoids letting a later, unusually large suffix matrix
-control the leading direct objective. The additive scan term prices direct
-work at every fold within that bucket. The
-[planner rationale](../../specs/setup-offloading-planner.md#why-adaptive-direct-planning-starts-with-first-direct-capacity)
-defines the related setup quantities and records the limitations of this design
-choice.
-
-Recursive setup planning uses a different leading metric because offloading can
-move setup cost into a committed prefix. It first fixes the power-of-two
-capacity covering every setup object, then minimizes the remaining direct scan,
-proof-and-work score, proof bytes, and first-direct output witness. The
-[recursive-objective rationale](../../specs/setup-offloading-planner.md#why-recursive-planning-starts-with-padded-total-setup-capacity)
-explains why exact setup inside the winning bucket is not another tie-break.
+The leading setup bucket covers every setup object. Within that bucket the
+objective favors a smaller remaining direct scan and then proof/work. Discrete
+geometry changes can make the selected count non-monotone: scalar fp128
+one-hot at nv24…29 selects 0,1,0,1,0,1. No fixed size threshold is imposed.
+The [Book](../../book/src/how/setup-offloading.md) explains the objective and
+the [baseline survey](../../artifacts/offload-survey/README.md) lists all 60
+field/source/chunk combinations with exact tested points and limitations.
 
 The output is an `akita_params::PlannedFoldSchedule`. Its protocol value is a
 typed `FoldSchedule { root, recursive_folds, terminal }`; its non-protocol
@@ -85,7 +77,7 @@ multiplicity is always `1`; multi-group roots derive those counts from
 - The scalar SIS policy identifier.
 - Decomposition parameters, including the basis search range.
 - Claim and challenge extension degrees.
-- Ring dimension mode and recursive setup capability.
+- Ring dimensions and the bounded setup-offload search domain.
 - Selection policy and optional setup field budget.
 
 Source laws are separate planner-only values. For example, the one-hot policy
@@ -133,8 +125,7 @@ Conceptually, a candidate level answers three questions:
   the first direct output-witness length and total setup envelope?
 
 The first question determines whether the current fold is worthwhile. The second question determines how expensive later recursive levels can be.
-Adaptive direct planning retains the first-direct-first objective. Recursive
-setup planning compares total setup at next-power-of-two capacity, then
+Setup planning compares total setup at next-power-of-two capacity, then
 minimizes first-direct capacity and proof-and-work score within the winning bucket
 before comparing first-direct output-witness length.
 
@@ -175,7 +166,7 @@ After that candidate is chosen, the suffix DP still performs the important globa
 - Fold once more and pay the current level proof bytes plus the best suffix below it.
 
 The memoized suffix state tracks the level, current witness length, active
-basis choices, and parent-visible geometry. Direct and recursive search share
+basis choices, and parent-visible geometry. Direct and offloaded successor edges share
 one projected frontier: a setup-aware first-direct projection and a setup-aware
 proof-payload projection. A candidate is pruned only when both projections make it irrelevant
 to every parent transition. At a complete root, a level setup bound larger than
@@ -441,3 +432,33 @@ This boundary avoids a circular dependency while keeping a single source of trut
 - `src/bin/gen_schedule_artifacts.rs`: source for the `gen_schedule_artifacts` binary.
 - `src/generated_families.rs`: preset family list and regeneration hooks.
 - `artifacts/schedules/`: tracked external family artifacts.
+
+## Setup-offload boundary survey
+
+`offload_boundary_survey` plans one scalar input with the existing recursive
+objective, admitting zero, one, or two setup offloads at the root and first
+child. It accepts field tier, source kind, witness chunk count, activated levels,
+variable count, and output directory. Each successful result passes independent
+catalog admission and is saved as a canonical `.aks` artifact.
+
+```bash
+rtk cargo build --release -p akita-planner --features catalog-gen \
+  --example offload_boundary_survey
+python3 scripts/survey-offload-boundaries.py \
+  --binary target/release/examples/offload_boundary_survey
+python3 scripts/report-offload-boundaries.py
+```
+
+Results live in `artifacts/offload-survey/`. The TSV and report distinguish
+selected offload counts, planning errors, timeouts, and untested variable counts.
+The default grid covers dense and stock one-hot sources over fp32/fp64/fp128,
+with the unchunked layout and W2/W4/W8 at R1/R2/R3. Additional policy combinations
+are survey catalogs; adding them does not declare new application presets.
+Use `--cells field:source:chunks:levels:nv ...` for adjacent transition probes.
+After the coarse grid, `--refine --max-refinements 200` narrows observed changes,
+prioritizing zero-to-one changes. Equal endpoint counts can hide untested
+islands, so the report lists measured points without interpolation. Use a new
+`--output` directory when the planner source or policy changes; existing records
+are resume caches for the captured baseline. To replay the exact captured cells
+in a fresh directory, pass `--manifest artifacts/offload-survey/results.tsv`
+with a new `--output` path.

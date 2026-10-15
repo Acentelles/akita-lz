@@ -99,7 +99,7 @@ The root live set is deliberately small and is synchronized with
 13. `role-native-projected-digit-layout.md`
 14. `runtime-ring-cutover.md`
 15. `selective-l2-fold-security-sizing.md`
-16. `setup-offloading-planner.md`
+16. `automatic-setup-offloading.md`
 17. `sis-quantum128-scalar-n-table.md`
 18. `structured-e-term.md`
 19. `subring-coefficient-packing.md`

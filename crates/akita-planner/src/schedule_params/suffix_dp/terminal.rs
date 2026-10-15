@@ -201,12 +201,10 @@ mod tests {
     #[test]
     fn terminal_route_guide_preserves_either_feasible_route() {
         use crate::schedule_params::PlannerOpeningCandidate;
-        use akita_config::{
-            policy_of, proof_optimized::fp128::OneHot, CommitmentConfig, RecursiveCommitmentConfig,
-        };
+        use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
         use akita_params::InnerCommitSecurityRoute;
 
-        type Recursive = RecursiveCommitmentConfig<OneHot>;
+        type Recursive = OneHot;
         let policy = policy_of::<Recursive>();
         let source_moment = crate::response_model::SourceMomentEstimate::new(1_000_000);
         let request = RecursiveCandidateRequest {

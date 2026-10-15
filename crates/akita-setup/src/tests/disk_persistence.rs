@@ -149,8 +149,8 @@ fn config_backed_cache_does_not_apply_generic_setup_decode_limit() {
 
 #[test]
 fn combined_recursive_prefix_registry_persists_and_serves_each_family() {
-    type OneHotRec = akita_config::RecursiveCommitmentConfig<fp128::OneHot>;
-    type MultiChunkRec = akita_config::RecursiveCommitmentConfig<fp128::OneHotMultiChunk>;
+    type OneHotRec = fp128::OneHot;
+    type MultiChunkRec = fp128::OneHotMultiChunk;
     // The four-polynomial grouped roots are the rows at which both
     // recursive families carry a setup-prefix slot.
     const MAX_VARS: usize = 32;

@@ -818,14 +818,6 @@ where
     fn chunked_witness_cfg() -> akita_params::ChunkedWitnessCfg {
         Base::chunked_witness_cfg()
     }
-
-    fn recursive_setup_planning() -> bool {
-        Base::recursive_setup_planning()
-    }
-
-    fn selection_policy() -> akita_schedules::SelectionPolicyId {
-        Base::selection_policy()
-    }
 }
 
 impl<Base, const LEVEL: usize> CommitmentConfig for EarlyEvaluationTraceConfig<Base, LEVEL>
@@ -870,14 +862,6 @@ where
     fn chunked_witness_cfg() -> akita_params::ChunkedWitnessCfg {
         Base::chunked_witness_cfg()
     }
-
-    fn recursive_setup_planning() -> bool {
-        Base::recursive_setup_planning()
-    }
-
-    fn selection_policy() -> akita_schedules::SelectionPolicyId {
-        Base::selection_policy()
-    }
 }
 
 impl<Envelope, Final> Copy for EnvelopeFinalGroupConfig<Envelope, Final> {}
@@ -905,10 +889,6 @@ where
 
     fn ring_challenge_config(d: usize) -> Result<SparseChallengeConfig, AkitaError> {
         Envelope::ring_challenge_config(d).or_else(|_| Final::ring_challenge_config(d))
-    }
-
-    fn selection_policy() -> akita_schedules::SelectionPolicyId {
-        Envelope::selection_policy()
     }
 
     fn schedule_family_name() -> &'static str {

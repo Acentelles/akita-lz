@@ -1,0 +1,7 @@
+# Keep the survey narrative and tools visible; raw replay evidence is generated.
+artifacts/offload-survey/schedules/*.aks linguist-generated=true
+artifacts/offload-survey/baseline_catalogs/*.aks linguist-generated=true
+artifacts/offload-survey/records/*.json linguist-generated=true
+# Empty final TSV cells require trailing tab separators.
+artifacts/offload-survey/results.tsv linguist-generated=true whitespace=-blank-at-eol
+artifacts/offload-survey/catalog-migration.json linguist-generated=true

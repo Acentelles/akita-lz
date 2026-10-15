@@ -10,12 +10,11 @@ pub(crate) fn recursive_multi_group_round_trip<BaseCfg>(
     transcript_domain: &'static [u8],
     on_schedule: fn(&FoldSchedule),
 ) where
-    BaseCfg: CommitmentConfig<Field = F, ExtField = F>
-        + akita_config::recursive_commitment::RecursiveScheduleConfig,
+    BaseCfg: CommitmentConfig<Field = F, ExtField = F>,
 {
     init_rayon_pool();
     run_on_large_stack(move || {
-        let setup = load_workspace_scheme::<RecursiveCommitmentConfig<BaseCfg>>()
+        let setup = load_workspace_scheme::<BaseCfg>()
             .expect("workspace recursive schedule catalog")
             .setup_prover(RECURSIVE_ROUND_TRIP_NV, RECURSIVE_ROUND_TRIP_POLYS)
             .expect("recursive setup");
@@ -38,8 +37,7 @@ pub(crate) fn recursive_multi_group_round_trip_on<BaseCfg>(
     transcript_domain: &[u8],
     on_schedule: fn(&FoldSchedule),
 ) where
-    BaseCfg: CommitmentConfig<Field = F, ExtField = F>
-        + akita_config::recursive_commitment::RecursiveScheduleConfig,
+    BaseCfg: CommitmentConfig<Field = F, ExtField = F>,
 {
     const PRE_NV: usize = 16;
     const FINAL_NV: usize = RECURSIVE_ROUND_TRIP_NV;
@@ -50,8 +48,8 @@ pub(crate) fn recursive_multi_group_round_trip_on<BaseCfg>(
         assert!(PRE_GROUPS * PRE_GROUP_SIZE + FINAL_GROUP_SIZE == RECURSIVE_ROUND_TRIP_POLYS);
 
     let base_scheme = load_workspace_scheme::<BaseCfg>().expect("workspace base schedule catalog");
-    let recursive_scheme = load_workspace_scheme::<RecursiveCommitmentConfig<BaseCfg>>()
-        .expect("workspace recursive schedule catalog");
+    let recursive_scheme =
+        load_workspace_scheme::<BaseCfg>().expect("workspace recursive schedule catalog");
     let pre_key = PolynomialGroupLayout::new(PRE_NV, PRE_GROUP_SIZE);
     let pre_frozen = base_scheme
         .schedules()
@@ -163,7 +161,7 @@ pub(crate) fn recursive_multi_group_round_trip_on<BaseCfg>(
     let mut prover_hints = pre_hints;
     prover_hints.push(final_hint);
 
-    let prover_claims = selected_prover_data::<RecursiveCommitmentConfig<BaseCfg>>(
+    let prover_claims = selected_prover_data::<BaseCfg>(
         OpeningClaims::from_groups(prover_groups).expect("prover claims"),
         prover_hints,
         recursive_scheme.schedules(),

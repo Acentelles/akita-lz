@@ -9,7 +9,7 @@
 //! In the recursive rows, `direct` and `pre` distinguish whether the *caller*
 //! supplies precommitted groups, not whether the schedule is multi-group:
 //! recursive mode always resolves against a multi-group setup internally.
-//! `direct` is `RecursiveCommitmentConfig` with no user precommit; `pre` adds
+//! `direct` is the ordinary configuration with no user precommit; `pre` adds
 //! user precommitted groups on top. Both columns therefore exist and are
 //! declared below.
 //!
@@ -48,11 +48,11 @@
 //!   checks the same catalog row without proving at nv=32.
 //! OneHot mc nonrec pre: NA. The catalog has no combined final=32, pre=14 row.
 //! OneHot sc rec: nv=32 is production-sized (ign).
-//!   direct = RecursiveCommitmentConfig only, no user precommit.
-//!   pre    = RecursiveCommitmentConfig + two 16-variable user precommits,
+//!   direct = ordinary configuration only, no user precommit.
+//!   pre    = ordinary configuration + two 16-variable user precommits,
 //!            committed under the base config's scalar row.
 //! OneHot mc rec: nv=32 is production-sized (ign).
-//!   direct = RecursiveCommitmentConfig<OneHotMultiChunk>.
+//!   direct = OneHotMultiChunk.
 //!   pre    = same + two 16-variable user precommits, committed under the
 //!            base config's scalar row.
 //!
@@ -154,7 +154,7 @@ macro_rules! matrix_test {
             });
         }
     };
-    // recursive mode, no user precommit (fp128_onehot_recursive.rs schedule)
+    // recursive mode, no user precommit (fp128_onehot.aks schedule)
     (recursive_direct; $name:ident; $base_cfg:ty) => {
         #[test]
         #[ignore = "production-sized; run explicitly with --release"]
@@ -255,25 +255,25 @@ matrix_test!(onehot_pre; fp128_onehot_pre; fp128::OneHot; final_nvs=[16, 20]);
 
 // ----------------------------------------------------------------------------
 // OneHot × single-chunk × direct × recursive    (production-sized, ignored)
-// RecursiveCommitmentConfig, no user precommit; uses fp128_onehot_recursive.rs schedule.
+//  no user precommit; uses fp128_onehot.aks schedule.
 // ----------------------------------------------------------------------------
 matrix_test!(recursive_direct; fp128_onehot_rec; fp128::OneHot);
 
 // ----------------------------------------------------------------------------
 // OneHot × single-chunk × precommitted × recursive    (production-sized, ignored)
-// RecursiveCommitmentConfig + user precommit; profiles from the base config's scalar row.
+// ordinary configuration + user precommit; profiles from the base config's scalar row.
 // ----------------------------------------------------------------------------
 matrix_test!(recursive_pre; fp128_onehot_rec_pre; fp128::OneHot);
 
 // ----------------------------------------------------------------------------
 // OneHot × multi-chunk × direct × recursive    (production-sized, ignored)
-// RecursiveCommitmentConfig<OneHotMultiChunk>; uses fp128_onehot_recursive_multi_chunk_w8r2.rs.
+// OneHotMultiChunk; uses fp128_onehot_multi_chunk.aks.
 // ----------------------------------------------------------------------------
 matrix_test!(recursive_direct; fp128_onehot_mc_rec; fp128::OneHotMultiChunk);
 
 // ----------------------------------------------------------------------------
 // OneHot × multi-chunk × precommitted × recursive    (production-sized, ignored)
-// RecursiveCommitmentConfig<OneHotMultiChunk> + user precommit;
+// OneHotMultiChunk + user precommit;
 // profiles from the base config's scalar row.
 // ----------------------------------------------------------------------------
 matrix_test!(recursive_pre; fp128_onehot_mc_rec_pre; fp128::OneHotMultiChunk);

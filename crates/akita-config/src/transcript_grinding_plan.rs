@@ -87,11 +87,11 @@ mod tests {
             ),
             (
                 43,
-                50,
-                400,
+                51,
+                401,
                 [
-                    201, 141, 145, 223, 13, 192, 44, 142, 174, 252, 217, 177, 224, 123, 135, 2,
-                    122, 211, 6, 174, 3, 127, 123, 102, 130, 17, 69, 136, 179, 80, 247, 229,
+                    220, 61, 171, 78, 63, 185, 50, 47, 100, 57, 171, 209, 47, 142, 108, 223, 12,
+                    89, 164, 124, 82, 3, 246, 183, 198, 85, 249, 217, 91, 125, 84, 60,
                 ],
             )
         );
@@ -281,14 +281,9 @@ mod tests {
         audit::<fp128::OneHotMultiChunkW4R3>();
         audit::<fp128::OneHotMultiChunkW8R3>();
         audit::<fp128::DenseMultiChunkW8R3>();
-        audit::<crate::RecursiveCommitmentConfig<fp128::OneHotMultiChunkW2R3>>();
-        audit::<crate::RecursiveCommitmentConfig<fp128::OneHotMultiChunkW4R3>>();
-        audit::<crate::RecursiveCommitmentConfig<fp128::OneHotMultiChunkW8R3>>();
         audit::<fp64::Dense>();
         audit::<fp64::OneHot>();
         audit::<fp32::Dense>();
         audit::<fp32::OneHot>();
-        audit::<crate::RecursiveCommitmentConfig<fp128::OneHot>>();
-        audit::<crate::RecursiveCommitmentConfig<fp128::OneHotMultiChunk>>();
     }
 }
