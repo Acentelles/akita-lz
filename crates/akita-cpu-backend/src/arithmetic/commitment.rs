@@ -8,13 +8,10 @@ use crate::commitment::{
     OneHotIndexWidth, PolynomialRepresentation, PolynomialType, ResolvedCommitSource,
     UnitPositionSlice,
 };
-use crate::kernels::linear::{
-    mat_vec_mul_ntt_blocks_i8, mat_vec_mul_ntt_i8, mat_vec_mul_ntt_packed_digits_i8,
-    mat_vec_mul_ntt_packed_raw_i8,
-};
+use crate::kernels::linear::{mat_vec_mul_ntt_blocks_i8, mat_vec_mul_ntt_i8, I8CommitPolicy};
 use crate::opaque::CommitInnerPlan;
 use crate::opaque::{commit_onehot_sources, OneHotSource};
-use crate::sources::block_digits::{DigitShape, I16Rows, I8Rows, LiveRings};
+use crate::sources::block_digits::{DigitShape, I16Rows, I8Rows, LiveRings, PackedDigits};
 use crate::sources::packed_digits::PackedSignedDigitView;
 use crate::sources::poly_helpers::SignedDigitBasis;
 use crate::validation::signed_digit_kernel_for_setup;
@@ -216,6 +213,7 @@ impl<F: Field, E> CpuBackend<F, E> {
             shape,
             signed_digit_kernel,
             false,
+            I8CommitPolicy::Dense,
         )
     }
 
@@ -230,12 +228,14 @@ impl<F: Field, E> CpuBackend<F, E> {
         shape: DigitShape,
         signed_digit_kernel: SignedDigitKernel,
         check_zero: bool,
+        policy: I8CommitPolicy,
     ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError>
     where
         F: Field + CanonicalEncoding,
         S: I8Rows<D> + I16Rows<D>,
     {
-        let use_exact_ifma52 = signed_digit_kernel == SignedDigitKernel::I8
+        let use_exact_ifma52 = matches!(policy, I8CommitPolicy::Dense)
+            && signed_digit_kernel == SignedDigitKernel::I8
             && dense_i8_exact_ifma52_preferred::<F, D>(row_width, shape.log_basis)?;
         if signed_digit_kernel == SignedDigitKernel::I16 || use_exact_ifma52 {
             commit_rows_i16(prepared, n_a, row_width, source, block_ranges, shape)
@@ -251,6 +251,7 @@ impl<F: Field, E> CpuBackend<F, E> {
                         block_ranges,
                         shape,
                         check_zero,
+                        policy,
                     )
                 },
             )
@@ -287,10 +288,38 @@ impl<F: Field, E> CpuBackend<F, E> {
                 "recursive witness does not cover its live blocks".into(),
             ));
         }
-        if signed_digit_kernel_for_setup(log_basis_inner, "for recursive witness commitment")?
-            == SignedDigitKernel::I16
-        {
-            return recursive_packed_witness_commit_rows_i16(
+        let signed_digit_kernel =
+            signed_digit_kernel_for_setup(log_basis_inner, "for recursive witness commitment")?;
+        if num_digits_inner == 1 {
+            let block_ranges = (0..num_live_blocks)
+                .map(|block| {
+                    let start = block * num_positions_per_block;
+                    let live = (ring_elems - start).min(num_positions_per_block);
+                    start..start + live
+                })
+                .collect::<Vec<_>>();
+            let source = PackedDigits {
+                digits,
+                num_rings: ring_elems,
+            };
+            self.commit_rows(
+                prepared,
+                n_rows,
+                row_width,
+                &source,
+                &block_ranges,
+                DigitShape {
+                    num_digits: num_digits_inner,
+                    log_basis: log_basis_inner,
+                },
+                signed_digit_kernel,
+                true,
+                I8CommitPolicy::Recursive {
+                    raw: !digits.bounds().fits_balanced_log_basis(log_basis_inner),
+                },
+            )
+        } else if signed_digit_kernel == SignedDigitKernel::I16 {
+            recursive_packed_witness_commit_rows_i16(
                 prepared,
                 digits,
                 n_rows,
@@ -298,56 +327,7 @@ impl<F: Field, E> CpuBackend<F, E> {
                 num_live_blocks,
                 num_digits_inner,
                 log_basis_inner,
-            );
-        }
-        if num_digits_inner == 1 {
-            let decode_block = |block_index: usize| {
-                let start_ring = block_index * num_positions_per_block;
-                let live = (ring_elems - start_ring).min(num_positions_per_block);
-                digits.decode_rings::<D>(start_ring, live)
-            };
-            let bounds = digits.bounds();
-            let stored_is_balanced = bounds.fits_balanced_log_basis(log_basis_inner);
-            if stored_is_balanced {
-                prepared.with_shared_ntt::<D, _>(
-                    NttCacheKey::from_matrix_shape(
-                        D,
-                        n_rows,
-                        row_width,
-                        NttTransformDomain::Negacyclic,
-                    )?,
-                    |ntt| {
-                        mat_vec_mul_ntt_packed_digits_i8(
-                            ntt,
-                            n_rows,
-                            row_width,
-                            num_live_blocks,
-                            &decode_block,
-                            log_basis_inner,
-                        )
-                    },
-                )
-            } else {
-                let rhs_bound = u64::from(bounds.negative_abs_max().max(bounds.positive_max()));
-                prepared.with_shared_ntt::<D, _>(
-                    NttCacheKey::from_matrix_shape(
-                        D,
-                        n_rows,
-                        row_width,
-                        NttTransformDomain::Negacyclic,
-                    )?,
-                    |ntt| {
-                        mat_vec_mul_ntt_packed_raw_i8(
-                            ntt,
-                            n_rows,
-                            row_width,
-                            num_live_blocks,
-                            rhs_bound,
-                            &decode_block,
-                        )
-                    },
-                )
-            }
+            )
         } else {
             prepared.with_shared_ntt::<D, _>(
                 NttCacheKey::from_matrix_shape(

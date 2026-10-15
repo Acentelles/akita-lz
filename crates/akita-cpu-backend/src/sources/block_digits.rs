@@ -12,6 +12,8 @@ use akita_params::SignedDigitKernel;
 use jolt_field::{CanonicalEncoding, Field};
 use std::ops::Range;
 
+pub(crate) mod evaluate;
+
 #[derive(Clone, Copy)]
 pub(crate) struct DigitShape {
     pub num_digits: usize,
@@ -300,7 +302,19 @@ impl<F: Field + CanonicalEncoding, const D: usize> I16Rows<D> for LiveRings<'_, 
 pub(crate) struct PackedDigits<'a> {
     pub(crate) digits: PackedSignedDigitView<'a>,
     pub(crate) num_rings: usize,
-    pub(crate) digit_abs_bound: u64,
+}
+
+impl<F: Field, const D: usize> RingValueSource<F, D> for PackedDigits<'_> {
+    type Values<'a>
+        = [i8; D]
+    where
+        Self: 'a;
+    fn num_rings(&self) -> usize {
+        self.num_rings
+    }
+    fn values(&self, ring: usize) -> Result<Self::Values<'_>, AkitaError> {
+        self.digits.decode_array(ring * D)
+    }
 }
 
 impl<const D: usize> BlockDigits<D> for PackedDigits<'_> {
@@ -313,10 +327,13 @@ impl<const D: usize> BlockDigits<D> for PackedDigits<'_> {
         self.num_rings
     }
     fn digit_abs_bound(&self, _shape: DigitShape) -> u64 {
-        self.digit_abs_bound
+        let bounds = self.digits.bounds();
+        u64::from(bounds.negative_abs_max().max(bounds.positive_max()))
     }
-    fn i8_digit_span(&self, _shape: DigitShape) -> Option<I8DigitSpan> {
-        Some(bounded_i8_digit_span(self.digit_abs_bound))
+    fn i8_digit_span(&self, shape: DigitShape) -> Option<I8DigitSpan> {
+        Some(bounded_i8_digit_span(
+            <Self as BlockDigits<D>>::digit_abs_bound(self, shape),
+        ))
     }
     fn scratch(&self, _shape: DigitShape, _max_rings: usize) -> Self::Scratch {
         [0; D]
@@ -330,6 +347,57 @@ impl<const D: usize> BlockDigits<D> for PackedDigits<'_> {
         debug_assert_eq!(shape.num_digits, 1);
         self.digits.decode_range(ring * D, s)?;
         Ok(s)
+    }
+}
+
+impl<const D: usize> I8Rows<D> for PackedDigits<'_> {
+    type I8Scratch = Vec<[i8; D]>;
+    fn i8_scratch(&self, _shape: DigitShape, max_rings: usize) -> Self::I8Scratch {
+        vec![[0; D]; max_rings]
+    }
+    fn digit_abs_bound(&self, shape: DigitShape) -> u64 {
+        <Self as BlockDigits<D>>::digit_abs_bound(self, shape)
+    }
+    fn i8_rows<'a>(
+        &'a self,
+        _block_index: usize,
+        block_start: usize,
+        rings: Range<usize>,
+        shape: DigitShape,
+        s: &'a mut Self::I8Scratch,
+    ) -> Result<&'a [[i8; D]], AkitaError> {
+        if shape.num_digits != 1 {
+            return Err(AkitaError::InvalidInput(
+                "packed rows require one inner digit".into(),
+            ));
+        }
+        let rows = &mut s[..rings.len()];
+        self.digits
+            .decode_range((block_start + rings.start) * D, rows.as_flattened_mut())?;
+        Ok(rows)
+    }
+}
+
+impl<const D: usize> I16Rows<D> for PackedDigits<'_> {
+    type I16Scratch = (Vec<[i8; D]>, Vec<[i16; D]>);
+    fn i16_scratch(&self, shape: DigitShape, max_rings: usize) -> Self::I16Scratch {
+        (
+            <Self as I8Rows<D>>::i8_scratch(self, shape, max_rings),
+            vec![[0; D]; max_rings],
+        )
+    }
+    fn i16_rows<'a>(
+        &'a self,
+        rings: Range<usize>,
+        shape: DigitShape,
+        s: &'a mut Self::I16Scratch,
+    ) -> Result<&'a [[i16; D]], AkitaError> {
+        let rows = <Self as I8Rows<D>>::i8_rows(self, 0, 0, rings, shape, &mut s.0)?;
+        s.1.fill([0; D]);
+        for (dst, src) in s.1.iter_mut().zip(rows) {
+            *dst = std::array::from_fn(|k| i16::from(src[k]));
+        }
+        Ok(&s.1)
     }
 }
 

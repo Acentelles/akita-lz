@@ -92,6 +92,7 @@ fn field_matvec<
             num_digits,
             log_basis,
         },
+        super::I8CommitPolicy::Dense,
         "i8 matvec CRT capacity cannot fit a single term",
         params,
     )
@@ -153,6 +154,7 @@ fn mat_vec_mul_ntt_i8_dense_single_row<F: Field + CanonicalEncoding, const D: us
             log_basis,
         },
         false,
+        super::I8CommitPolicy::Dense,
     )?
     .into_iter()
     .map(|mut row| row.remove(0))
@@ -286,3 +288,31 @@ mod crt_dense;
 mod digit_matvec;
 mod fused;
 mod reduced_profiles;
+
+#[test]
+fn raw_block_bound_uses_bounded_scratch_and_live_columns() {
+    use crate::sources::block_digits::{I8Rows, PackedDigits};
+    use crate::sources::packed_digits::PackedSignedDigits;
+
+    const D: usize = 8;
+    let mut digits = vec![1; 23 * D];
+    digits[16 * D] = -128;
+    digits[21 * D] = 127;
+    let packed = PackedSignedDigits::from_i8_digits_auto(digits);
+    let source = PackedDigits {
+        digits: packed.view(),
+        num_rings: 23,
+    };
+    let shape = super::DigitShape {
+        num_digits: 1,
+        log_basis: 3,
+    };
+    let mut scratch = <PackedDigits as I8Rows<D>>::i8_scratch(&source, shape, 4);
+    let bound = |width, scratch: &mut Vec<[i8; D]>| {
+        super::i8_block_abs_bound(&source, 2, &(5..23), shape, width, 4, scratch).unwrap()
+    };
+    assert_eq!(bound(11, &mut scratch), 1);
+    assert_eq!(bound(12, &mut scratch), 128);
+    assert_eq!(bound(18, &mut scratch), 128);
+    assert_eq!(scratch.len(), 4);
+}

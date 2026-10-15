@@ -122,6 +122,7 @@ pub(super) fn mat_vec_mul_digits_i8_block_parallel<
         width,
         width.max(1),
         digit_bound,
+        false,
         params,
     )
 }
@@ -142,10 +143,12 @@ pub(super) fn mat_vec_mul_digits_i8_block_parallel_chunked<
     inner_width: usize,
     chunk_width: usize,
     digit_bound: u64,
+    raw: bool,
     params: &CrtNttParamSet<W, K, D>,
 ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
     let n_a = ntt_mat.len();
-    let lut = DigitMontLut::<W, K>::new_with_digit_bound(params, digit_bound);
+    let lut =
+        DigitMontLut::<W, K>::new_with_digit_bound(params, if raw { 128 } else { digit_bound });
     // A ring batch keeps full lazy-dot groups intact without tying decode
     // scratch to the CRT chunk width.
     let decode_rings = params.pointwise_dot_batch_size();
@@ -163,6 +166,23 @@ pub(super) fn mat_vec_mul_digits_i8_block_parallel_chunked<
     ),
                  (block_index, block): (usize, &Range<usize>)| {
         let live_width = (block.len() * shape.num_digits).min(inner_width);
+        let chunk_width = if raw {
+            let rhs_bound = i8_block_abs_bound(
+                source,
+                block_index,
+                block,
+                shape,
+                inner_width,
+                decode_rings,
+                digits,
+            )?;
+            safe_crt_chunk_width::<F, W, K, D>(params, inner_width, rhs_bound)
+                .ok_or_else(|| AkitaError::InvalidInput(
+                    "raw i8 recursive-witness coefficients exceed the CRT lift range for these parameters".into(),
+                ))?
+        } else {
+            chunk_width
+        };
         let mut out = vec![CyclotomicRing::<F, D>::zero(); n_a];
         for start in (0..live_width).step_by(chunk_width) {
             let end = (start + chunk_width).min(live_width);
@@ -257,6 +277,7 @@ pub(super) fn mat_vec_mul_blocks_i8_single_row_with_params<
                 inner_width,
                 chunk_width,
                 digit_bound,
+                false,
                 params,
             )?
             .into_iter()
@@ -318,4 +339,33 @@ pub(super) fn mat_vec_mul_blocks_i8_single_row_with_params<
             Ok(out)
         })
         .collect()
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn i8_block_abs_bound<S: I8Rows<D>, const D: usize>(
+    source: &S,
+    block_index: usize,
+    block: &Range<usize>,
+    shape: DigitShape,
+    inner_width: usize,
+    decode_rings: usize,
+    scratch: &mut S::I8Scratch,
+) -> Result<u64, AkitaError> {
+    let live_width = (block.len() * shape.num_digits).min(inner_width);
+    let mut bound = 0;
+    for ring_start in (0..live_width.div_ceil(shape.num_digits)).step_by(decode_rings) {
+        let ring_end = (ring_start + decode_rings).min(live_width.div_ceil(shape.num_digits));
+        let rows = source.i8_rows(
+            block_index,
+            block.start,
+            ring_start..ring_end,
+            shape,
+            scratch,
+        )?;
+        let width = (live_width - ring_start * shape.num_digits).min(rows.len());
+        for coefficient in rows[..width].iter().flatten() {
+            bound = bound.max(u64::from(coefficient.unsigned_abs()));
+        }
+    }
+    Ok(bound)
 }

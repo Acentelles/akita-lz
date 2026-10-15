@@ -1,9 +1,9 @@
 use super::rotated_accum::should_use_rotated_challenge;
 use super::windowed_accum::{I8DigitSpan, WindowedChallenge};
 use super::{
-    balanced_ring_decompose_fold_partitioned, element_partitioned_decompose_fold,
-    packed_tight_digit_fold_partitioned, sparse_mul_acc, sparse_mul_acc_i16_scalar,
-    sparse_mul_acc_scalar, SignedDigitBasis, ValidatedSparseChallenge, ValidatedSparseChallenges,
+    balanced_ring_decompose_fold_partitioned, element_partitioned_decompose_fold, sparse_mul_acc,
+    sparse_mul_acc_i16_scalar, sparse_mul_acc_scalar, SignedDigitBasis, ValidatedSparseChallenge,
+    ValidatedSparseChallenges,
 };
 use crate::sources::block_digits::{CachedDigits, DigitShape};
 use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
@@ -188,12 +188,20 @@ fn partitioned_fold_matches_scalar_for_window_grid_challenges() {
             .copied()
             .collect();
         let packed = PackedSignedDigits::from_i8_digits_auto(lowest_digits);
-        let packed = packed_tight_digit_fold_partitioned::<D>(
-            packed.view(),
-            rings.len(),
+        let packed = element_partitioned_decompose_fold::<_, D>(
+            &crate::sources::block_digits::PackedDigits {
+                digits: packed.view(),
+                num_rings: rings.len(),
+            },
             &challenges,
+            std::slice::from_ref(&(0..challenges.len())),
             POSITIONS,
+            DigitShape {
+                num_digits: 1,
+                log_basis: 8,
+            },
         )
+        .map(|mut chunks| chunks.pop().unwrap_or_default())
         .unwrap();
         let expected_lowest = expected
             .iter()
@@ -244,12 +252,20 @@ fn all_fold_sources_share_rotated_narrow_and_chunked_results() {
     let live =
         balanced_ring_decompose_fold_partitioned(&rings, &challenges, POSITIONS, &params).unwrap();
     let cached = cached_fold(&planes, &challenges, POSITIONS, 1, 8).unwrap();
-    let packed = packed_tight_digit_fold_partitioned::<D>(
-        packed.view(),
-        rings.len(),
+    let packed = element_partitioned_decompose_fold::<_, D>(
+        &crate::sources::block_digits::PackedDigits {
+            digits: packed.view(),
+            num_rings: rings.len(),
+        },
         &challenges,
+        std::slice::from_ref(&(0..challenges.len())),
         POSITIONS,
+        DigitShape {
+            num_digits: 1,
+            log_basis: 8,
+        },
     )
+    .map(|mut chunks| chunks.pop().unwrap_or_default())
     .unwrap();
     let mut expected = vec![[0i32; D]; POSITIONS];
     for (block, challenge) in challenges.iter().enumerate() {
