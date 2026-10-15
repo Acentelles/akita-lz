@@ -9,6 +9,7 @@ pub(crate) mod poly;
 #[doc(hidden)]
 #[allow(missing_docs)]
 pub(crate) mod poly_helpers;
+pub(crate) mod signed_blocks;
 pub(crate) mod sparse_ring;
 
 pub use dense::DensePoly;

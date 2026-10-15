@@ -49,7 +49,7 @@ pub mod custom_source {
         AvailablePolynomialTypes, BackendKindId, CommitSourceClass, CommitSourceDescriptor,
         CommitmentSource, ExternalInnerCommitmentCapability, ExternalInnerCommitmentInput,
         ExternalInnerCommitmentOperation, ExternalOperationIdentity, PolynomialRepresentation,
-        PolynomialTypeSelection, PreparedExternalInnerCommitment,
+        PolynomialTypeSelection, PreparedExternalInnerCommitment, SignedBlockDecoder, SignedBlocks,
     };
     pub use crate::opaque::{
         aggregate_decompose_fold_witnesses, CommitInnerPlan, CpuFoldResponses,
@@ -63,6 +63,7 @@ pub mod custom_source {
         RootOpeningSource, RootPolyMeta, RootPolyShape, SourceCoefficients,
     };
     pub use crate::sources::poly_helpers::fill_rotated_challenge;
+    pub use crate::sources::signed_blocks::SignedBlockPoly;
 }
 
 /// Arithmetic entry points exercised by the crate's standalone kernel benchmarks.

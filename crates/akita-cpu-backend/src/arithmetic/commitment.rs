@@ -1,19 +1,19 @@
-use super::exact_i16::{
-    commit_rows_i16,
-    recursive_packed_witness_commit_rows as recursive_packed_witness_commit_rows_i16,
-};
+use super::exact_i16::commit_rows_i16;
 use super::{CpuBackend, CpuPreparedSetup};
 use crate::commitment::{
-    CommitSourceDescriptor, DenseCoefficientSource, DenseRepresentation, DenseType,
-    OneHotIndexWidth, PolynomialRepresentation, PolynomialType, ResolvedCommitSource,
-    UnitPositionSlice,
+    AcceptedReach, CommitSourceDescriptor, DenseCoefficientSource, DenseRepresentation, DenseType,
+    OneHotIndexWidth, PolynomialRepresentation, PolynomialType, ResolvedCommitSource, SignedBlocks,
+    SignedValues, UnitPositionSlice,
 };
-use crate::kernels::linear::{mat_vec_mul_ntt_blocks_i8, mat_vec_mul_ntt_i8, I8CommitPolicy};
+use crate::kernels::linear::{mat_vec_mul_ntt_blocks_i8, I8CommitPolicy};
 use crate::opaque::CommitInnerPlan;
 use crate::opaque::{commit_onehot_sources, OneHotSource};
-use crate::sources::block_digits::{DigitShape, I16Rows, I8Rows, LiveRings, PackedDigits};
+use crate::sources::block_digits::{
+    DecomposedPackedDigits, DigitShape, I16Rows, I8Rows, LiveRings, PackedDigits,
+};
 use crate::sources::packed_digits::PackedSignedDigitView;
 use crate::sources::poly_helpers::SignedDigitBasis;
+use crate::sources::signed_blocks::{Decoded, I16Slice, I8Slice, SignedBlockDigits};
 use crate::validation::signed_digit_kernel_for_setup;
 use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
 use akita_algebra::CyclotomicRing;
@@ -21,9 +21,7 @@ use akita_error::AkitaError;
 use akita_params::{balanced_signed_digit_abs_bound, field_modulus, SignedDigitKernel};
 use akita_types::RingVec;
 use akita_types::{dense_i8_commit_prefers_exact_ifma52, NttCacheKey, NttTransformDomain};
-use jolt_field::solinas::parallel::*;
 use jolt_field::{CanonicalEncoding, Field, Unreduced, WithCommitAccumulator};
-use std::array::from_fn;
 use std::ops::Range;
 
 impl<F: Field, E> CpuBackend<F, E> {
@@ -102,6 +100,27 @@ impl<F: Field, E> CpuBackend<F, E> {
                         source.descriptor(),
                         plan,
                     )?)
+                })
+                .collect(),
+            Some(PolynomialType::Dense(DenseType::SignedBlocks)) => sources
+                .iter()
+                .map(|source| {
+                    let Some(PolynomialRepresentation::Dense(DenseRepresentation::SignedBlocks(
+                        blocks,
+                    ))) = source.representation()
+                    else {
+                        return Err(AkitaError::Internal(
+                            "compiled signed-block group contains another representation".into(),
+                        ));
+                    };
+                    let accepted = source.accepted.ok_or_else(|| {
+                        AkitaError::InvalidInput(
+                            "signed blocks require accepted coefficient bounds".into(),
+                        )
+                    })?;
+                    crate::typed_inner_rows(
+                        self.signed_block_commit_rows::<D>(prepared, *blocks, accepted, plan)?,
+                    )
                 })
                 .collect(),
             Some(PolynomialType::ShortNorm(_)) => sources
@@ -217,6 +236,74 @@ impl<F: Field, E> CpuBackend<F, E> {
         )
     }
 
+    pub(crate) fn signed_block_commit_rows<const D: usize>(
+        &self,
+        prepared: &CpuPreparedSetup<F>,
+        blocks: SignedBlocks<'_>,
+        accepted: AcceptedReach,
+        plan: CommitInnerPlan,
+    ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError>
+    where
+        F: Field + CanonicalEncoding,
+    {
+        if plan.ring_dimension != D || plan.num_positions_per_block == 0 {
+            return Err(AkitaError::InvalidInput(
+                "signed-block commitment geometry is invalid".into(),
+            ));
+        }
+        let ring_count = akita_error::checked::pow2(blocks.num_vars())
+            .and_then(|len| akita_error::checked::div_ceil(len, D))
+            .ok_or_else(|| {
+                AkitaError::InvalidInput("signed-block ring extent is invalid".into())
+            })?;
+        let block_ranges = (0..ring_count)
+            .step_by(plan.num_positions_per_block)
+            .map(|start| start..(start + plan.num_positions_per_block).min(ring_count))
+            .collect::<Vec<_>>();
+        if block_ranges.len() != plan.num_live_blocks {
+            return Err(AkitaError::InvalidInput(
+                "signed-block live block count disagrees with plan".into(),
+            ));
+        }
+        let shape = DigitShape {
+            num_digits: plan.num_digits_inner,
+            log_basis: plan.log_basis_inner,
+        };
+        let row_width = akita_error::checked::product([
+            ring_count.min(plan.num_positions_per_block),
+            shape.num_digits,
+        ])
+        .ok_or_else(|| AkitaError::InvalidSetup("signed-block row width overflow".into()))?;
+        let kernel = signed_digit_kernel_for_setup(shape.log_basis, "for dense commitment")?;
+        macro_rules! commit {
+            ($storage:expr) => {{
+                let source = SignedBlockDigits::<F, _, D>::new(
+                    $storage,
+                    blocks.num_vars(),
+                    blocks.len(),
+                    Some(accepted),
+                    Some(blocks.extrema()),
+                )?;
+                self.commit_rows(
+                    prepared,
+                    plan.n_a,
+                    row_width,
+                    &source,
+                    &block_ranges,
+                    shape,
+                    kernel,
+                    false,
+                    I8CommitPolicy::Dense,
+                )
+            }};
+        }
+        match blocks.values {
+            SignedValues::I8(values) => commit!(I8Slice(values)),
+            SignedValues::I16(values) => commit!(I16Slice(values)),
+            SignedValues::DecodedI8(decoder) => commit!(Decoded(decoder)),
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub(super) fn commit_rows<S, const D: usize>(
         &self,
@@ -290,17 +377,24 @@ impl<F: Field, E> CpuBackend<F, E> {
         }
         let signed_digit_kernel =
             signed_digit_kernel_for_setup(log_basis_inner, "for recursive witness commitment")?;
+        let block_ranges = (0..num_live_blocks)
+            .map(|block| {
+                let start = block * num_positions_per_block;
+                let live = (ring_elems - start).min(num_positions_per_block);
+                start..start + live
+            })
+            .collect::<Vec<_>>();
+        let source = PackedDigits {
+            digits,
+            num_rings: ring_elems,
+        };
+        let shape = DigitShape {
+            num_digits: num_digits_inner,
+            log_basis: log_basis_inner,
+        };
         if num_digits_inner == 1 {
-            let block_ranges = (0..num_live_blocks)
-                .map(|block| {
-                    let start = block * num_positions_per_block;
-                    let live = (ring_elems - start).min(num_positions_per_block);
-                    start..start + live
-                })
-                .collect::<Vec<_>>();
-            let source = PackedDigits {
-                digits,
-                num_rings: ring_elems,
+            let policy = I8CommitPolicy::Recursive {
+                raw: !digits.bounds().fits_balanced_log_basis(log_basis_inner),
             };
             self.commit_rows(
                 prepared,
@@ -308,64 +402,26 @@ impl<F: Field, E> CpuBackend<F, E> {
                 row_width,
                 &source,
                 &block_ranges,
-                DigitShape {
-                    num_digits: num_digits_inner,
-                    log_basis: log_basis_inner,
-                },
+                shape,
                 signed_digit_kernel,
                 true,
-                I8CommitPolicy::Recursive {
-                    raw: !digits.bounds().fits_balanced_log_basis(log_basis_inner),
-                },
-            )
-        } else if signed_digit_kernel == SignedDigitKernel::I16 {
-            recursive_packed_witness_commit_rows_i16(
-                prepared,
-                digits,
-                n_rows,
-                num_positions_per_block,
-                num_live_blocks,
-                num_digits_inner,
-                log_basis_inner,
+                policy,
             )
         } else {
-            prepared.with_shared_ntt::<D, _>(
-                NttCacheKey::from_matrix_shape(
-                    D,
-                    n_rows,
-                    row_width,
-                    NttTransformDomain::Negacyclic,
-                )?,
-                |ntt| {
-                    cfg_into_iter!(0..num_live_blocks)
-                        .map(|block_index| {
-                            let start_ring = block_index * num_positions_per_block;
-                            let live = (ring_elems - start_ring).min(num_positions_per_block);
-                            let decoded = digits.decode_rings::<D>(start_ring, live)?;
-                            let block = decoded
-                                .iter()
-                                .map(|digit| {
-                                    CyclotomicRing::from_coefficients(from_fn(|k| {
-                                        F::from_i8(digit[k])
-                                    }))
-                                })
-                                .collect::<Vec<_>>();
-                            let mut rows = mat_vec_mul_ntt_i8(
-                                ntt,
-                                n_rows,
-                                row_width,
-                                &[block.as_slice()],
-                                num_digits_inner,
-                                log_basis_inner,
-                            )?;
-                            rows.pop().ok_or_else(|| {
-                                AkitaError::Internal(
-                                    "single-block commitment matvec returned no batch".into(),
-                                )
-                            })
-                        })
-                        .collect()
-                },
+            let source = DecomposedPackedDigits::<F> {
+                packed: source,
+                params: BalancedDecomposePow2Params::new(num_digits_inner, log_basis_inner),
+            };
+            self.commit_rows(
+                prepared,
+                n_rows,
+                row_width,
+                &source,
+                &block_ranges,
+                shape,
+                signed_digit_kernel,
+                true,
+                I8CommitPolicy::Recursive { raw: false },
             )
         }
     }

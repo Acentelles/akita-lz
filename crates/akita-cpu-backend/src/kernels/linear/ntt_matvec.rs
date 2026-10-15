@@ -30,47 +30,6 @@ macro_rules! dispatch_slot {
     }};
 }
 
-pub(crate) fn mat_vec_mul_ntt_i8<F: Field + CanonicalEncoding, const D: usize>(
-    slot: &PreparedNttCache<D>,
-    num_rows: usize,
-    num_cols: usize,
-    blocks: &[&[CyclotomicRing<F, D>]],
-    num_digits: usize,
-    log_basis: u32,
-) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
-    validate_i8_log_basis(log_basis)?;
-    let params = BalancedDecomposePow2Params::new(num_digits, log_basis);
-    let basis = crate::sources::poly_helpers::SignedDigitBasis::new(log_basis)?;
-    let shape = DigitShape {
-        num_digits,
-        log_basis,
-    };
-    blocks
-        .iter()
-        .map(|coeffs| {
-            let source = LiveRings {
-                coeffs,
-                params: &params,
-                basis,
-            };
-            mat_vec_mul_ntt_blocks_i8(
-                slot,
-                num_rows,
-                num_cols,
-                &source,
-                std::slice::from_ref(&(0..coeffs.len())),
-                shape,
-                true,
-                I8CommitPolicy::Dense,
-            )?
-            .pop()
-            .ok_or_else(|| {
-                AkitaError::Internal("single-block commitment matvec returned no batch".into())
-            })
-        })
-        .collect()
-}
-
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn mat_vec_mul_ntt_blocks_i8<
     F: Field + CanonicalEncoding,

@@ -38,7 +38,7 @@ impl<F: Field, const D: usize> RingValues<F, D> for [i8; D] {
 
 impl<F: Field, const D: usize> RingValues<F, D> for [i16; D] {
     fn coeff(&self, k: usize) -> F {
-        F::from_i64(i64::from(self[k]))
+        F::from_i16(self[k])
     }
 }
 
@@ -396,6 +396,80 @@ impl<const D: usize> I16Rows<D> for PackedDigits<'_> {
         s.1.fill([0; D]);
         for (dst, src) in s.1.iter_mut().zip(rows) {
             *dst = std::array::from_fn(|k| i16::from(src[k]));
+        }
+        Ok(&s.1)
+    }
+}
+
+/// Packed small integers split into `num_digits` balanced planes.
+pub(crate) struct DecomposedPackedDigits<'a, F: Field + CanonicalEncoding> {
+    pub(crate) packed: PackedDigits<'a>,
+    pub(crate) params: BalancedDecomposePow2Params<F>,
+}
+
+impl<F: Field + CanonicalEncoding> DecomposedPackedDigits<'_, F> {
+    fn decode<'s, const D: usize>(
+        &self,
+        rings: Range<usize>,
+        decoded: &'s mut [[i8; D]],
+    ) -> Result<&'s [[i8; D]], AkitaError> {
+        let decoded = &mut decoded[..rings.len()];
+        self.packed
+            .digits
+            .decode_range(rings.start * D, decoded.as_flattened_mut())?;
+        Ok(decoded)
+    }
+}
+
+impl<F: Field + CanonicalEncoding, const D: usize> I8Rows<D> for DecomposedPackedDigits<'_, F> {
+    type I8Scratch = (Vec<[i8; D]>, Vec<[i8; D]>);
+    fn i8_scratch(&self, shape: DigitShape, max_rings: usize) -> Self::I8Scratch {
+        (
+            vec![[0; D]; max_rings],
+            vec![[0; D]; shape.num_digits * max_rings],
+        )
+    }
+    fn digit_abs_bound(&self, shape: DigitShape) -> u64 {
+        1 << (shape.log_basis - 1)
+    }
+    fn i8_rows<'a>(
+        &'a self,
+        _block_index: usize,
+        block_start: usize,
+        rings: Range<usize>,
+        shape: DigitShape,
+        s: &'a mut Self::I8Scratch,
+    ) -> Result<&'a [[i8; D]], AkitaError> {
+        let width = rings.len() * shape.num_digits;
+        let decoded = self.decode(block_start + rings.start..block_start + rings.end, &mut s.0)?;
+        for (ring, planes) in decoded
+            .iter()
+            .zip(s.1[..width].chunks_mut(shape.num_digits))
+        {
+            self.params.decompose_small_signed_into(ring, planes);
+        }
+        Ok(&s.1[..width])
+    }
+}
+
+impl<F: Field + CanonicalEncoding, const D: usize> I16Rows<D> for DecomposedPackedDigits<'_, F> {
+    type I16Scratch = (Vec<[i8; D]>, Vec<[i16; D]>);
+    fn i16_scratch(&self, shape: DigitShape, max_rings: usize) -> Self::I16Scratch {
+        (
+            vec![[0; D]; max_rings],
+            vec![[0; D]; shape.num_digits * max_rings],
+        )
+    }
+    fn i16_rows<'a>(
+        &'a self,
+        rings: Range<usize>,
+        shape: DigitShape,
+        s: &'a mut Self::I16Scratch,
+    ) -> Result<&'a [[i16; D]], AkitaError> {
+        let decoded = self.decode(rings, &mut s.0)?;
+        s.1.fill([0; D]);
+        for (ring, planes) in decoded.iter().zip(s.1.chunks_mut(shape.num_digits)) {
+            self.params.decompose_small_signed_into(ring, planes);
         }
         Ok(&s.1)
     }

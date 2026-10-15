@@ -521,7 +521,7 @@ mod tests {
             ),
         )
         .unwrap()
-        .materialize()
+        .materialize(None)
         .unwrap();
         let operation = CpuInnerCommitOperation::new(&backend, &prepared);
         let binding = crate::commitment::CommitmentStateBinding::new(

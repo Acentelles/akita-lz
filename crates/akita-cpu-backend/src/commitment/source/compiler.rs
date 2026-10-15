@@ -25,7 +25,10 @@ impl<'a, F: Field> CompiledCommitmentRequest<'a, F> {
     }
 
     /// Materialize only the representations selected during request compilation.
-    pub(crate) fn materialize(self) -> Result<Vec<ResolvedCommitSource<'a, F>>, AkitaError> {
+    pub(crate) fn materialize(
+        self,
+        accepted: Option<AcceptedReach>,
+    ) -> Result<Vec<ResolvedCommitSource<'a, F>>, AkitaError> {
         self.sources
             .iter()
             .zip(self.descriptors)
@@ -59,6 +62,7 @@ impl<'a, F: Field> CompiledCommitmentRequest<'a, F> {
                 Ok(ResolvedCommitSource {
                     descriptor,
                     inner_plan: self.plan,
+                    accepted,
                     path,
                 })
             })
@@ -83,6 +87,15 @@ fn validate_materialized_representation<F: Field>(
                     expected: descriptor.total_coefficient_len(),
                     actual: source.coefficients().len(),
                 });
+            }
+        }
+        PolynomialRepresentation::Dense(DenseRepresentation::SignedBlocks(blocks)) => {
+            if blocks.num_vars() != descriptor.num_vars()
+                || blocks.len() > descriptor.total_coefficient_len()
+            {
+                return Err(AkitaError::InvalidInput(
+                    "signed blocks disagree with their source descriptor".into(),
+                ));
             }
         }
         PolynomialRepresentation::ShortNorm(representation) => {
