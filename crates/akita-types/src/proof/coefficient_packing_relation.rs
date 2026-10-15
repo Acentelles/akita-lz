@@ -33,11 +33,12 @@ struct RelationEventDomain {
 }
 
 use expanded::CoefficientPackingGroupSemanticInputs;
-use expanded::CoefficientPackingRelationEvents;
 pub use expanded::{
     CoefficientPackingBatchSemanticInputs, CoefficientPackingBatchSemantics,
     CoefficientPackingGroupSemantics,
 };
+#[cfg(test)]
+use expanded::{CoefficientPackingRelationEvents, TestCoefficientPackingGroupSemantics};
 #[cfg(any(test, feature = "test-support"))]
 pub use test_fixtures::{
     coefficient_packing_fixture, coefficient_packing_multigroup_fixture, CoefficientPackingFixture,
@@ -47,8 +48,8 @@ pub use test_fixtures::{
 /// One packing group whose geometry, prepared point, claims, consistency row
 /// and gadgets have been checked against the fold authority.
 ///
-/// Only [`validate_coefficient_packing_batch_groups`] builds one. The prover
-/// expands it into relation events and Stage 2 terms; the verifier reads it
+/// Only [`validate_coefficient_packing_batch_groups`] builds one. Consumers
+/// explicitly expand it into relation events or Stage 2 terms; the verifier reads it
 /// through the accessors below to build compact factors.
 ///
 /// Holding one guarantees that `d_d` is nonzero and divides the partial
@@ -76,7 +77,6 @@ pub struct ValidatedCoefficientPackingGroup<'authority, 'output, F: Field, E: Fi
     alpha_powers: Vec<E>,
     basis: Vec<E>,
     opening_gadget: Vec<E>,
-    challenge_alpha_values: Vec<E>,
     quotient_gadget: Vec<E>,
     denominator: E,
     witness_gadget: Vec<E>,
@@ -176,10 +176,26 @@ impl<'authority, 'output, F: Field, E: Field>
     }
 
     /// Canonical packing challenges evaluated at alpha, claim-major over live
-    /// blocks.
-    #[must_use]
-    pub fn challenge_alpha_values(&self) -> &[E] {
-        &self.challenge_alpha_values
+    /// blocks. Evaluation is consumer-owned; validating a group does not run it.
+    #[tracing::instrument(skip_all, name = "coefficient_packing_challenge_evaluations")]
+    pub fn challenge_alpha_values(&self) -> Result<Vec<E>, AkitaError>
+    where
+        F: CanonicalEncoding,
+        E: ExtField<F>,
+    {
+        let RingRelationGroupOpeningView::SubringCoefficientPacking {
+            canonical_subring_challenges,
+            ..
+        } = self
+            .inputs
+            .relation
+            .group_opening_view(self.group_index())?
+        else {
+            return Err(AkitaError::Internal(
+                "validated packing group changed opening family".into(),
+            ));
+        };
+        canonical_subring_challenges.evals_at_pows::<F, E>(&self.alpha_powers)
     }
 
     #[must_use]
@@ -317,7 +333,7 @@ fn push_event<E: Field>(
 #[cfg(test)]
 fn prepare_coefficient_packing_group_semantics<'authority, 'output, F, E>(
     inputs: CoefficientPackingGroupSemanticInputs<'authority, 'output, F, E>,
-) -> Result<CoefficientPackingGroupSemantics<'output, E>, AkitaError>
+) -> Result<TestCoefficientPackingGroupSemantics<'output, E>, AkitaError>
 where
     F: Field + CanonicalEncoding,
     E: ExtField<F> + FpExtEncoding<F>,
@@ -330,9 +346,17 @@ where
         inputs.tau1,
         inputs.claim_coefficients,
     )?;
-    prepare_coefficient_packing_prover_group(validate_coefficient_packing_group(
-        inputs, &authority,
-    )?)
+    let validated = validate_coefficient_packing_group(inputs, &authority)?;
+    let relation_events = CoefficientPackingRelationEvents {
+        events: coefficient_packing_relation_events(&validated)?,
+        alpha_powers: validated.alpha_powers.clone().into(),
+        relation_coefficient_block_len: validated.coefficient_block,
+        physical_field_len: validated.physical_field_len,
+    };
+    Ok(TestCoefficientPackingGroupSemantics {
+        semantics: prepare_coefficient_packing_prover_group(validated)?,
+        relation_events,
+    })
 }
 
 fn validate_coefficient_packing_group<'authority, 'output, F, E>(
@@ -482,7 +506,6 @@ where
     .into_iter()
     .map(E::lift_base)
     .collect::<Vec<_>>();
-    let challenge_alpha_values = canonical_challenges.evals_at_pows::<F, E>(&alpha_powers)?;
 
     let quotient_gadget = gadget_row_scalars::<F>(
         r_decomp_levels::<F>(inputs.level_params.open().digits.log_basis),
@@ -540,7 +563,6 @@ where
         alpha_powers,
         basis,
         opening_gadget,
-        challenge_alpha_values,
         quotient_gadget,
         denominator,
         witness_gadget,
@@ -551,6 +573,7 @@ where
 /// Relation-weight events of one validated packing group: the consistency
 /// row's E terms in claim, unit, block, digit and plane order, then its
 /// quotient terms. Events with a zero scalar are omitted.
+#[tracing::instrument(skip_all, name = "coefficient_packing_relation_events")]
 pub fn coefficient_packing_relation_events<F, E>(
     validated: &ValidatedCoefficientPackingGroup<'_, '_, F, E>,
 ) -> Result<Vec<RelationWeightEvent<E>>, AkitaError>
@@ -558,6 +581,7 @@ where
     F: Field + CanonicalEncoding,
     E: ExtField<F> + FpExtEncoding<F>,
 {
+    let challenge_alpha_values = validated.challenge_alpha_values()?;
     let inputs = &validated.inputs;
     let geometry = validated.geometry;
     let group_layout = inputs.opening_batch.group_layout(inputs.group_index)?;
@@ -611,10 +635,8 @@ where
                         .ok_or_else(|| {
                             AkitaError::InvalidSetup("challenge index overflow".into())
                         })?;
-                    let challenge_alpha = *validated
-                        .challenge_alpha_values
-                        .get(challenge_index)
-                        .ok_or_else(|| {
+                    let challenge_alpha =
+                        *challenge_alpha_values.get(challenge_index).ok_or_else(|| {
                             AkitaError::Internal(
                                 "packing challenge index exceeds alpha table".into(),
                             )
@@ -695,15 +717,6 @@ where
     F: Field + CanonicalEncoding,
     E: ExtField<F> + FpExtEncoding<F>,
 {
-    let relation_events = CoefficientPackingRelationEvents {
-        events: coefficient_packing_relation_events(&validated)?,
-        #[cfg(test)]
-        alpha_powers: validated.alpha_powers.clone().into(),
-        #[cfg(test)]
-        relation_coefficient_block_len: validated.coefficient_block,
-        #[cfg(test)]
-        physical_field_len: validated.physical_field_len,
-    };
     let ValidatedCoefficientPackingGroup {
         inputs,
         geometry,
@@ -737,7 +750,6 @@ where
     Ok(CoefficientPackingGroupSemantics {
         group_index: inputs.group_index,
         geometry,
-        relation_events,
         witness_units,
         prepared_point: inputs.prepared_point,
         group_claim_range,
@@ -866,8 +878,9 @@ where
     Ok(groups)
 }
 
-/// Prepare joined relation-weight events and Stage 2 terms for all packing
-/// groups from one validated fold authority.
+/// Prepare compact Stage 2 semantics for all packing groups from one validated
+/// fold authority. This does not evaluate sparse challenges or expand relation
+/// events; consumers that need events use [`coefficient_packing_relation_events`].
 pub fn prepare_coefficient_packing_batch_semantics<'authority, 'output, 'points, F, E>(
     inputs: CoefficientPackingBatchSemanticInputs<'authority, 'output, 'points, F, E>,
 ) -> Result<CoefficientPackingBatchSemantics<'output, E>, AkitaError>

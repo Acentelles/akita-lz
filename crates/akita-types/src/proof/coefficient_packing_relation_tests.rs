@@ -116,7 +116,7 @@ fn packing_rejects_tensor_projected_commitment_source() {
 fn prepare<'a, Base, Extension>(
     fixture: &'a Fixture<Base, Extension>,
     alpha: Extension,
-) -> CoefficientPackingGroupSemantics<'a, Extension>
+) -> TestCoefficientPackingGroupSemantics<'a, Extension>
 where
     Base: Field + CanonicalEncoding + Ring,
     Extension: ExtField<Base> + FpExtEncoding<Base> + Ring + ExtField<Base>,

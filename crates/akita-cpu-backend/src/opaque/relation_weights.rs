@@ -30,7 +30,10 @@ use akita_params::{
     gadget_row_scalars, r_decomp_levels, CommittedGroupParams, OpeningClaimsLayout, OpeningMethod,
     RelationAddressGeometry, RelationRowFamily, RelationWitnessGeometry, SetupProjectionGeometry,
 };
-use akita_types::RelationWeightContribution;
+use akita_types::{
+    coefficient_packing_relation_events, validate_coefficient_packing_batch_groups,
+    CoefficientPackingBatchSemanticInputs, RelationWeightContribution,
+};
 use akita_types::{
     AkitaExpandedSetup, CoefficientPackingBatchSemantics, FpExtEncoding, OpeningFamily,
     PreparedSubringCoefficientPackingPoint, RelationRangeImagePlan, RingRelationInstance,
@@ -182,14 +185,19 @@ where
     )
 }
 
-fn pack_relation_events<E: Field>(
+fn pack_relation_events<F, E>(
     weights: &mut RelationLaneWeights<E>,
     num_groups: usize,
     packing_required: bool,
     packing_semantics: Option<&CoefficientPackingBatchSemantics<'_, E>>,
+    event_inputs: Option<&CoefficientPackingBatchSemanticInputs<'_, '_, '_, F, E>>,
     live_coeff_len: usize,
     relation_coefficient_block_len: usize,
-) -> Result<Vec<Option<usize>>, AkitaError> {
+) -> Result<Vec<Option<usize>>, AkitaError>
+where
+    F: Field + CanonicalEncoding,
+    E: ExtField<F> + FpExtEncoding<F>,
+{
     let mut packing_a_ring_dims = vec![None; num_groups];
     if packing_required != packing_semantics.is_some() {
         return Err(AkitaError::Internal(
@@ -217,8 +225,12 @@ fn pack_relation_events<E: Field>(
                     "packing relation group appears more than once".into(),
                 ));
             }
-            weights.extend_events(group.relation_weight_events().iter().cloned())?;
         }
+    }
+    if let Some(inputs) = event_inputs {
+        validate_coefficient_packing_batch_groups(inputs, |group| {
+            weights.extend_events(coefficient_packing_relation_events(&group)?)
+        })?;
     }
     Ok(packing_a_ring_dims)
 }
@@ -233,6 +245,21 @@ where
     E: FpExtEncoding<F> + Ring + ExtField<F> + MulBaseUnreduced<F>,
 {
     let compilation = validate_relation_inputs(&inputs)?;
+    let event_inputs = match &inputs.opening_points {
+        OpeningFamily::EvaluationTrace(()) => None,
+        OpeningFamily::SubringCoefficientPacking(points) => {
+            Some(CoefficientPackingBatchSemanticInputs {
+                level_params: inputs.level_params,
+                opening_batch: inputs.instance.opening_batch(),
+                relation_plan: inputs.relation_plan,
+                relation: inputs.instance,
+                prepared_points: points,
+                alpha: inputs.alpha,
+                tau1: inputs.relation_row_point,
+                claim_coefficients: inputs.claim_coefficients,
+            })
+        }
+    };
     let RelationLaneWeightInputs {
         instance,
         alpha,
@@ -301,6 +328,7 @@ where
         opening_batch.num_groups(),
         packing_required,
         packing_semantics,
+        event_inputs.as_ref(),
         compilation.witness_layout.live_coeff_len(),
         relation_coefficient_block_len,
     )?;

@@ -17,6 +17,7 @@ pub(super) struct CoefficientPackingGroupSemanticInputs<'authority, 'output, F: 
 }
 
 /// Packing-specific E and quotient events over the checked flat witness domain.
+#[cfg(test)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct CoefficientPackingRelationEvents<E: Field> {
     pub(super) events: Vec<RelationWeightEvent<E>>,
@@ -161,7 +162,6 @@ impl<E: Field> CoefficientPackingRelationEvents<E> {
 pub struct CoefficientPackingGroupSemantics<'a, E: Field> {
     pub(super) group_index: usize,
     pub(super) geometry: SubringCoefficientPackingGeometry,
-    pub(super) relation_events: CoefficientPackingRelationEvents<E>,
     pub(super) witness_units: Vec<WitnessUnitLayout>,
     pub(super) prepared_point: &'a PreparedSubringCoefficientPackingPoint<E>,
     pub(super) group_claim_range: Range<usize>,
@@ -222,18 +222,6 @@ impl<'a, E: Field> CoefficientPackingGroupSemantics<'a, E> {
     #[must_use]
     pub const fn geometry(&self) -> SubringCoefficientPackingGeometry {
         self.geometry
-    }
-
-    #[cfg(test)]
-    #[must_use]
-    pub(super) const fn relation_events(&self) -> &CoefficientPackingRelationEvents<E> {
-        &self.relation_events
-    }
-
-    /// Relation events prepared from this group's validated packing authority.
-    #[must_use]
-    pub fn relation_weight_events(&self) -> &[RelationWeightEvent<E>] {
-        &self.relation_events.events
     }
 
     #[must_use]
@@ -324,5 +312,27 @@ impl<'a, E: Field> CoefficientPackingGroupSemantics<'a, E> {
     #[must_use]
     pub fn fold_gadget(&self) -> &[E] {
         &self.fold_gadget
+    }
+}
+
+/// Event oracles are requested explicitly by reference tests, like the CPU consumer.
+#[cfg(test)]
+pub(super) struct TestCoefficientPackingGroupSemantics<'a, E: Field> {
+    pub(super) semantics: CoefficientPackingGroupSemantics<'a, E>,
+    pub(super) relation_events: CoefficientPackingRelationEvents<E>,
+}
+
+#[cfg(test)]
+impl<'a, E: Field> std::ops::Deref for TestCoefficientPackingGroupSemantics<'a, E> {
+    type Target = CoefficientPackingGroupSemantics<'a, E>;
+    fn deref(&self) -> &Self::Target {
+        &self.semantics
+    }
+}
+
+#[cfg(test)]
+impl<E: Field> TestCoefficientPackingGroupSemantics<'_, E> {
+    pub(super) fn relation_events(&self) -> &CoefficientPackingRelationEvents<E> {
+        &self.relation_events
     }
 }
