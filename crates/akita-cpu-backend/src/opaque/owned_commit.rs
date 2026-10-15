@@ -1,6 +1,6 @@
 //! Commitment execution and persistence admission at the owning backend boundary.
 use super::owned::{CommitOutput, CommitmentHandle, CommittedSource, SourceHandle};
-use crate::commitment::{CommitmentExecutor, GroupContext, PortableStatePolicy};
+use crate::commitment::{AcceptedReach, CommitmentExecutor, GroupContext, PortableStatePolicy};
 use crate::opaque::CpuBackend;
 use akita_config::{CommitmentConfig, TrustedScheduleCatalog};
 use akita_error::AkitaError;
@@ -52,7 +52,7 @@ where
             PortableStatePolicy,
         )?;
         let (recomputed, retained) =
-            executor.execute_full_via_outer_image(self, committed.parameters, &sources)?;
+            executor.execute_full_via_outer_image(self, committed.parameters, &sources, None)?;
         if recomputed.commitment != committed.public || retained != committed.retained {
             return Err(AkitaError::InvalidInput(
                 "transferred commitment does not match backend setup".into(),
@@ -118,8 +118,24 @@ where
             family,
             context,
         )?;
+        let (negative_abs, positive) = producer_contract.accepted_bounds(
+            profile.inner.digits.log_basis,
+            profile.inner.digits.num_digits,
+        );
+        let modulus = akita_params::field_modulus::<F>()?;
+        let centering_threshold = akita_algebra::ring::cyclotomic::decompose_centering_threshold(
+            profile.inner.digits.num_digits,
+            profile.inner.digits.log_basis,
+            modulus,
+        );
+        let accepted = AcceptedReach {
+            modulus,
+            centering_threshold,
+            negative_abs,
+            positive,
+        };
         let (committed_group, prover_state) =
-            executor.execute_full_via_outer_image(self, profile, &sources)?;
+            executor.execute_full_via_outer_image(self, profile, &sources, Some(accepted))?;
         let private_handle = CommitmentHandle {
             owner: source.owner,
             committed: Arc::new(CommittedSource {
