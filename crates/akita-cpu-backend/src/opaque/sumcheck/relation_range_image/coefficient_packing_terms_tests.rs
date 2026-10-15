@@ -9,9 +9,9 @@ use akita_params::{
 };
 use akita_types::{
     coefficient_packing_relation_events, prepare_coefficient_packing_batch_semantics,
-    relation_rhs_coeff_len, validate_coefficient_packing_batch_groups, AkitaExpandedSetup,
-    AkitaSetupDescriptor, CoefficientPackingBatchSemanticInputs, CoefficientPackingBatchSemantics,
-    CoefficientPackingChallenges, CoefficientPackingGroupSemantics, OpeningFamily,
+    relation_rhs_coeff_len, AkitaExpandedSetup, AkitaSetupDescriptor,
+    CoefficientPackingBatchSemanticInputs, CoefficientPackingBatchSemantics,
+    CoefficientPackingChallenges, CoefficientPackingGroupSemantics,
     PreparedSubringCoefficientPackingPoint, RelationRangeImagePlan, RelationWeightEvent,
     RingRelationGroupOpening, RingRelationInstance, RingVec,
 };
@@ -163,11 +163,14 @@ fn fixture_for_basis(basis: BasisMode) -> Fixture {
         tau1: &tau1,
         claim_coefficients: &claim_coefficients,
     };
-    let relation_events = validate_coefficient_packing_batch_groups(&inputs(), |group| {
-        coefficient_packing_relation_events(&group)
-    })
-    .unwrap()
-    .concat();
+    let batch = prepare_coefficient_packing_batch_semantics(inputs()).unwrap();
+    let relation_events = batch
+        .groups()
+        .iter()
+        .map(coefficient_packing_relation_events::<F, E>)
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap()
+        .concat();
     Fixture {
         params,
         opening_batch,
@@ -527,7 +530,7 @@ fn duplicate_packing_group_support_is_rejected() {
 }
 
 #[test]
-fn method_aware_relation_builder_uses_shared_packing_events_once() {
+fn method_aware_relation_builder_uses_batch_packing_events_once() {
     use crate::opaque::relation_weights::{
         build_relation_lane_weights, RelationLaneWeightInputs, RelationSetupSource,
     };
@@ -538,21 +541,27 @@ fn method_aware_relation_builder_uses_shared_packing_events_once() {
     let domain = fixture.relation_plan.digit_witness_domain();
     let opening_ring_dim = fixture.params.role_dims().d_d();
     let alpha = E::from_u64(17);
-    // Packing weights must use the batch that also supplies the validated factors,
-    // even if the separately supplied relation coefficients differ.
-    let unrelated_coefficients = vec![E::from_u64(23); fixture.claim_coefficients.len()];
+    // Packing weights must use the batch that also supplies the Stage 2 terms.
+    // Unlike claim coefficients, tau1 changes the event scalars, so rebuilding
+    // events from the separately supplied point would break this comparison.
+    let mut unrelated_tau1 = fixture.tau1.clone();
+    unrelated_tau1[0] += E::one();
+    let consistency_row = fixture.relation_plan.consistency_row_index(0).unwrap();
+    assert_ne!(
+        batch.groups()[0].consistency_weight(),
+        akita_types::proof::relation_row_weight(consistency_row, &unrelated_tau1).unwrap(),
+    );
     let deferred = build_relation_lane_weights(RelationLaneWeightInputs {
         setup: RelationSetupSource::DeferredClaim,
         instance: &fixture.relation,
         alpha,
         level_params: &fixture.params,
-        relation_row_point: &fixture.tau1,
-        claim_coefficients: &unrelated_coefficients,
+        relation_row_point: &unrelated_tau1,
+        claim_coefficients: &fixture.claim_coefficients,
         opening_source_len: domain.domain_len() / opening_ring_dim,
         opening_ring_dim,
         relation_plan: &fixture.relation_plan,
         packing_semantics: Some(&batch),
-        opening_points: OpeningFamily::SubringCoefficientPacking(&[(0, &fixture.prepared_point)]),
     })
     .unwrap();
 
@@ -629,7 +638,6 @@ fn method_aware_relation_builder_uses_shared_packing_events_once() {
         opening_ring_dim,
         relation_plan: &fixture.relation_plan,
         packing_semantics: Some(&batch),
-        opening_points: OpeningFamily::SubringCoefficientPacking(&[(0, &fixture.prepared_point)]),
     })
     .unwrap();
     // Every packed D column adds one setup term across its opening-ring lanes.
@@ -658,7 +666,6 @@ fn method_aware_relation_builder_uses_shared_packing_events_once() {
         opening_ring_dim,
         relation_plan: &fixture.relation_plan,
         packing_semantics: None,
-        opening_points: OpeningFamily::EvaluationTrace(()),
     })
     .is_err());
     assert!(
@@ -776,4 +783,31 @@ fn recursive_packing_phases_share_one_relation_authority() {
     let semantics = &packing_semantics.groups()[0];
     let prepared = prepare_coefficient_packing_linear_terms(semantics.clone()).unwrap();
     assert_eq!(prepared.materialize_dense(), materialize_shared(semantics),);
+}
+
+#[test]
+fn relation_builder_rejects_alpha_that_differs_from_packing_batch() {
+    use crate::opaque::relation_weights::{
+        build_relation_lane_weights, RelationLaneWeightInputs, RelationSetupSource,
+    };
+
+    let fixture = fixture();
+    let batch = prepare_batch(&fixture);
+    let opening_ring_dim = fixture.params.role_dims().d_d();
+    assert!(matches!(
+        build_relation_lane_weights(RelationLaneWeightInputs {
+            setup: RelationSetupSource::DeferredClaim,
+            instance: &fixture.relation,
+            alpha: E::from_u64(19),
+            level_params: &fixture.params,
+            relation_row_point: &fixture.tau1,
+            claim_coefficients: &fixture.claim_coefficients,
+            opening_source_len: fixture.relation_plan.digit_witness_domain().domain_len()
+                / opening_ring_dim,
+            opening_ring_dim,
+            relation_plan: &fixture.relation_plan,
+            packing_semantics: Some(&batch),
+        }),
+        Err(AkitaError::Internal(_))
+    ));
 }
