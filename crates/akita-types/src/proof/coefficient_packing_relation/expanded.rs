@@ -21,11 +21,8 @@ pub(super) struct CoefficientPackingGroupSemanticInputs<'authority, 'output, F: 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct CoefficientPackingRelationEvents<E: Field> {
     pub(super) events: Vec<RelationWeightEvent<E>>,
-    #[cfg(test)]
     pub(super) alpha_powers: Arc<[E]>,
-    #[cfg(test)]
     pub(super) relation_coefficient_block_len: usize,
-    #[cfg(test)]
     pub(super) physical_field_len: usize,
 }
 
@@ -160,6 +157,12 @@ impl<E: Field> CoefficientPackingRelationEvents<E> {
 /// factors from which a compute backend can prepare its own execution plan.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CoefficientPackingGroupSemantics<'a, E: Field> {
+    // Challenges share their immutable storage with the relation. Keep only
+    // compact inputs here; CPU consumers evaluate and expand them on demand.
+    pub(super) canonical_challenges: Challenges,
+    pub(super) quotient_row: akita_params::witness::WitnessQuotientRowLayout,
+    pub(super) quotient_gadget: Vec<E>,
+    pub(super) denominator: E,
     pub(super) group_index: usize,
     pub(super) geometry: SubringCoefficientPackingGeometry,
     pub(super) witness_units: Vec<WitnessUnitLayout>,
@@ -312,27 +315,5 @@ impl<'a, E: Field> CoefficientPackingGroupSemantics<'a, E> {
     #[must_use]
     pub fn fold_gadget(&self) -> &[E] {
         &self.fold_gadget
-    }
-}
-
-/// Event oracles are requested explicitly by reference tests, like the CPU consumer.
-#[cfg(test)]
-pub(super) struct TestCoefficientPackingGroupSemantics<'a, E: Field> {
-    pub(super) semantics: CoefficientPackingGroupSemantics<'a, E>,
-    pub(super) relation_events: CoefficientPackingRelationEvents<E>,
-}
-
-#[cfg(test)]
-impl<'a, E: Field> std::ops::Deref for TestCoefficientPackingGroupSemantics<'a, E> {
-    type Target = CoefficientPackingGroupSemantics<'a, E>;
-    fn deref(&self) -> &Self::Target {
-        &self.semantics
-    }
-}
-
-#[cfg(test)]
-impl<E: Field> TestCoefficientPackingGroupSemantics<'_, E> {
-    pub(super) fn relation_events(&self) -> &CoefficientPackingRelationEvents<E> {
-        &self.relation_events
     }
 }

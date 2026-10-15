@@ -4,7 +4,7 @@ use akita_algebra::offset_eq::{
 };
 use akita_error::AkitaError;
 use jolt_field::solinas::parallel::*;
-use jolt_field::Field;
+use jolt_field::{CanonicalEncoding, ExtField, Field};
 use std::ops::Range;
 use std::sync::Arc;
 
@@ -52,8 +52,8 @@ pub(super) struct CoefficientPackingAffineRelationFamily<E: Field> {
 
 /// Checked compact packing semantics for the Stage 2 verifier.
 ///
-/// This carrier builds compact verifier factors rather than expanded event and
-/// segment representation.
+/// This carrier builds compact verifier factors rather than the expanded event and
+/// segment representations.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct CoefficientPackingVerifierBatchSemantics<E: Field> {
     pub(super) groups: Vec<CoefficientPackingVerifierGroupSemantics<E>>,
@@ -367,10 +367,7 @@ fn extend_point<E: Field>(target: &mut Vec<E>, point: &[E]) -> Result<(), AkitaE
     Ok(())
 }
 
-pub(super) fn prepare_compact_factors<
-    F: Field + jolt_field::CanonicalEncoding,
-    E: Field + jolt_field::ExtField<F>,
->(
+pub(super) fn prepare_compact_factors<F: Field + CanonicalEncoding, E: Field + ExtField<F>>(
     group: &ValidatedCoefficientPackingGroup<'_, '_, F, E>,
 ) -> Result<CoefficientPackingCompactFactors<E>, AkitaError> {
     let s = group.geometry().challenge_subring_dimension();

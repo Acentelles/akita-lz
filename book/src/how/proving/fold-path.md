@@ -47,6 +47,16 @@ may use different challenge subring dimensions. A setup prefix inherits the
 method selected by the fold that consumes it. The commitment itself does not
 record that method.
 
+For coefficient packing, ring-switch finalization prepares one compact batch
+of checked group semantics. The batch retains shared sparse challenges, alpha
+powers, row weights, gadgets, and witness addresses. It supplies both the
+Stage 2 opening terms and the CPU relation events. The CPU calls
+`coefficient_packing_relation_events` on those groups when it needs expanded
+weights; shared preparation does not evaluate the challenges or allocate events.
+This keeps both consumers tied to the same fold inputs while allowing other
+backends to consume the compact batch directly. The verifier evaluates its
+challenges once per group when building compact factors.
+
 ## Implementation map
 
 - `crates/akita-prover/src/protocol/prove/fold/`.

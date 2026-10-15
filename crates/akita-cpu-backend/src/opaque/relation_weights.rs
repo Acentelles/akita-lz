@@ -30,13 +30,10 @@ use akita_params::{
     gadget_row_scalars, r_decomp_levels, CommittedGroupParams, OpeningClaimsLayout, OpeningMethod,
     RelationAddressGeometry, RelationRowFamily, RelationWitnessGeometry, SetupProjectionGeometry,
 };
-use akita_types::{
-    coefficient_packing_relation_events, validate_coefficient_packing_batch_groups,
-    CoefficientPackingBatchSemanticInputs, RelationWeightContribution,
-};
+use akita_types::{coefficient_packing_relation_events, RelationWeightContribution};
 use akita_types::{
     AkitaExpandedSetup, CoefficientPackingBatchSemantics, FpExtEncoding, OpeningFamily,
-    PreparedSubringCoefficientPackingPoint, RelationRangeImagePlan, RingRelationInstance,
+    RelationRangeImagePlan, RingRelationInstance,
 };
 use compiler::RelationWeightCompilation;
 use jolt_field::solinas::parallel::*;
@@ -67,9 +64,6 @@ pub(crate) struct RelationLaneWeightInputs<'a, F: Field, E: Field> {
     pub opening_ring_dim: usize,
     pub relation_plan: &'a RelationRangeImagePlan,
     pub packing_semantics: Option<&'a CoefficientPackingBatchSemantics<'a, E>>,
-    /// Method-typed prepared points for the current fold.
-    pub opening_points:
-        OpeningFamily<(), &'a [(usize, &'a PreparedSubringCoefficientPackingPoint<E>)]>,
 }
 
 mod lane_weights;
@@ -190,7 +184,6 @@ fn pack_relation_events<F, E>(
     num_groups: usize,
     packing_required: bool,
     packing_semantics: Option<&CoefficientPackingBatchSemantics<'_, E>>,
-    event_inputs: Option<&CoefficientPackingBatchSemanticInputs<'_, '_, '_, F, E>>,
     live_coeff_len: usize,
     relation_coefficient_block_len: usize,
 ) -> Result<Vec<Option<usize>>, AkitaError>
@@ -208,6 +201,8 @@ where
         for group in batch.groups() {
             if group.physical_field_len() != live_coeff_len
                 || group.relation_coefficient_block_len() != relation_coefficient_block_len
+                || weights.alpha_powers().get(..group.alpha_powers().len())
+                    != Some(group.alpha_powers())
             {
                 return Err(AkitaError::Internal(
                     "packing semantics disagree with the current ring switch".into(),
@@ -225,12 +220,8 @@ where
                     "packing relation group appears more than once".into(),
                 ));
             }
+            weights.extend_events(coefficient_packing_relation_events::<F, E>(group)?)?;
         }
-    }
-    if let Some(inputs) = event_inputs {
-        validate_coefficient_packing_batch_groups(inputs, |group| {
-            weights.extend_events(coefficient_packing_relation_events(&group)?)
-        })?;
     }
     Ok(packing_a_ring_dims)
 }
@@ -245,26 +236,10 @@ where
     E: FpExtEncoding<F> + Ring + ExtField<F> + MulBaseUnreduced<F>,
 {
     let compilation = validate_relation_inputs(&inputs)?;
-    let event_inputs = match &inputs.opening_points {
-        OpeningFamily::EvaluationTrace(()) => None,
-        OpeningFamily::SubringCoefficientPacking(points) => {
-            Some(CoefficientPackingBatchSemanticInputs {
-                level_params: inputs.level_params,
-                opening_batch: inputs.instance.opening_batch(),
-                relation_plan: inputs.relation_plan,
-                relation: inputs.instance,
-                prepared_points: points,
-                alpha: inputs.alpha,
-                tau1: inputs.relation_row_point,
-                claim_coefficients: inputs.claim_coefficients,
-            })
-        }
-    };
     let RelationLaneWeightInputs {
         instance,
         alpha,
         level_params: lp,
-        opening_points,
         packing_semantics,
         ..
     } = inputs;
@@ -279,11 +254,6 @@ where
         compilation.relation_geometry.group_opening_method(0)?,
         OpeningMethod::SubringCoefficientPacking { .. }
     );
-    if packing_required != matches!(opening_points, OpeningFamily::SubringCoefficientPacking(_)) {
-        return Err(AkitaError::Internal(
-            "relation opening family disagrees with prepared points".into(),
-        ));
-    }
     let quotient_row_dims = compilation
         .row_families
         .iter()
@@ -323,12 +293,11 @@ where
         setup_is_deferred,
     )?;
     let lane_alpha_powers = weights.lane_alpha_powers();
-    let packing_a_ring_dims = pack_relation_events(
+    let packing_a_ring_dims = pack_relation_events::<F, E>(
         &mut weights,
         opening_batch.num_groups(),
         packing_required,
         packing_semantics,
-        event_inputs.as_ref(),
         compilation.witness_layout.live_coeff_len(),
         relation_coefficient_block_len,
     )?;

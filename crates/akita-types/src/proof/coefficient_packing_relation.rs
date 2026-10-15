@@ -7,6 +7,7 @@ use akita_algebra::offset_eq::{OffsetEqWindow, MAX_COMPACT_STRIDE_TERMS};
 #[cfg(test)]
 use akita_algebra::poly::multilinear_eval;
 use akita_algebra::ring::scalar_powers;
+use akita_challenges::Challenges;
 use akita_error::{checked, AkitaError};
 use jolt_field::{canonical_extension_basis, CanonicalEncoding, ExtField, Field};
 
@@ -33,12 +34,12 @@ struct RelationEventDomain {
 }
 
 use expanded::CoefficientPackingGroupSemanticInputs;
+#[cfg(test)]
+use expanded::CoefficientPackingRelationEvents;
 pub use expanded::{
     CoefficientPackingBatchSemanticInputs, CoefficientPackingBatchSemantics,
     CoefficientPackingGroupSemantics,
 };
-#[cfg(test)]
-use expanded::{CoefficientPackingRelationEvents, TestCoefficientPackingGroupSemantics};
 #[cfg(any(test, feature = "test-support"))]
 pub use test_fixtures::{
     coefficient_packing_fixture, coefficient_packing_multigroup_fixture, CoefficientPackingFixture,
@@ -53,8 +54,10 @@ pub use test_fixtures::{
 /// through the accessors below to build compact factors.
 ///
 /// Holding one guarantees that `d_d` is nonzero and divides the partial
-/// width, and that the challenge, alpha-power and basis buffers have the
-/// lengths the geometry fixes.
+/// width, and that the challenge count, alpha-power table and basis have the
+/// lengths the geometry fixes. Sparse challenge entries were checked by
+/// [`crate::CoefficientPackingChallenges::new`] when the relation opening was
+/// constructed. Challenge evaluation remains consumer-owned.
 ///
 /// Validation is structural. It checks the supplied prepared point, alpha,
 /// tau1 and claim coefficients against the fold authority's geometry, not
@@ -62,6 +65,7 @@ pub use test_fixtures::{
 /// The caller must supply the transcript-derived values, as the verifier's
 /// fold replay does.
 pub struct ValidatedCoefficientPackingGroup<'authority, 'output, F: Field, E: Field> {
+    canonical_challenges: &'authority Challenges,
     inputs: CoefficientPackingGroupSemanticInputs<'authority, 'output, F, E>,
     geometry: SubringCoefficientPackingGeometry,
     group_claim_range: Range<usize>,
@@ -183,19 +187,8 @@ impl<'authority, 'output, F: Field, E: Field>
         F: CanonicalEncoding,
         E: ExtField<F>,
     {
-        let RingRelationGroupOpeningView::SubringCoefficientPacking {
-            canonical_subring_challenges,
-            ..
-        } = self
-            .inputs
-            .relation
-            .group_opening_view(self.group_index())?
-        else {
-            return Err(AkitaError::Internal(
-                "validated packing group changed opening family".into(),
-            ));
-        };
-        canonical_subring_challenges.evals_at_pows::<F, E>(&self.alpha_powers)
+        self.canonical_challenges
+            .evals_at_pows::<F, E>(&self.alpha_powers)
     }
 
     #[must_use]
@@ -333,7 +326,13 @@ fn push_event<E: Field>(
 #[cfg(test)]
 fn prepare_coefficient_packing_group_semantics<'authority, 'output, F, E>(
     inputs: CoefficientPackingGroupSemanticInputs<'authority, 'output, F, E>,
-) -> Result<TestCoefficientPackingGroupSemantics<'output, E>, AkitaError>
+) -> Result<
+    (
+        CoefficientPackingGroupSemantics<'output, E>,
+        CoefficientPackingRelationEvents<E>,
+    ),
+    AkitaError,
+>
 where
     F: Field + CanonicalEncoding,
     E: ExtField<F> + FpExtEncoding<F>,
@@ -347,16 +346,14 @@ where
         inputs.claim_coefficients,
     )?;
     let validated = validate_coefficient_packing_group(inputs, &authority)?;
+    let semantics = prepare_coefficient_packing_prover_group(validated)?;
     let relation_events = CoefficientPackingRelationEvents {
-        events: coefficient_packing_relation_events(&validated)?,
-        alpha_powers: validated.alpha_powers.clone().into(),
-        relation_coefficient_block_len: validated.coefficient_block,
-        physical_field_len: validated.physical_field_len,
+        events: coefficient_packing_relation_events::<F, E>(&semantics)?,
+        alpha_powers: semantics.alpha_powers.clone().into(),
+        relation_coefficient_block_len: semantics.relation_coefficient_block_len,
+        physical_field_len: semantics.physical_field_len,
     };
-    Ok(TestCoefficientPackingGroupSemantics {
-        semantics: prepare_coefficient_packing_prover_group(validated)?,
-        relation_events,
-    })
+    Ok((semantics, relation_events))
 }
 
 fn validate_coefficient_packing_group<'authority, 'output, F, E>(
@@ -548,6 +545,7 @@ where
     .map(E::lift_base)
     .collect::<Vec<_>>();
     Ok(ValidatedCoefficientPackingGroup {
+        canonical_challenges,
         inputs,
         geometry,
         group_claim_range,
@@ -570,49 +568,48 @@ where
     })
 }
 
-/// Relation-weight events of one validated packing group: the consistency
+/// Relation-weight events of one shared packing group: the consistency
 /// row's E terms in claim, unit, block, digit and plane order, then its
 /// quotient terms. Events with a zero scalar are omitted.
 #[tracing::instrument(skip_all, name = "coefficient_packing_relation_events")]
 pub fn coefficient_packing_relation_events<F, E>(
-    validated: &ValidatedCoefficientPackingGroup<'_, '_, F, E>,
+    group: &CoefficientPackingGroupSemantics<'_, E>,
 ) -> Result<Vec<RelationWeightEvent<E>>, AkitaError>
 where
     F: Field + CanonicalEncoding,
     E: ExtField<F> + FpExtEncoding<F>,
 {
-    let challenge_alpha_values = validated.challenge_alpha_values()?;
-    let inputs = &validated.inputs;
-    let geometry = validated.geometry;
-    let group_layout = inputs.opening_batch.group_layout(inputs.group_index)?;
-    let group_params = inputs
-        .level_params
-        .group_params_geometry(inputs.opening_batch, inputs.group_index)?;
+    let challenge_alpha_values = {
+        let _span = tracing::info_span!("coefficient_packing_challenge_evaluations").entered();
+        group
+            .canonical_challenges
+            .evals_at_pows::<F, E>(&group.alpha_powers)?
+    };
+    let geometry = group.geometry;
     let s = geometry.challenge_subring_dimension();
-    let d_d = validated.d_d;
+    let d_d = group.d_d;
     let event_domain = RelationEventDomain {
-        alpha_power_count: validated.alpha_powers.len(),
-        coefficient_block: validated.coefficient_block,
-        physical_field_len: validated.physical_field_len,
+        alpha_power_count: group.alpha_powers.len(),
+        coefficient_block: group.relation_coefficient_block_len,
+        physical_field_len: group.physical_field_len,
     };
 
     let block_event_capacity = checked::product([
-        validated.opening_gadget.len(),
+        group.opening_gadget.len(),
         geometry.extension_degree(),
         s.div_ceil(d_d),
     ])
     .ok_or_else(|| AkitaError::InvalidSetup("coefficient-packing E event count overflow".into()))?;
     let e_event_capacity = checked::product([
-        group_layout.num_polynomials(),
-        group_params.num_live_blocks(),
+        group.group_claim_range.len(),
+        group.canonical_challenges.num_live_blocks_per_claim(),
         block_event_capacity,
     ])
     .ok_or_else(|| AkitaError::InvalidSetup("coefficient-packing E event count overflow".into()))?;
     let q_event_capacity =
-        checked::product([validated.quotient_gadget.len(), geometry.extension_degree()])
-            .ok_or_else(|| {
-                AkitaError::InvalidSetup("coefficient-packing quotient event count overflow".into())
-            })?;
+        checked::product([group.quotient_gadget.len(), geometry.extension_degree()]).ok_or_else(
+            || AkitaError::InvalidSetup("coefficient-packing quotient event count overflow".into()),
+        )?;
     let event_capacity = e_event_capacity
         .checked_add(q_event_capacity)
         .ok_or_else(|| AkitaError::InvalidSetup("packing event count overflow".into()))?;
@@ -620,17 +617,13 @@ where
     events
         .try_reserve_exact(event_capacity)
         .map_err(|_| AkitaError::InvalidInput("packing event allocation failed".into()))?;
-    for claim in 0..group_layout.num_polynomials() {
-        for unit in inputs
-            .relation_plan
-            .witness_layout()
-            .units_for_group(inputs.group_index)?
-        {
+    for claim in 0..group.group_claim_range.len() {
+        for unit in &group.witness_units {
             let block_events = unit
                 .global_block_range()
                 .map(|global_block| {
                     let challenge_index = claim
-                        .checked_mul(group_params.num_live_blocks())
+                        .checked_mul(group.canonical_challenges.num_live_blocks_per_claim())
                         .and_then(|base| base.checked_add(global_block))
                         .ok_or_else(|| {
                             AkitaError::InvalidSetup("challenge index overflow".into())
@@ -642,8 +635,8 @@ where
                             )
                         })?;
                     let mut events = Vec::with_capacity(block_event_capacity);
-                    for (digit, &gadget) in validated.opening_gadget.iter().enumerate() {
-                        for (plane, &basis_element) in validated.basis.iter().enumerate() {
+                    for (digit, &gadget) in group.opening_gadget.iter().enumerate() {
+                        for (plane, &basis_element) in group.basis.iter().enumerate() {
                             let mut plane_offset = 0usize;
                             while plane_offset < s {
                                 let flat = plane
@@ -657,8 +650,8 @@ where
                                 let count = (d_d - role_coefficient).min(s - plane_offset);
                                 let physical_start = unit.e_coefficient_index(
                                     d_d,
-                                    group_layout.num_polynomials(),
-                                    group_params.num_digits_open(),
+                                    group.group_claim_range.len(),
+                                    group.num_digits_open,
                                     claim,
                                     global_block,
                                     role_subcolumn,
@@ -670,7 +663,7 @@ where
                                     physical_start,
                                     count,
                                     plane_offset,
-                                    validated.consistency_weight
+                                    group.consistency_weight
                                         * challenge_alpha
                                         * gadget
                                         * basis_element,
@@ -689,20 +682,15 @@ where
         }
     }
 
-    for (digit, &gadget) in validated.quotient_gadget.iter().enumerate() {
-        for (plane, &basis_element) in validated.basis.iter().enumerate() {
-            let physical_start = inputs.relation_plan.witness_layout().r_coefficient_index(
-                validated.consistency_row,
-                digit,
-                plane,
-                0,
-            )?;
+    for (digit, &gadget) in group.quotient_gadget.iter().enumerate() {
+        for (plane, &basis_element) in group.basis.iter().enumerate() {
+            let physical_start = group.quotient_row.coefficient_index(digit, plane, 0)?;
             push_event(
                 &mut events,
                 physical_start,
                 s,
                 0,
-                -(validated.consistency_weight * gadget * basis_element * validated.denominator),
+                -(group.consistency_weight * gadget * basis_element * group.denominator),
                 event_domain,
             )?;
         }
@@ -718,11 +706,15 @@ where
     E: ExtField<F> + FpExtEncoding<F>,
 {
     let ValidatedCoefficientPackingGroup {
+        canonical_challenges,
         inputs,
         geometry,
         group_claim_range,
         group_claim_coefficients,
+        consistency_row,
         consistency_weight,
+        quotient_gadget,
+        denominator,
         scalar_claim_weight,
         d_d,
         coefficient_block,
@@ -747,7 +739,18 @@ where
         .map_err(|_| AkitaError::InvalidInput("packing witness-unit allocation failed".into()))?;
     witness_units.extend(units.cloned());
 
+    let quotient_row = inputs
+        .relation_plan
+        .witness_layout()
+        .r_rows()
+        .get(consistency_row)
+        .ok_or_else(|| AkitaError::Internal("packing consistency quotient row is missing".into()))?
+        .clone();
     Ok(CoefficientPackingGroupSemantics {
+        canonical_challenges: canonical_challenges.clone(),
+        quotient_row,
+        quotient_gadget,
+        denominator,
         group_index: inputs.group_index,
         geometry,
         witness_units,
