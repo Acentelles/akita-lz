@@ -407,10 +407,9 @@ fn single_digit_fold_validates_challenges_before_both_dense_row_loops() {
 
     for value in [1, 256] {
         let poly = DensePoly::<F>::from_field_evals(6, vec![F::from_u64(value); 64]).unwrap();
-        // Fix the digit cache at another dimension, exercising the two
-        // single-digit fallback loops (small-i8 mirror and live field rows).
+        // Fix the digit cache at another dimension to exercise the
+        // single-digit fallback over live field rows.
         assert!(poly.digit_planes_for::<64>(1, 4).is_some());
-        assert_eq!(poly.small_i8_coeffs.is_some(), value == 1);
         let challenges = [SparseChallenge {
             positions: vec![128].into(),
             coeffs: vec![1].into(),

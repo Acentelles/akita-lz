@@ -3,13 +3,6 @@ use jolt_field::Field;
 
 /// Internal dense CPU commit representation.
 pub(crate) enum DenseCommitInput<'a, F: Field, const D: usize> {
-    /// Balanced digit planes are already cached by the polynomial.
-    CachedDigits {
-        /// Per-block digit slices.
-        digit_block_slices: Vec<&'a [[i8; D]]>,
-        /// Logarithm of the gadget basis used to produce the cached digits.
-        log_basis_inner: u32,
-    },
     /// Ring coefficients need backend-side digit decomposition.
     CoeffBlocks {
         /// Per-block coefficient slices.

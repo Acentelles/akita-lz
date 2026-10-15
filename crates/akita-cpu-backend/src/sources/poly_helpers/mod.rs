@@ -13,7 +13,6 @@ pub use decompose_fold_partitioned::balanced_ring_decompose_fold_partitioned;
 pub(crate) use decompose_fold_partitioned::cached_digit_decompose_fold_partitioned;
 pub(crate) use decompose_fold_partitioned::packed_tight_digit_fold_partitioned;
 
-use crate::kernels::linear::try_centered_i8;
 #[cfg(target_arch = "aarch64")]
 use crate::kernels::neon_decompose_fold as decompose_fold_neon;
 use crate::opaque::DecomposeFoldWitness;
@@ -175,24 +174,6 @@ where
             Ok(DecomposeFoldWitness::from_centered_rows(coefficients))
         })
         .collect::<Result<Vec<_>, AkitaError>>()
-}
-
-pub(crate) fn try_small_i8_cache_from_ring_coeffs<F: Field + CanonicalEncoding, const D: usize>(
-    coeffs: &[CyclotomicRing<F, D>],
-) -> Option<Vec<[i8; D]>> {
-    let q = (-F::one()).to_u128_checked()? + 1;
-    let half_q = q / 2;
-    let mut out = Vec::with_capacity(coeffs.len());
-
-    for ring in coeffs {
-        let mut digits = [0i8; D];
-        for (dst, coeff) in digits.iter_mut().zip(ring.coeffs.iter()) {
-            *dst = try_centered_i8(*coeff, q, half_q)?;
-        }
-        out.push(digits);
-    }
-
-    Some(out)
 }
 
 /// Scalar sparse-multiply-accumulate: accumulate `challenge * digit_plane`

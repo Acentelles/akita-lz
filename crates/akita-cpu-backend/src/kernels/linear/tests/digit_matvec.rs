@@ -553,7 +553,6 @@ macro_rules! block_parallel_matches_column_tiled_wide_rows_test {
                             $width,
                             $num_primes,
                             D,
-                            true,
                         >(
                             &ntt_mat[..n_a],
                             &digit_block_slices,

@@ -7,7 +7,6 @@ use crate::opaque::RecursiveWitnessFlat;
 use crate::opaque::{CommitInnerPlan, ComputeBackendSetup};
 use crate::{AkitaProverSetup, DensePoly, OneHotPoly};
 use akita_params::SetupMatrixCapacity;
-use akita_types::RingVec;
 use jolt_field::{Prime128Offset275, Ring};
 
 type F = Prime128Offset275;
@@ -47,11 +46,6 @@ fn capabilities(types: Vec<PolynomialType>) -> CommitmentRequestCapabilities {
         BackendKindId::of::<CpuTestBackend>("cpu-test").unwrap(),
         types,
     )
-}
-
-fn assert_rows_equal(left: &RingVec<F>, right: &RingVec<F>) {
-    assert_eq!(left.ring_dim(), right.ring_dim());
-    assert_eq!(left.coeffs(), right.coeffs());
 }
 
 #[test]
@@ -149,60 +143,6 @@ fn resolved_packed_short_norm_commits_without_full_decode() {
     assert_eq!(actual.len(), 1);
     assert_eq!(actual[0].ring_dim(), D);
     assert_eq!(actual[0].count(), plan().n_a);
-}
-
-#[test]
-fn resolved_dense_reuses_exact_plan_digit_cache() {
-    let (_setup, prepared) = prepared();
-    let backend = CpuBackend::<F, F>::for_arithmetic_tests();
-    let dense = DensePoly::from_field_evals(
-        9,
-        (0usize..512)
-            .map(|index| F::from_u64(u64::from(index.is_multiple_of(7))))
-            .collect::<Vec<_>>(),
-    )
-    .unwrap();
-    // Populate the exact dense digit cache through its production consumer.
-    // Request compilation should then prefer that zero-copy representation.
-    let _ = dense.decompose_fold::<D>(
-        &[],
-        plan().num_positions_per_block,
-        plan().num_digits_inner,
-        plan().log_basis_inner,
-    );
-    let coefficient_refs: [&dyn CommitmentSource<F>; 1] = [&dense];
-    let coefficient_resolved = compile_commitment_request(
-        &plan(),
-        &coefficient_refs,
-        &capabilities(vec![PolynomialType::Dense(DenseType::Coefficients)]),
-    )
-    .unwrap()
-    .materialize()
-    .unwrap();
-    let expected = backend
-        .commit_resolved_inner_host::<D>(&prepared, &coefficient_resolved, plan())
-        .unwrap();
-    let source_refs: [&dyn CommitmentSource<F>; 1] = [&dense];
-    let resolved = compile_commitment_request(
-        &plan(),
-        &source_refs,
-        &capabilities(vec![
-            PolynomialType::Dense(DenseType::PredecomposedDigits),
-            PolynomialType::Dense(DenseType::Coefficients),
-        ]),
-    )
-    .unwrap()
-    .materialize()
-    .unwrap();
-
-    assert_eq!(
-        resolved[0].selected_type(),
-        Some(PolynomialType::Dense(DenseType::PredecomposedDigits))
-    );
-    let actual = backend
-        .commit_resolved_inner_host::<D>(&prepared, &resolved, plan())
-        .unwrap();
-    assert_rows_equal(&actual[0], &expected[0]);
 }
 
 #[test]

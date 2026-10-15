@@ -103,7 +103,6 @@ pub(super) fn mat_vec_mul_digits_i8_block_parallel<
     W: PrimeWidth,
     const K: usize,
     const D: usize,
-    const CHECK_ZERO: bool,
 >(
     ntt_mat: &[&[CyclotomicCrtNtt<W, K, D>]],
     blocks: &[&[[i8; D]]],
@@ -119,7 +118,7 @@ pub(super) fn mat_vec_mul_digits_i8_block_parallel<
                 vec![CyclotomicCrtNtt::<W, K, D>::zero(); n_a];
             let mut scratch = I8ColumnScratch::new();
 
-            accumulate_i8_columns::<W, K, D, CHECK_ZERO>(
+            accumulate_i8_columns::<W, K, D, true>(
                 &mut accs,
                 ntt_mat,
                 0,
@@ -139,7 +138,6 @@ pub(super) fn mat_vec_mul_digits_i8_block_parallel_chunked<
     W: PrimeWidth,
     const K: usize,
     const D: usize,
-    const CHECK_ZERO: bool,
 >(
     ntt_mat: &[&[CyclotomicCrtNtt<W, K, D>]],
     blocks: &[&[[i8; D]]],
@@ -160,7 +158,7 @@ pub(super) fn mat_vec_mul_digits_i8_block_parallel_chunked<
             for chunk_start in (0..live_width).step_by(chunk_width) {
                 let chunk_end = (chunk_start + chunk_width).min(live_width);
                 let mut accs = vec![CyclotomicCrtNtt::<W, K, D>::zero(); n_a];
-                accumulate_i8_columns::<W, K, D, CHECK_ZERO>(
+                accumulate_i8_columns::<W, K, D, true>(
                     &mut accs,
                     ntt_mat,
                     chunk_start,
