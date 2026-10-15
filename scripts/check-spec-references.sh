@@ -169,7 +169,6 @@ live_specs=(
   specs/role-native-projected-digit-layout.md
   specs/runtime-ring-cutover.md
   specs/selective-l2-fold-security-sizing.md
-  specs/automatic-setup-offloading.md
   specs/sis-quantum128-scalar-n-table.md
   specs/structured-e-term.md
   specs/subring-coefficient-packing.md

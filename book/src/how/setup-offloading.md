@@ -274,7 +274,6 @@ panic.
 | Verify Stage 3 | `crates/akita-verifier/src/stages/stage3.rs` |
 | Enforce the recursive fold handoff | `crates/akita-prover/src/protocol/prove/` and `crates/akita-verifier/src/fold/` |
 
-The live planner contract is
-[`specs/automatic-setup-offloading.md`](https://github.com/LayerZero-Labs/akita/blob/main/specs/automatic-setup-offloading.md).
-It records the exact feasibility rules and external-artifact invariants. This
-chapter owns the reader explanation of the implemented feature.
+[Configuration and schedule planning](configuration.md) explains the sole
+planner policy, bounded setup-offload search, and trusted catalog admission.
+This chapter explains the implemented setup-offloading protocol.

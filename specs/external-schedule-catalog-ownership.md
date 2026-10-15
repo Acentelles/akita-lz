@@ -555,8 +555,8 @@ parity source and feature surface.
 ## References
 
 - [PR #428](https://github.com/LayerZero-Labs/akita/pull/428)
-- [`automatic-setup-offloading.md`](automatic-setup-offloading.md) for planner and
-  recursive setup selection policy
+- [Setup offloading](../book/src/how/setup-offloading.md) for the planner's
+  setup-offload selection policy
 - [`archive/2026-Q3/runtime-schedule-boundary.md`](archive/2026-Q3/runtime-schedule-boundary.md)
   for the earlier rule that proof bytes do not supply schedule policy
 - [`book/src/how/configuration.md`](../book/src/how/configuration.md)
