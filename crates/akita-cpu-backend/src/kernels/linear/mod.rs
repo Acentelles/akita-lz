@@ -49,6 +49,7 @@ pub(crate) use digit_relation::{
     digit_relation_matrix_extent, digit_relation_rows_cached_prover_bounds,
     digit_relation_rows_streamed_prover_bounds, DigitRelationRows,
 };
+pub(crate) use digits::I8CommitPolicy;
 use digits::*;
 #[cfg(test)]
 pub(crate) use fused_quotients::fused_split_eq_quotients;
@@ -58,11 +59,7 @@ pub use fused_quotients::{
 pub(crate) use fused_quotients::{
     fused_quotient_matrix_extent, fused_split_eq_quotients_streamed_prover_bounds,
 };
+pub(crate) use ntt_matvec::mat_vec_mul_ntt_blocks_i8;
 pub use ntt_matvec::mat_vec_mul_ntt_digits_i8;
 pub(crate) use ntt_matvec::mat_vec_mul_ntt_i8;
-#[cfg(test)]
-pub(crate) use ntt_matvec::mat_vec_mul_ntt_raw_digits_i8;
-pub(crate) use ntt_matvec::{
-    mat_vec_mul_ntt_blocks_i8, mat_vec_mul_ntt_packed_digits_i8, mat_vec_mul_ntt_packed_raw_i8,
-};
 pub(crate) use single_cyclic::{mat_vec_mul_ntt_single_i8, mat_vec_mul_ntt_single_i8_cyclic};

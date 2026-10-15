@@ -10,7 +10,6 @@ mod rotated_accum;
 mod windowed_accum;
 
 pub use decompose_fold_partitioned::balanced_ring_decompose_fold_partitioned;
-pub(crate) use decompose_fold_partitioned::packed_tight_digit_fold_partitioned;
 pub(crate) use decompose_fold_partitioned::{element_partitioned_decompose_fold, WidePlan};
 pub(crate) use windowed_accum::{I8DigitSpan, WindowedChallenge};
 

@@ -1,5 +1,6 @@
 use super::prepared_tests::{prepared, D, F};
 use super::CpuBackend;
+use crate::kernels::linear::I8CommitPolicy;
 use crate::sources::block_digits::{DigitShape, LiveRings};
 use crate::sources::packed_digits::PackedSignedDigits;
 use crate::sources::poly_helpers::SignedDigitBasis;
@@ -82,6 +83,7 @@ fn dense_coeff_commit_selects_exact_i16_from_inner_basis_inner() {
                 },
                 signed_digit_kernel,
                 false,
+                I8CommitPolicy::Dense,
             )
             .expect("dense commit rows")
     };
@@ -144,6 +146,7 @@ fn dense_i16_commit_matches_schoolbook_composition_inner() {
                 },
                 signed_digit_kernel,
                 false,
+                I8CommitPolicy::Dense,
             )
             .expect("dense i16 commit");
 

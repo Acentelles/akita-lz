@@ -92,21 +92,14 @@ pub(super) fn recursive_packed_witness_commit_rows<F: Field + CanonicalEncoding,
                     let live = (ring_elems - start_ring).min(num_positions_per_block);
                     let block = digits.decode_rings::<D>(start_ring, live)?;
                     let mut rhs = vec![[0i16; D]; row_width];
-                    if num_digits_inner == 1 {
-                        for (dst, src) in rhs.iter_mut().zip(&block) {
-                            *dst = from_fn(|k| i16::from(src[k]));
-                        }
-                    } else {
-                        for (ring_idx, digit) in block.iter().enumerate() {
-                            let ring = CyclotomicRing::from_coefficients(from_fn(|k| {
-                                F::from_i8(digit[k])
-                            }));
-                            let start = ring_idx * num_digits_inner;
-                            ring.balanced_decompose_pow2_i16_into(
-                                &mut rhs[start..start + num_digits_inner],
-                                &params,
-                            );
-                        }
+                    for (ring_idx, digit) in block.iter().enumerate() {
+                        let ring =
+                            CyclotomicRing::from_coefficients(from_fn(|k| F::from_i8(digit[k])));
+                        let start = ring_idx * num_digits_inner;
+                        ring.balanced_decompose_pow2_i16_into(
+                            &mut rhs[start..start + num_digits_inner],
+                            &params,
+                        );
                     }
                     ntt.mat_vec_i16::<F>(log_basis_inner, n_rows, &rhs)
                 })

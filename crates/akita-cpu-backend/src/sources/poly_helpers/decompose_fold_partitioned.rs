@@ -20,9 +20,8 @@ use jolt_field::{CanonicalEncoding, Field};
 use std::ops::Range;
 
 use crate::sources::block_digits::{
-    BlockDigits, DigitPlaneSet, DigitPlanes, DigitShape, LiveRings, PackedDigits,
+    BlockDigits, DigitPlaneSet, DigitPlanes, DigitShape, LiveRings,
 };
-use crate::sources::packed_digits::PackedSignedDigitView;
 
 pub(crate) struct PreparedPm1Challenge {
     positive: Vec<u32>,
@@ -516,36 +515,6 @@ pub fn balanced_ring_decompose_fold_partitioned<F: Field + CanonicalEncoding, co
         DigitShape {
             num_digits: params.levels(),
             log_basis: params.log_basis(),
-        },
-    )
-    .map(|mut chunks| chunks.pop().unwrap_or_default())
-}
-
-/// Position-partitioned accumulation over a packed tight recursive witness.
-pub(crate) fn packed_tight_digit_fold_partitioned<const D: usize>(
-    digits: PackedSignedDigitView<'_>,
-    num_rings: usize,
-    challenges: &[SparseChallenge],
-    num_positions_per_block: usize,
-) -> Result<Vec<[i32; D]>, AkitaError> {
-    let digit_abs_bound = u64::from(
-        digits
-            .bounds()
-            .negative_abs_max()
-            .max(digits.bounds().positive_max()),
-    );
-    element_partitioned_decompose_fold::<_, D>(
-        &PackedDigits {
-            digits,
-            num_rings,
-            digit_abs_bound,
-        },
-        challenges,
-        std::slice::from_ref(&(0..challenges.len())),
-        num_positions_per_block,
-        DigitShape {
-            num_digits: 1,
-            log_basis: 1,
         },
     )
     .map(|mut chunks| chunks.pop().unwrap_or_default())
