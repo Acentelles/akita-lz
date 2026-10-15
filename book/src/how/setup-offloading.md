@@ -141,7 +141,7 @@ The complete schedule is ordered lexicographically by:
 1. Padded total setup-envelope capacity.
 2. First directly evaluated setup capacity.
 3. Exact modeled proof-and-work score.
-4. Modeled proof bytes.
+4. Modeled proof bytes, including every Stage 3 proof.
 5. First-direct output witness length.
 6. Canonical schedule descriptor.
 
@@ -210,6 +210,24 @@ needed, and load its matching `TrustedScheduleCatalog<Cfg>`. There is one
 catalog family per preset. Small and large rows share the same policy; the
 presence of setup-prefix groups determines each row's offload count.
 
+Each artifact row fixes the native A, B, and D dimensions for its folds.
+Offloading rows can use different dimensions for these matrices and can change
+dimensions between folds. A ring dimension counts field coefficients in one
+ring element; it is not a matrix row count.
+
+For example, the `fp128_onehot.aks` row with two earlier singleton nv16 groups
+and a final group of two nv34 polynomials opens a setup-prefix group in its
+first recursive fold with
+
+$$
+d_A=512,\qquad d_B=128,\qquad d_D=128.
+$$
+
+The A and B dimensions belong to that group. The consuming fold owns the shared
+D dimension. The [ring-dimension contract](./architecture.md#ring-dimension-ownership)
+explains these roles. The matching catalog must contain an admitted row for the
+requested workload and dimensions.
+
 Regenerate the catalogs with:
 
 ```bash
@@ -257,6 +275,6 @@ panic.
 | Enforce the recursive fold handoff | `crates/akita-prover/src/protocol/prove/` and `crates/akita-verifier/src/fold/` |
 
 The live planner contract is
-[`specs/automatic-setup-offloading.md`](../../../specs/automatic-setup-offloading.md).
+[`specs/automatic-setup-offloading.md`](https://github.com/LayerZero-Labs/akita/blob/main/specs/automatic-setup-offloading.md).
 It records the exact feasibility rules and external-artifact invariants. This
 chapter owns the reader explanation of the implemented feature.
