@@ -575,3 +575,6 @@ mod batch_only {
         assert!(backend.import_source(vec![BatchOnlySource(poly)]).is_ok());
     }
 }
+
+#[path = "signed_block_tests.rs"]
+mod signed_block_tests;

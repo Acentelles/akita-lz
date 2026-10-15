@@ -3,8 +3,10 @@ use super::{
     PreparedExternalInnerCommitment,
 };
 use crate::opaque::CommitInnerPlan;
+use crate::sources::signed_blocks::signed_extrema;
 use akita_error::{checked, AkitaError};
 use jolt_field::{CanonicalEncoding, Field};
+use std::sync::OnceLock;
 
 use compiler::checked_logical_len;
 
@@ -100,11 +102,110 @@ impl CommitSourceDescriptor {
     }
 }
 
+/// Borrowed signed integer coefficients of one dense root polynomial.
+///
+/// Value `i` is flat coefficient `i` (ring `i / D`, slot `i % D`), in the
+/// same order as [`crate::DensePoly::from_field_evals`]. Values from `len()`
+/// through `2^num_vars` are zero. Commitment checks every live value against
+/// the accepted coefficient interval of the selected schedule.
+#[derive(Clone, Copy)]
+pub struct SignedBlocks<'a> {
+    pub(crate) values: SignedValues<'a>,
+    pub(crate) len: usize,
+    pub(crate) num_vars: usize,
+    /// The owner's cache of [`Self::extrema`], when it keeps one.
+    pub(crate) extrema: Option<&'a OnceLock<(i64, i64)>>,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) enum SignedValues<'a> {
+    I8(&'a [i8]),
+    I16(&'a [i16]),
+    DecodedI8(&'a dyn SignedBlockDecoder),
+}
+
+impl<'a> SignedBlocks<'a> {
+    /// Borrow signed eight-bit coefficients, zero-extended past their length.
+    pub fn i8(values: &'a [i8], num_vars: usize) -> Result<Self, AkitaError> {
+        Self::new(SignedValues::I8(values), values.len(), num_vars)
+    }
+
+    /// Borrow signed sixteen-bit coefficients, zero-extended past their length.
+    pub fn i16(values: &'a [i16], num_vars: usize) -> Result<Self, AkitaError> {
+        Self::new(SignedValues::I16(values), values.len(), num_vars)
+    }
+
+    /// Borrow a deterministic decoder for `len` signed eight-bit coefficients.
+    /// Values past `len` are zero; the decoder is never asked for those values.
+    pub fn decoded_i8(
+        decoder: &'a dyn SignedBlockDecoder,
+        len: usize,
+        num_vars: usize,
+    ) -> Result<Self, AkitaError> {
+        Self::new(SignedValues::DecodedI8(decoder), len, num_vars)
+    }
+
+    fn new(values: SignedValues<'a>, len: usize, num_vars: usize) -> Result<Self, AkitaError> {
+        if len > checked_logical_len(num_vars)? {
+            return Err(AkitaError::InvalidInput(
+                "signed blocks exceed the logical coefficient extent".into(),
+            ));
+        }
+        Ok(Self {
+            values,
+            len,
+            num_vars,
+            extrema: None,
+        })
+    }
+
+    /// Logical multilinear variable count.
+    pub const fn num_vars(&self) -> usize {
+        self.num_vars
+    }
+
+    /// Number of stored coefficients before zero extension.
+    #[allow(clippy::len_without_is_empty)]
+    pub const fn len(&self) -> usize {
+        self.len
+    }
+
+    /// The least and greatest coefficient of the zero-extended table.
+    pub(crate) fn extrema(&self) -> (i64, i64) {
+        match self.extrema {
+            Some(cache) => *cache.get_or_init(|| signed_extrema(self.values, self.len)),
+            None => signed_extrema(self.values, self.len),
+        }
+    }
+}
+
+/// Deterministically decode borrowed signed eight-bit coefficients.
+///
+/// Writes flat coefficients `start..start + out.len()`, always within the
+/// carrier's `len()`, in the order of [`crate::DensePoly::from_field_evals`].
+/// Repeated calls for the same coefficients must return the same values.
+/// Commitment checks the decoded values against its accepted interval.
+pub trait SignedBlockDecoder: Send + Sync {
+    /// Fill the requested live coefficient range.
+    fn decode_i8(&self, start: usize, out: &mut [i8]);
+}
+
+/// Accepted coefficient interval admitted at the owning backend boundary.
+#[derive(Clone, Copy)]
+pub(crate) struct AcceptedReach {
+    pub modulus: u128,
+    pub centering_threshold: u128,
+    pub negative_abs: Option<u128>,
+    pub positive: Option<u128>,
+}
+
 /// Physical dense representation offered by a source.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum DenseType {
     /// Borrowed canonical field coefficients.
     Coefficients,
+    /// Borrowed signed integer blocks.
+    SignedBlocks,
 }
 
 /// Packed short-norm source representation.
@@ -210,6 +311,13 @@ impl AvailablePolynomialTypes {
         }
     }
 
+    /// Offer borrowed signed integer blocks for the standard dense kernels.
+    pub fn signed_blocks() -> Self {
+        Self {
+            entries: vec![PolynomialType::Dense(DenseType::SignedBlocks)],
+        }
+    }
+
     /// Offered representations in source preference order.
     pub(crate) fn as_slice(&self) -> &[PolynomialType] {
         &self.entries
@@ -251,6 +359,8 @@ pub(crate) trait DenseCoefficientSource<F: Field>: Send + Sync {
 pub(crate) enum DenseRepresentation<'a, F: Field> {
     /// Canonical field coefficients.
     Coefficients(&'a dyn DenseCoefficientSource<F>),
+    /// Borrowed signed integer blocks.
+    SignedBlocks(SignedBlocks<'a>),
 }
 
 /// Borrowed packed bounded signed coefficients.
@@ -437,11 +547,19 @@ pub enum PolynomialRepresentation<'a, F: Field> {
     OneHot(OneHotRepresentation<'a>),
 }
 
-impl<F: Field> PolynomialRepresentation<'_, F> {
+impl<'a, F: Field> PolynomialRepresentation<'a, F> {
+    /// Represent a dense polynomial as borrowed signed integer blocks.
+    pub fn signed_blocks(blocks: SignedBlocks<'a>) -> Self {
+        Self::Dense(DenseRepresentation::SignedBlocks(blocks))
+    }
+
     fn polynomial_type(&self) -> Result<PolynomialType, AkitaError> {
         match self {
             Self::Dense(DenseRepresentation::Coefficients(_)) => {
                 Ok(PolynomialType::Dense(DenseType::Coefficients))
+            }
+            Self::Dense(DenseRepresentation::SignedBlocks(_)) => {
+                Ok(PolynomialType::Dense(DenseType::SignedBlocks))
             }
             Self::ShortNorm(representation) => Ok(PolynomialType::ShortNorm(ShortNormType::new(
                 representation.signed_bit_width(),
@@ -570,6 +688,7 @@ enum ResolvedCommitSourcePath<'a, F: Field> {
 pub(crate) struct ResolvedCommitSource<'a, F: Field> {
     descriptor: CommitSourceDescriptor,
     inner_plan: CommitInnerPlan,
+    pub(crate) accepted: Option<AcceptedReach>,
     path: ResolvedCommitSourcePath<'a, F>,
 }
 

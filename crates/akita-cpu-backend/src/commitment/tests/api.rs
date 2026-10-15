@@ -543,7 +543,7 @@ fn imported_root_outer_image_matches_full_cpu_commitment() {
             .into_parts();
         let normal_group = CommittedGroup::new(profile, Commitment::new(normal_payload));
         let (_, outer_image) = executor
-            .execute_uncompressed_stages(&execution, &sources)
+            .execute_uncompressed_stages(&execution, &sources, None)
             .unwrap()
             .into_parts();
         let (imported_group, compression_state) = backend

@@ -1,6 +1,8 @@
 //! Linear algebra helpers for ring commitment.
 
-use crate::sources::block_digits::{DigitRows, DigitShape, I8Rows, LiveRings};
+#[cfg(test)]
+use crate::sources::block_digits::LiveRings;
+use crate::sources::block_digits::{DigitRows, DigitShape, I8Rows};
 use akita_algebra::ntt::{MontCoeff, PrimeWidth, I32_LAZY_DOT_BATCH};
 use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
 use akita_algebra::{
@@ -61,5 +63,4 @@ pub(crate) use fused_quotients::{
 };
 pub(crate) use ntt_matvec::mat_vec_mul_ntt_blocks_i8;
 pub use ntt_matvec::mat_vec_mul_ntt_digits_i8;
-pub(crate) use ntt_matvec::mat_vec_mul_ntt_i8;
 pub(crate) use single_cyclic::{mat_vec_mul_ntt_single_i8, mat_vec_mul_ntt_single_i8_cyclic};

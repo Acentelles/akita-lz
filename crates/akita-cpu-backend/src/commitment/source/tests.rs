@@ -273,7 +273,7 @@ fn request_compilation_finishes_discovery_before_materialization() {
     let supported: [&dyn CommitmentSource<F>; 1] = [&dense];
     let compiled = compile_commitment_request(&plan(), &supported, &capabilities).unwrap();
     assert_eq!(dense.materializations.load(Ordering::SeqCst), 0);
-    assert_eq!(compiled.materialize().unwrap().len(), 1);
+    assert_eq!(compiled.materialize(None).unwrap().len(), 1);
     assert_eq!(dense.materializations.load(Ordering::SeqCst), 1);
 }
 
@@ -296,7 +296,7 @@ fn onehot_materialization_rejects_positions_outside_the_chunk() {
 
     let error = compile_commitment_request(&plan(), &sources, &capabilities)
         .unwrap()
-        .materialize()
+        .materialize(None)
         .err()
         .expect("out-of-range one-hot position must be rejected");
     assert!(
@@ -403,7 +403,7 @@ fn external_only_source_is_checked_and_selected() {
     let split = CommitmentRequestCapabilities::split::<ExternalContext>(backend, Vec::new());
     let resolved = compile_commitment_request(&plan(), &sources, &split)
         .unwrap()
-        .materialize()
+        .materialize(None)
         .unwrap();
     let external = resolved[0].external().unwrap();
     assert_eq!(external.input().payload::<ExternalFamily>().unwrap().0, 7);
@@ -413,4 +413,141 @@ fn external_only_source_is_checked_and_selected() {
         CommitmentRequestCapabilities::fused::<ExternalContext, FusedCommand>(backend, Vec::new());
     assert!(compile_commitment_request(&plan(), &sources, &fused,).is_err());
     assert_eq!(source.preparations.load(Ordering::SeqCst), 1);
+}
+
+struct SignedSource<'a> {
+    blocks: SignedBlocks<'a>,
+    descriptor_num_vars: usize,
+}
+
+impl CommitmentSource<F> for SignedSource<'_> {
+    fn descriptor(&self) -> Result<CommitSourceDescriptor, AkitaError> {
+        let len = checked_logical_len(self.descriptor_num_vars)?;
+        CommitSourceDescriptor::new(
+            self.descriptor_num_vars,
+            len,
+            len,
+            CommitSourceClass::Dense,
+            "signed-test",
+        )
+    }
+
+    fn committed_centered_reach(
+        &self,
+        _modulus: u128,
+        _centering_threshold: u128,
+    ) -> Result<(u128, u128), AkitaError> {
+        Ok((0, 0))
+    }
+
+    fn available_polynomial_types(
+        &self,
+        _plan: &CommitInnerPlan,
+    ) -> Result<AvailablePolynomialTypes, AkitaError> {
+        Ok(AvailablePolynomialTypes::signed_blocks())
+    }
+
+    fn represent_as(
+        &self,
+        _selected: PolynomialTypeSelection,
+        _plan: &CommitInnerPlan,
+    ) -> Result<PolynomialRepresentation<'_, F>, AkitaError> {
+        Ok(PolynomialRepresentation::signed_blocks(self.blocks))
+    }
+}
+
+struct TestSignedDecoder;
+
+impl SignedBlockDecoder for TestSignedDecoder {
+    fn decode_i8(&self, start: usize, out: &mut [i8]) {
+        for (index, value) in out.iter_mut().enumerate() {
+            *value = ((start + index) % 3) as i8 - 1;
+        }
+    }
+}
+
+#[test]
+fn signed_block_constructors_check_extents_without_decoding() {
+    let decoder = TestSignedDecoder;
+    for len in [0, 1, 63, 64] {
+        let i8_values = vec![-1_i8; len];
+        let i16_values = vec![-1_i16; len];
+        for blocks in [
+            SignedBlocks::i8(&i8_values, 6).unwrap(),
+            SignedBlocks::i16(&i16_values, 6).unwrap(),
+            SignedBlocks::decoded_i8(&decoder, len, 6).unwrap(),
+        ] {
+            assert_eq!(blocks.len(), len);
+            assert_eq!(blocks.num_vars(), 6);
+        }
+    }
+    assert!(matches!(
+        SignedBlocks::i8(&[0; 65], 6),
+        Err(AkitaError::InvalidInput(_))
+    ));
+    assert!(matches!(
+        SignedBlocks::i16(&[0; 65], 6),
+        Err(AkitaError::InvalidInput(_))
+    ));
+    assert!(matches!(
+        SignedBlocks::decoded_i8(&decoder, 65, 6),
+        Err(AkitaError::InvalidInput(_))
+    ));
+    assert!(matches!(
+        SignedBlocks::decoded_i8(&decoder, 0, usize::BITS as usize),
+        Err(AkitaError::InvalidInput(_))
+    ));
+}
+
+#[test]
+fn signed_block_compiler_preserves_accepted_interval_and_zero_extension() {
+    let backend = BackendKindId::of::<ExternalBackend>("signed-test").unwrap();
+    let capabilities = CommitmentRequestCapabilities::split::<ExternalContext>(
+        backend,
+        AvailablePolynomialTypes::signed_blocks()
+            .as_slice()
+            .to_vec(),
+    );
+    let accepted = AcceptedReach {
+        modulus: (-F::from_u64(1)).to_u128_checked().unwrap() + 1,
+        centering_threshold: akita_params::field_modulus::<F>().unwrap() / 2,
+        negative_abs: Some(3),
+        positive: Some(2),
+    };
+    let values = [-1_i8; 7];
+    let decoder = TestSignedDecoder;
+    for blocks in [
+        SignedBlocks::i8(&values, 6).unwrap(),
+        SignedBlocks::i16(&[-1; 64], 6).unwrap(),
+        SignedBlocks::decoded_i8(&decoder, 0, 6).unwrap(),
+    ] {
+        let source = SignedSource {
+            blocks,
+            descriptor_num_vars: 6,
+        };
+        let sources: [&dyn CommitmentSource<F>; 1] = [&source];
+        let resolved = compile_commitment_request(&plan(), &sources, &capabilities)
+            .unwrap()
+            .materialize(Some(accepted))
+            .unwrap();
+        assert_eq!(resolved[0].accepted.unwrap().negative_abs, Some(3));
+        assert_eq!(resolved[0].accepted.unwrap().positive, Some(2));
+        let Some(PolynomialRepresentation::Dense(DenseRepresentation::SignedBlocks(materialized))) =
+            resolved[0].representation()
+        else {
+            panic!("expected the selected signed representation");
+        };
+        assert_eq!(materialized.len(), blocks.len());
+    }
+    let source = SignedSource {
+        blocks: SignedBlocks::i8(&values, 5).unwrap(),
+        descriptor_num_vars: 6,
+    };
+    let sources: [&dyn CommitmentSource<F>; 1] = [&source];
+    assert!(matches!(
+        compile_commitment_request(&plan(), &sources, &capabilities)
+            .unwrap()
+            .materialize(Some(accepted)),
+        Err(AkitaError::InvalidInput(_))
+    ));
 }
