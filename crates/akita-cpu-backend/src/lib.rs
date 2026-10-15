@@ -5,6 +5,7 @@
 //! provers. Config and schedule policy live in `akita-config`.
 
 pub(crate) mod arithmetic;
+mod cache;
 pub(crate) mod commitment;
 pub(crate) mod kernels;
 pub(crate) mod opaque;
