@@ -24,6 +24,12 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+# Renamed profiles retain the same workload when comparing older binaries.
+LEGACY_PROFILE_MODES = {
+    "onehot_fp128_multi_group_multi_chunk_w8r2":
+        "onehot_fp128_multi_group_recursive_multi_chunk_w8r2",
+}
+
 MODES_RS = "crates/akita-pcs/examples/profile/modes.rs"
 PCS_TOML = "crates/akita-pcs/Cargo.toml"
 PROFILE_CI_MARKER = "const PROFILE_CI_MODES"
@@ -168,7 +174,7 @@ def merge_base_profile_modes(ref: str) -> set[str]:
 def missing_modes_for_cases(ref: str, cases: list[BenchCase]) -> list[str]:
     available_modes = merge_base_profile_modes(ref)
     required = {case.mode for case in cases}
-    return sorted(mode for mode in required if mode not in available_modes)
+    return sorted(mode for mode in required if mode not in available_modes and LEGACY_PROFILE_MODES.get(mode) not in available_modes)
 
 
 def smoke_profile_case(binary: Path, case: BenchCase) -> tuple[bool, str]:
@@ -188,6 +194,10 @@ def smoke_profile_case(binary: Path, case: BenchCase) -> tuple[bool, str]:
         env=env,
         check=False,
     )
+    legacy_mode = LEGACY_PROFILE_MODES.get(case.mode)
+    if legacy_mode and "Unknown AKITA_MODE" in completed.stdout + completed.stderr:
+        env["AKITA_MODE"] = legacy_mode
+        completed = subprocess.run([str(binary)], capture_output=True, text=True, env=env, check=False)
     if completed.returncode == 0:
         return True, ""
     combined = completed.stdout + completed.stderr

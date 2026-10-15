@@ -13,7 +13,6 @@ use crate::common::*;
 use akita_config::CommitmentConfig;
 use akita_cpu_backend::{CpuBackend, DensePoly, OneHotPoly};
 use akita_params::{BasisMode, PolynomialGroupLayout, ScheduleLookupKey};
-use akita_pcs::AkitaCommitmentScheme;
 use akita_types::{GroupBatchStatement, OpeningClaims, PolynomialGroupClaims};
 
 /// Single-group recursive roundtrip: one two-polynomial final group at `nv=32`, no
@@ -30,8 +29,6 @@ pub(super) fn prove_verify_recursive_direct_roundtrip<BaseCfg>(transcript_domain
 where
     BaseCfg: CommitmentConfig<Field = F, ExtField = F>,
 {
-    type Recursive<BaseCfg> = AkitaCommitmentScheme<BaseCfg>;
-
     const FINAL_NV: usize = 32;
     const FINAL_GROUP_SIZE: usize = 2;
 

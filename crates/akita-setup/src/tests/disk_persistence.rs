@@ -149,10 +149,8 @@ fn config_backed_cache_does_not_apply_generic_setup_decode_limit() {
 
 #[test]
 fn combined_recursive_prefix_registry_persists_and_serves_each_family() {
-    type OneHotRec = fp128::OneHot;
-    type MultiChunkRec = fp128::OneHotMultiChunk;
     // The four-polynomial grouped roots are the rows at which both
-    // recursive families carry a setup-prefix slot.
+    // catalog families carry a setup-prefix slot.
     const MAX_VARS: usize = 32;
     const MAX_POLYS: usize = 4;
 
@@ -162,16 +160,18 @@ fn combined_recursive_prefix_registry_persists_and_serves_each_family() {
         std::thread::Builder::new()
             .stack_size(64 * 1024 * 1024)
             .spawn(|| {
-                let onehot = SetupRequirements::from_catalog::<OneHotRec>(
-                    &akita_config::test_support::workspace_schedule_catalog::<OneHotRec>()
+                let onehot = SetupRequirements::from_catalog::<fp128::OneHot>(
+                    &akita_config::test_support::workspace_schedule_catalog::<fp128::OneHot>()
                         .expect("recursive one-hot catalog"),
                     MAX_VARS,
                     MAX_POLYS,
                 )
                 .expect("recursive one-hot requirements");
-                let multichunk = SetupRequirements::from_catalog::<MultiChunkRec>(
-                    &akita_config::test_support::workspace_schedule_catalog::<MultiChunkRec>()
-                        .expect("recursive multi-chunk catalog"),
+                let multichunk = SetupRequirements::from_catalog::<fp128::OneHotMultiChunk>(
+                    &akita_config::test_support::workspace_schedule_catalog::<
+                        fp128::OneHotMultiChunk,
+                    >()
+                    .expect("recursive multi-chunk catalog"),
                     MAX_VARS,
                     MAX_POLYS,
                 )

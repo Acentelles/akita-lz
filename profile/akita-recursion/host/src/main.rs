@@ -18,10 +18,10 @@ use std::process::ExitCode;
 use std::time::Instant;
 
 use akita_config::proof_optimized::{fp128, fp32, fp64};
-use akita_config::{CommitmentConfig};
+use akita_config::CommitmentConfig;
+use akita_params::BasisMode;
 use akita_recursion_glue::{read_blob_case, AkitaJoltCase, AkitaJoltInputs, MAX_JOLT_BLOB_BYTES};
-use akita_types::{prepared_verifier_ntt_cache_metadata};
-use akita_params::{BasisMode};
+use akita_types::prepared_verifier_ntt_cache_metadata;
 use akita_verifier::{build_riscv64_terminal_ntt_cache, AkitaVerifier};
 use clap::Parser;
 use tracing::info;

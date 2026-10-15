@@ -26,8 +26,8 @@
 //! coefficients are skipped and logged. The cap matches the largest cell the
 //! default fp128 correctness matrix proves (one-hot, 28 variables); every
 //! skipped row commits at least `2^30` coefficients, the production sizes that
-//! matrix marks `#[ignore]`. The recursive catalogs are excluded for the same
-//! reason: every recursive row is production-sized.
+//! matrix marks `#[ignore]`. Offloading rows in the unified catalogs are subject to the same
+//! coefficient cap.
 
 use crate::common::{dense_opening_lagrange, load_workspace_scheme, onehot_opening_lagrange};
 use akita_config::proof_optimized::{fp128, fp32, fp64};

@@ -139,17 +139,6 @@ fn run_prove<FF, const D: usize, Cfg: CommitmentConfig<Field = FF>>(
             .as_ref()
             .expect("runtime schedule was resolved")
     });
-    let setup_contribution_mode = effective_schedule
-        .recursive_folds
-        .first()
-        .map_or(akita_params::SetupContributionMode::Direct, |fold| {
-            fold.predecessor_setup_contribution_mode()
-        });
-    tracing::info!(
-        label,
-        ?setup_contribution_mode,
-        "profile setup-contribution mode"
-    );
     let grinding_plan = derive_transcript_grinding_plan::<Cfg>(effective_schedule, &opening_batch)
         .expect("profile grinding plan");
     print_proof_summary(label, &proof, effective_schedule, &grinding_plan);
@@ -166,7 +155,6 @@ fn run_prove<FF, const D: usize, Cfg: CommitmentConfig<Field = FF>>(
                 &proof,
                 proof_size_budgets::<Cfg>(plan, group_layout),
                 "planned",
-                setup_contribution_mode,
             );
         }
         emit_runtime_schedule_summary(
@@ -186,7 +174,6 @@ fn run_prove<FF, const D: usize, Cfg: CommitmentConfig<Field = FF>>(
                 &proof,
                 proof_size_budgets::<Cfg>(schedule, group_layout),
                 "runtime schedule",
-                setup_contribution_mode,
             );
         }
         emit_runtime_schedule_summary(

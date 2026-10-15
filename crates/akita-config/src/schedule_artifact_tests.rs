@@ -114,16 +114,14 @@ fn replace_schedule_evaluation_trace_challenges(
 
 #[test]
 fn row_admission_audits_recursive_setup_prefix_policy() {
-    type RecursiveOneHot = fp128::OneHot;
-
-    let row = row_with_setup_prefix::<RecursiveOneHot>(|_| true);
+    let row = row_with_setup_prefix::<fp128::OneHot>(|_| true);
     let prefix_index = row
         .schedule()
         .recursive_folds
         .iter()
         .position(|fold| fold.params.setup_prefix().is_some())
         .expect("recursive setup-prefix fold");
-    let error = mutated_row_admission_error::<RecursiveOneHot>(&row, |schedule| {
+    let error = mutated_row_admission_error::<fp128::OneHot>(&row, |schedule| {
         let fold = schedule
             .recursive_folds
             .get_mut(prefix_index)
@@ -144,9 +142,7 @@ fn row_admission_audits_recursive_setup_prefix_policy() {
 
 #[test]
 fn catalog_binding_revalidates_recursive_setup_prefix_challenge_hook() {
-    type RecursiveMultiChunk = fp128::OneHotMultiChunk;
-
-    let row = row_with_setup_prefix::<RecursiveMultiChunk>(|prefix| {
+    let row = row_with_setup_prefix::<fp128::OneHotMultiChunk>(|prefix| {
         prefix.opening.opening_method == OpeningMethod::EvaluationTrace
     });
     let (prefix_index, target_prefix) = row
@@ -177,22 +173,22 @@ fn catalog_binding_revalidates_recursive_setup_prefix_challenge_hook() {
     let profiles = row.profiles().clone();
     let mut schedule = row.schedule().clone();
     replace_schedule_evaluation_trace_challenges(&mut schedule, ring_dimension, replacement);
-    let policy = policy_of::<RecursiveMultiChunk>();
+    let policy = policy_of::<fp128::OneHotMultiChunk>();
     let catalog = ValidatedScheduleCatalog::try_new(
-        RecursiveMultiChunk::schedule_family_name(),
+        fp128::OneHotMultiChunk::schedule_family_name(),
         [(profiles, schedule)],
         &policy,
         |dimension| {
             if dimension == ring_dimension {
                 Ok(replacement)
             } else {
-                RecursiveMultiChunk::ring_challenge_config(dimension)
+                fp128::OneHotMultiChunk::ring_challenge_config(dimension)
             }
         },
     )
     .expect("catalog admitted under its alternate challenge hook");
 
-    let error = TrustedScheduleCatalog::<RecursiveMultiChunk>::new(catalog)
+    let error = TrustedScheduleCatalog::<fp128::OneHotMultiChunk>::new(catalog)
         .expect_err("concrete config must reject the alternate prefix challenge");
     assert!(
         error.to_string().contains(&format!(
@@ -203,34 +199,31 @@ fn catalog_binding_revalidates_recursive_setup_prefix_challenge_hook() {
 }
 
 #[test]
-fn dense_recursive_artifacts_cover_benchmark_sizes_and_offload_setup() {
+fn dense_artifacts_cover_benchmark_sizes_and_offload_setup() {
     use crate::proof_optimized::{fp32, fp64};
     use akita_params::PolynomialGroupLayout;
     use akita_params::ScheduleLookupKey;
 
-    fn check<Cfg: CommitmentConfig>(sizes: &[usize]) {
+    fn check<Cfg: CommitmentConfig>(sizes: &[(usize, usize)]) {
         let catalog = crate::test_support::workspace_schedule_catalog::<Cfg>()
-            .expect("dense recursive artifact admitted under current policy");
-        let mut offloaded = 0;
-        for &num_vars in sizes {
+            .expect("dense artifact admitted under current policy");
+        for &(num_vars, expected_offloads) in sizes {
             let key = ScheduleLookupKey::single(PolynomialGroupLayout::singleton(num_vars));
             let row = catalog.resolve_key(&key).expect("benchmark size present");
-            if row
+            let offloads = row
                 .schedule()
                 .recursive_folds
                 .iter()
-                .any(|fold| fold.params.setup_prefix().is_some())
-            {
-                offloaded += 1;
-            }
+                .filter(|fold| fold.params.setup_prefix().is_some())
+                .count();
+            assert_eq!(
+                offloads, expected_offloads,
+                "unexpected offloads at nv{num_vars}"
+            );
         }
-        assert!(
-            offloaded > 0,
-            "dense recursive family must actually offload setup"
-        );
     }
 
-    check::<fp32::Dense>(&[20, 22, 24, 26, 28, 30]);
-    check::<fp64::Dense>(&[21, 23, 25, 27, 29]);
-    check::<fp128::Dense>(&[20, 22, 24, 26, 28]);
+    check::<fp32::Dense>(&[(20, 0), (22, 0), (24, 1), (26, 1), (28, 1), (30, 1)]);
+    check::<fp64::Dense>(&[(21, 0), (23, 1), (25, 1), (27, 1), (29, 1)]);
+    check::<fp128::Dense>(&[(20, 0), (22, 0), (24, 0), (26, 1), (28, 1)]);
 }

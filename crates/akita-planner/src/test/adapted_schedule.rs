@@ -399,11 +399,8 @@ fn adapted_schedule_rebuilds_a_checked_in_onehot_group_shape() {
 
 #[test]
 fn adapted_schedule_preserves_recursive_setup_offload_topology() {
-    type RecursiveOneHot = OneHot;
-
-    let recursive_catalog =
-        akita_config::test_support::workspace_schedule_catalog::<RecursiveOneHot>()
-            .expect("recursive one-hot catalog");
+    let recursive_catalog = akita_config::test_support::workspace_schedule_catalog::<OneHot>()
+        .expect("recursive one-hot catalog");
     let main_group = PolynomialGroupLayout::singleton(36);
     let main_row = recursive_catalog
         .resolve_key(&ScheduleLookupKey::single(main_group))
@@ -426,14 +423,14 @@ fn adapted_schedule_preserves_recursive_setup_offload_topology() {
         precommitteds: vec![pre_profile],
     };
     let request = grouped_request::<OneHot>(main_group, &key.precommitteds);
-    let policy = policy_of::<RecursiveOneHot>();
+    let policy = policy_of::<OneHot>();
 
     let adapted = find_adapted_schedule(
         main_row,
         &request,
-        RecursiveOneHot::committed_source_contract().unwrap(),
+        OneHot::committed_source_contract().unwrap(),
         &policy,
-        RecursiveOneHot::ring_challenge_config,
+        OneHot::ring_challenge_config,
     )
     .expect("guided recursive adaptation");
     assert_frozen_skeleton(main_row.schedule(), &adapted.schedule);

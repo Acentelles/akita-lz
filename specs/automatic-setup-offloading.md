@@ -144,3 +144,12 @@ record before implementation. Summarize the survey findings without committing
 the raw research records or survey artifacts.
 Prepare a PR description that states the API break, catalog migration,
 unchanged two-offload maximum, exact objective, data, validation, and limits.
+
+## Protocol fixture follow-up
+
+The portable tensor-transfer regression pins an explicitly admitted nv16,
+two-polynomial, zero-offload schedule independently of the optimizer. Keep the
+separate offloaded-route regression as well. Follow-up: pin similarly small
+admitted schedules for the quotient/reduced replay and compressed/raw tampering
+regressions, so optimizer changes do not require moving their workload sizes.
+Planner-choice tests should continue to exercise the optimizer itself.

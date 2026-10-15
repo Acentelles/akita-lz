@@ -51,43 +51,25 @@ fn main() -> Result<(), akita_error::AkitaError> {
         .nth(1)
         .and_then(|value| value.parse().ok())
         .unwrap_or(36);
-    let direct_policy = policy_of::<OneHot>();
-    let direct_key = ScheduleLookupKey::single(PolynomialGroupLayout::singleton(num_vars));
-    let direct = find_schedule(
-        &direct_key,
+    let policy = policy_of::<OneHot>();
+    let scalar_key = ScheduleLookupKey::single(PolynomialGroupLayout::singleton(num_vars));
+    let scalar = find_schedule(
+        &scalar_key,
         OneHot::committed_source_contract()?,
         &[],
-        &direct_policy,
+        &policy,
         OneHot::ring_challenge_config,
     )?;
-    print_schedule(
-        &format!("direct scalar mixed-D search (nv={num_vars})"),
-        &direct,
-    );
+    print_schedule(&format!("scalar mixed-D search (nv={num_vars})"), &scalar);
 
-    type Recursive = OneHot;
-    let recursive_policy = policy_of::<Recursive>();
-    let scalar_recursive_key =
-        ScheduleLookupKey::single(PolynomialGroupLayout::singleton(num_vars));
-    let scalar_recursive = find_schedule(
-        &scalar_recursive_key,
-        Recursive::committed_source_contract()?,
-        &[],
-        &recursive_policy,
-        Recursive::ring_challenge_config,
-    )?;
-    print_schedule("adaptive recursive scalar planner", &scalar_recursive);
-    println!(
-        "  offload_edges={}",
-        scalar_recursive.estimate.selected_offload_edges,
-    );
+    println!("  offload_edges={}", scalar.estimate.selected_offload_edges);
 
     let precommit_layout = PolynomialGroupLayout::singleton(16);
     let independent = find_schedule(
         &ScheduleLookupKey::single(precommit_layout),
         OneHot::committed_source_contract()?,
         &[],
-        &direct_policy,
+        &policy,
         OneHot::ring_challenge_config,
     )?;
     let descriptor = GroupCommitPhaseParams::try_from_params(
@@ -101,10 +83,10 @@ fn main() -> Result<(), akita_error::AkitaError> {
     let precommitted_source_contracts = vec![OneHot::committed_source_contract()?; 2];
     let adaptive_recursive = find_schedule(
         &recursive_key,
-        Recursive::committed_source_contract()?,
+        OneHot::committed_source_contract()?,
         &precommitted_source_contracts,
-        &recursive_policy,
-        Recursive::ring_challenge_config,
+        &policy,
+        OneHot::ring_challenge_config,
     )?;
     print_schedule("adaptive recursive grouped planner", &adaptive_recursive);
     println!(

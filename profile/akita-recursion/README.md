@@ -37,7 +37,7 @@ cargo build --release
 
 # 2. Generate one exact CI case (artifact prints its identity and size).
 #    REQUIRED before step 3 because `host` reads this file from disk.
-AKITA_RECURSION_BLOB=target/onehot_fp128_nv36_recursive.bin \
+AKITA_RECURSION_BLOB=target/onehot_fp128_nv36.bin \
     ./target/release/akita-recursion-artifact \
     --case onehot_fp128:36:1
 
@@ -51,7 +51,7 @@ ZEROOS_GUEST_RUSTFLAGS=-Zunstable-options \
     AKITA_RECURSION_LOG=info ./target/release/akita-recursion-host \
     --trace-only \
     --trace-output /dev/null \
-    --input target/onehot_fp128_nv36_recursive.bin
+    --input target/onehot_fp128_nv36.bin
 ```
 
 The reusable scalar OneHot cases are the exact cases from the CI profile

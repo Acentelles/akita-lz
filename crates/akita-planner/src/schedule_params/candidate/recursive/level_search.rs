@@ -51,6 +51,7 @@ pub(super) fn prepare_recursive_level_search(
         RecursiveSetupPrefix::None => None,
         RecursiveSetupPrefix::Search { natural_len, .. } => Some(*natural_len),
     };
+    // Validate the incoming suffix geometry before enumerating candidates.
     suffix_opening_layout(current_witness_len, incoming_setup_prefix)?;
     let setup_prefixes = match setup_prefix {
         RecursiveSetupPrefix::Search { cache, natural_len } => {

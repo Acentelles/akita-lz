@@ -401,11 +401,10 @@ mod tests {
     fn guided_setup_prefix_survives_pareto_pruning() {
         use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-        type Recursive = OneHot;
-        let policy = policy_of::<Recursive>();
+        let policy = policy_of::<OneHot>();
         let n_prefix = 1usize << 14;
         let opening = PlannerOpeningCandidate::evaluation_trace(
-            Recursive::ring_challenge_config(64).expect("challenge config"),
+            OneHot::ring_challenge_config(64).expect("challenge config"),
         );
         let mut cache = SetupPrefixSearchCache::default();
         let request = |guide| SetupPrefixSearchRequest {

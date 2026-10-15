@@ -208,7 +208,7 @@ The normative constraints and failure behavior are recorded in
 The coefficient `L∞` route remains available at every fold. A production
 preset may also enable the typed `L2` response model. Every shipped
 fp32, fp64, and fp128 dense and one-hot family enables it. This includes each
-generated multi-chunk and recursive companion.
+generated multi-chunk family.
 
 The planner always retains the universal L infinity candidate. When typed
 moments are available, it also evaluates the modeled L infinity depth. From

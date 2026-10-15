@@ -5,8 +5,7 @@
 
 use crate::report::print_layout;
 use crate::workload::{
-    onehot_k_for_num_vars, run_batched_onehot, run_dense_for, run_onehot,
-    run_recursive_multi_group_onehot,
+    onehot_k_for_num_vars, run_batched_onehot, run_dense_for, run_multi_group_onehot, run_onehot,
 };
 use crate::workspace_schedules::load_workspace_scheme;
 use akita_config::proof_optimized::{fp128, fp32, fp64};
@@ -216,7 +215,7 @@ const PROFILE_SELECTED_MODES: &[ProfileMode] = &[
     #[cfg(feature = "profile-ci-multi-group-w8r2")]
     ProfileMode {
         name: "onehot_fp128_multi_group_multi_chunk_w8r2",
-        run: run_profile_onehot_fp128_multi_group_recursive_multi_chunk_w8r2,
+        run: run_profile_onehot_fp128_multi_group_multi_chunk_w8r2,
     },
     #[cfg(feature = "profile-ci-distributed")]
     ProfileMode {
@@ -278,7 +277,7 @@ const PROFILE_ALL_MODES: &[ProfileMode] = &[
     },
     ProfileMode {
         name: "onehot_fp128_multi_group_multi_chunk_w8r2",
-        run: run_profile_onehot_fp128_multi_group_recursive_multi_chunk_w8r2,
+        run: run_profile_onehot_fp128_multi_group_multi_chunk_w8r2,
     },
     ProfileMode {
         name: "onehot_fp128_multi_chunk_w2r2",
@@ -405,17 +404,9 @@ fn run_profile_dense_fp128_multi_chunk_w8r2(nv: usize, num_polys: usize) {
 }
 
 fn run_profile_onehot_fp128(nv: usize, num_polys: usize) {
-    run_profile_onehot_fp128_with_cfg::<256, fp128::OneHot>("onehot_fp128", nv, num_polys);
-}
-
-fn run_profile_onehot_fp128_with_cfg<
-    const D: usize,
-    Cfg: CommitmentConfig<Field = F, ExtField = F>,
->(
-    label: &str,
-    nv: usize,
-    num_polys: usize,
-) {
+    const D: usize = 256;
+    type Cfg = fp128::OneHot;
+    let label = "onehot_fp128";
     assert!(
         matches!(nv, 32 | 36 | 40),
         "fp128 one-hot profile supports generated nv=32, nv=36, and nv=40 rows"
@@ -475,7 +466,7 @@ fn run_multi_group_mode<const D: usize, Cfg: CommitmentConfig<Field = F, ExtFiel
         "=== {label} (fp128, {}, source fixture view D={D}, flat public setup, generated per-level dimensions, {MULTI_GROUP_PRE_GROUPS} precommitted {MULTI_GROUP_PRE_NUM_VARS}-variable singleton groups + {expected_final_nv}-variable main group with {MULTI_GROUP_FINAL_POLYS} polynomials, {layout_note}) ===",
         fp128_prime_label()
     );
-    run_recursive_multi_group_onehot::<F, D, Cfg>(
+    run_multi_group_onehot::<F, D, Cfg>(
         label,
         MULTI_GROUP_PRE_NUM_VARS,
         expected_final_nv,
@@ -494,11 +485,11 @@ fn run_profile_onehot_fp128_multi_group(nv: usize, num_polys: usize) {
     );
 }
 
-fn run_profile_onehot_fp128_multi_group_recursive_multi_chunk_w8r2(nv: usize, num_polys: usize) {
+fn run_profile_onehot_fp128_multi_group_multi_chunk_w8r2(nv: usize, num_polys: usize) {
     type Cfg = fp128::OneHotMultiChunk;
     run_multi_group_mode::<256, Cfg>(
         "onehot_fp128_multi_group_multi_chunk_w8r2",
-        "adaptive ring dimensions + recursive setup offloading + W8R2 chunked witness: num_chunks=8 x 2 leading levels",
+        "adaptive ring dimensions + automatic setup offloading + W8R2 chunked witness: num_chunks=8 x 2 leading levels",
         nv,
         num_polys,
         MULTI_GROUP_W8R2_FINAL_NUM_VARS,

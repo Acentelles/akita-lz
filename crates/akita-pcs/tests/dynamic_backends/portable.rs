@@ -24,11 +24,19 @@ fn portable_tensor_import_matches_homogeneous_proof() {
     common::run_on_large_stack(|| {
         let chunk_size = akita_config::unit_onehot_source_chunk_size::<fp32::OneHot>().unwrap();
         let poly =
-            OneHotPoly::<F, u8>::new(chunk_size, vec![Some(0); (1 << 28) / chunk_size]).unwrap();
+            OneHotPoly::<F, u8>::new(chunk_size, vec![Some(0); (1 << 16) / chunk_size]).unwrap();
         let expected =
             akita_params::lagrange_weights(&vec![E::from_u64(2); chunk_size.ilog2() as usize])
                 .unwrap()[0];
-        run::<fp32::OneHot, _>(28, vec![poly], expected);
+        // Pin admitted geometry: optimizer changes must not erase batched,
+        // zero-offload tensor transfer coverage.
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/fp32_onehot_tensor_nv16_np2.aks");
+        let bytes = std::fs::read(path).expect("small tensor-transfer fixture");
+        let scheme =
+            akita_pcs::AkitaCommitmentScheme::<fp32::OneHot>::from_schedule_artifact(&bytes)
+                .expect("small tensor-transfer fixture must pass independent admission");
+        run::<fp32::OneHot, _>(&scheme, 16, vec![poly.clone(), poly], expected, false);
     });
 }
 
@@ -36,18 +44,23 @@ fn portable_tensor_import_matches_homogeneous_proof() {
 fn offloaded_route_uses_only_local_prefix_handles() {
     common::init_rayon_pool();
     common::run_on_large_stack(|| {
-        // The smallest shipped fp32 recursive row with an offloaded setup prefix.
+        // The smallest shipped fp32 dense row with an offloaded setup prefix.
         let poly = DensePoly::from_field_evals(24, vec![F::from_u64(1); 1 << 24]).unwrap();
-        run::<fp32::Dense, _>(24, vec![poly], E::from_u64(1));
+        let scheme = common::load_workspace_scheme::<fp32::Dense>().unwrap();
+        run::<fp32::Dense, _>(&scheme, 24, vec![poly], E::from_u64(1), true);
     });
 }
 
-fn run<Cfg, P>(nv: usize, polys: Vec<P>, expected: E)
-where
+fn run<Cfg, P>(
+    scheme: &akita_pcs::AkitaCommitmentScheme<Cfg>,
+    nv: usize,
+    polys: Vec<P>,
+    expected: E,
+    expect_offload: bool,
+) where
     Cfg: CommitmentConfig<Field = F, ExtField = E> + 'static,
     P: CpuSource<F, E>,
 {
-    let scheme = common::load_workspace_scheme::<Cfg>().unwrap();
     let setup = scheme.setup_prover(nv, polys.len()).unwrap();
     let producer = Cpu::new(setup.expanded.clone()).unwrap();
     let consumer = Cpu::new(setup.expanded.clone()).unwrap();
@@ -81,9 +94,10 @@ where
     let all_ids =
         akita_config::required_setup_prefix_slot_ids_for_schedule(schedule, input.opening_layout())
             .unwrap();
-    assert!(
+    assert_eq!(
         !all_ids.is_empty(),
-        "fixture must exercise setup offloading"
+        expect_offload,
+        "fixture setup-offload coverage changed"
     );
     assert!(schedule.recursive_folds.iter().any(|fold| matches!(
         fold.params.source_encoding,

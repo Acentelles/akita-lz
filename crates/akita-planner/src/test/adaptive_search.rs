@@ -12,7 +12,7 @@ fn estimated_first_direct_setup_capacity(planned: &PlannedFoldSchedule) -> usize
         planned
             .estimate
             .first_direct_setup_field_len
-            .expect("setup-first plan must report its first direct setup length"),
+            .expect("selected plan must report its first direct setup length"),
     )
 }
 
@@ -167,8 +167,6 @@ fn policy_for_domain(
         potential_b_dimensions: Box::leak(b.into_boxed_slice()),
         potential_d_dimensions: Box::leak(d.into_boxed_slice()),
     };
-    policy.selection_policy =
-        crate::SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6;
     policy
 }
 
@@ -210,8 +208,6 @@ fn mixed_domain_search_beats_or_ties_singleton_d64() {
         potential_b_dimensions: &[64],
         potential_d_dimensions: &[64],
     };
-    singleton_policy.selection_policy =
-        crate::SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6;
     let candidate = find_schedule(
         key,
         &singleton_policy,
@@ -266,8 +262,6 @@ fn statically_infeasible_early_packing_domain_is_unsupported() {
         potential_b_dimensions: &[128],
         potential_d_dimensions: &[128],
     };
-    policy.selection_policy =
-        crate::SelectionPolicyId::MinPaddedSetupEnvelopeThenFirstDirectThenExactProofAndWorkV6;
     policy.selective_l2_response_model = crate::SelectiveL2ResponseModelId::Disabled;
     let error = find_schedule(
         onehot_group(14, 1),
@@ -420,10 +414,8 @@ fn production_suffix_selects_l2_with_the_typed_response_model() {
 fn bounded_recursive_setup_search_matches_exhaustive_on_small_fixture() {
     use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-    type Recursive = OneHot;
-
     let domain = RingDimensionSearchDomain::new([CommitmentRingDims::uniform(64)]).unwrap();
-    let bounded = policy_for_domain(policy_of::<Recursive>(), &domain);
+    let bounded = policy_for_domain(policy_of::<OneHot>(), &domain);
     assert_eq!(
         bounded.recursive_setup_search_policy,
         crate::RecursiveSetupSearchPolicy::RootAndFirstChildV1
@@ -434,15 +426,15 @@ fn bounded_recursive_setup_search_matches_exhaustive_on_small_fixture() {
     let bounded_schedule = find_schedule(
         key,
         &bounded,
-        Recursive::committed_source_contract().unwrap(),
-        Recursive::ring_challenge_config,
+        OneHot::committed_source_contract().unwrap(),
+        OneHot::ring_challenge_config,
     )
     .expect("bounded recursive setup search");
     let exhaustive_schedule = find_schedule(
         key,
         &exhaustive,
-        Recursive::committed_source_contract().unwrap(),
-        Recursive::ring_challenge_config,
+        OneHot::committed_source_contract().unwrap(),
+        OneHot::ring_challenge_config,
     )
     .expect("exhaustive recursive setup search");
 
@@ -899,7 +891,7 @@ fn adaptive_search_applies_setup_budget_in_physical_fields() {
     .unwrap();
     policy = policy_for_domain(policy, &domain);
     let selected = find_schedule(
-        onehot_group(16, 1),
+        onehot_group(14, 1),
         &policy,
         OneHot::committed_source_contract().unwrap(),
         OneHot::ring_challenge_config,
@@ -910,7 +902,7 @@ fn adaptive_search_applies_setup_budget_in_physical_fields() {
     policy.setup_field_budget = Some(exact_fields);
 
     let budgeted = find_schedule(
-        onehot_group(16, 1),
+        onehot_group(14, 1),
         &policy,
         OneHot::committed_source_contract().unwrap(),
         OneHot::ring_challenge_config,
@@ -920,9 +912,28 @@ fn adaptive_search_applies_setup_budget_in_physical_fields() {
         akita_params::setup_matrix_field_elements_for_schedule(&budgeted.schedule).unwrap();
     assert_eq!(budgeted_fields, exact_fields);
 
+    // V6 minimizes padded capacity, so a tighter physical budget can select
+    // a different schedule within the same power-of-two bucket.
+    policy.setup_field_budget = Some(exact_fields - 1);
+    let alternative = find_schedule(
+        onehot_group(14, 1),
+        &policy,
+        OneHot::committed_source_contract().unwrap(),
+        OneHot::ring_challenge_config,
+    )
+    .expect("a tighter physical budget must reselect an admitted alternative");
+    let alternative_fields =
+        akita_params::setup_matrix_field_elements_for_schedule(&alternative.schedule).unwrap();
+    assert!(alternative_fields < exact_fields);
+    assert!(alternative_fields <= policy.setup_field_budget.unwrap());
+    assert_eq!(
+        akita_params::padded_setup_prefix_len(alternative_fields),
+        akita_params::padded_setup_prefix_len(exact_fields),
+    );
+
     policy.setup_field_budget = Some(1);
     let error = find_schedule(
-        onehot_group(16, 1),
+        onehot_group(14, 1),
         &policy,
         OneHot::committed_source_contract().unwrap(),
         OneHot::ring_challenge_config,

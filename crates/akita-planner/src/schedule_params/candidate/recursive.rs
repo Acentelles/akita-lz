@@ -6,7 +6,6 @@ mod level_search;
 #[cfg(all(test, feature = "catalog-gen"))]
 mod oracle;
 mod split;
-mod views;
 
 use frontier::derive_fold_candidate_frontier;
 use level_search::{
@@ -22,7 +21,6 @@ use split::recursive_witness_body_lower_bound;
 pub(super) use split::{
     recursive_candidate_order_key, recursive_split_lower_bound, RecursiveSplitLowerBoundInput,
 };
-pub(crate) use views::derive_recursive_candidate_views;
 
 #[derive(Clone, Copy)]
 pub(crate) struct RecursiveCandidateRequest<'a> {

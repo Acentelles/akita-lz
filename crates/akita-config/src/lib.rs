@@ -823,8 +823,7 @@ mod fp128_policy_tests {
 
     #[test]
     fn row_admission_rejects_overpadded_setup_prefix() {
-        type RecursiveOneHot = fp128::OneHot;
-        let catalog = crate::test_support::workspace_schedule_catalog::<RecursiveOneHot>()
+        let catalog = crate::test_support::workspace_schedule_catalog::<fp128::OneHot>()
             .expect("recursive one-hot schedule catalog");
 
         let row = (14..=50)
@@ -842,7 +841,7 @@ mod fp128_policy_tests {
                     .then_some(row)
             })
             .expect("generated row with a setup prefix");
-        let error = mutated_row_admission_error::<RecursiveOneHot>(row, |schedule| {
+        let error = mutated_row_admission_error::<fp128::OneHot>(row, |schedule| {
             let step = schedule
                 .recursive_folds
                 .iter_mut()
@@ -865,8 +864,7 @@ mod fp128_policy_tests {
 
     #[test]
     fn row_admission_rejects_setup_prefix_that_omits_real_tail_rings() {
-        type RecursiveOneHot = fp128::OneHot;
-        let catalog = crate::test_support::workspace_schedule_catalog::<RecursiveOneHot>()
+        let catalog = crate::test_support::workspace_schedule_catalog::<fp128::OneHot>()
             .expect("recursive one-hot schedule catalog");
 
         let row = (14..=50)
@@ -884,7 +882,7 @@ mod fp128_policy_tests {
                     .then_some(row)
             })
             .expect("generated row with a setup prefix");
-        let error = mutated_row_admission_error::<RecursiveOneHot>(row, |schedule| {
+        let error = mutated_row_admission_error::<fp128::OneHot>(row, |schedule| {
             let step = schedule
                 .recursive_folds
                 .iter_mut()

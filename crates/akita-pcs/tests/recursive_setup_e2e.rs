@@ -39,21 +39,18 @@ fn generated_recursive_onehot_profile_proves_with_setup_offload() {
 #[test]
 #[ignore = "production-sized profile E2E; run explicitly with --release"]
 fn combined_recursive_setup_proves_both_onehot_families() {
-    type OneHotRec = fp128::OneHot;
-    type MultiChunkRec = fp128::OneHotMultiChunk;
-
     init_rayon_pool();
     run_on_large_stack(|| {
-        let onehot = SetupRequirements::from_catalog::<OneHotRec>(
-            load_workspace_scheme::<OneHotRec>()
+        let onehot = SetupRequirements::from_catalog::<fp128::OneHot>(
+            load_workspace_scheme::<fp128::OneHot>()
                 .expect("recursive one-hot catalog")
                 .schedules(),
             RECURSIVE_ROUND_TRIP_NV,
             RECURSIVE_ROUND_TRIP_POLYS,
         )
         .expect("recursive one-hot requirements");
-        let multichunk = SetupRequirements::from_catalog::<MultiChunkRec>(
-            load_workspace_scheme::<MultiChunkRec>()
+        let multichunk = SetupRequirements::from_catalog::<fp128::OneHotMultiChunk>(
+            load_workspace_scheme::<fp128::OneHotMultiChunk>()
                 .expect("recursive multi-chunk catalog")
                 .schedules(),
             RECURSIVE_ROUND_TRIP_NV,

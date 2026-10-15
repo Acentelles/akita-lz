@@ -11,7 +11,7 @@ use crate::report::{
 use crate::workspace_schedules::load_workspace_scheme;
 use akita_config::{derive_transcript_grinding_plan, CommitmentConfig};
 use akita_cpu_backend::{AkitaProverSetup, CpuBackend};
-use akita_params::{BasisMode, FoldSchedule, PolynomialGroupLayout, SetupContributionMode};
+use akita_params::{BasisMode, FoldSchedule, PolynomialGroupLayout};
 use akita_serialization::{AkitaDeserialize, AkitaSerialize, Valid};
 use akita_types::{FpExtEncoding, GroupBatchStatement, OpeningClaims, PolynomialGroupClaims};
 use jolt_field::{CanonicalBytes, CanonicalEncoding, ExtField, Field, PseudoMersenne, Ring};
@@ -42,7 +42,7 @@ where
     Ok(())
 }
 
-pub(crate) fn run_recursive_multi_group_onehot<FF, const D: usize, Cfg>(
+pub(crate) fn run_multi_group_onehot<FF, const D: usize, Cfg>(
     label: &str,
     pre_num_vars: usize,
     final_num_vars: usize,
@@ -100,12 +100,6 @@ pub(crate) fn run_recursive_multi_group_onehot<FF, const D: usize, Cfg>(
         .expect("multi-group runtime schedule")
         .schedule()
         .clone();
-    let setup_contribution_mode = schedule
-        .recursive_folds
-        .first()
-        .map_or(SetupContributionMode::Direct, |fold| {
-            fold.predecessor_setup_contribution_mode()
-        });
     let pre_points = (0..PRE_GROUPS)
         .map(|_| random_claim_point::<FF, Cfg::ExtField>(pre_num_vars, &mut point_rng))
         .collect::<Vec<_>>();
@@ -256,12 +250,6 @@ pub(crate) fn run_recursive_multi_group_onehot<FF, const D: usize, Cfg>(
         let mut prover_hints = pre_hints;
         prover_hints.push(final_hint);
         let t_prove = Instant::now();
-        tracing::info!(
-            label,
-            ?setup_contribution_mode,
-            "profile setup-contribution mode"
-        );
-        eprintln!("[{label}] setup_contribution_mode: {setup_contribution_mode:?}");
         let prover_data = akita_prover::SelectedProverOpeningData::from_committed_claims::<Cfg>(
             OpeningClaims::from_groups(prover_groups).expect("prover claims"),
             prover_hints,
@@ -304,7 +292,6 @@ pub(crate) fn run_recursive_multi_group_onehot<FF, const D: usize, Cfg>(
         &proof,
         proof_size_budgets::<Cfg>(&schedule, final_group),
         "planned",
-        setup_contribution_mode,
     );
     emit_runtime_schedule_summary(
         label,

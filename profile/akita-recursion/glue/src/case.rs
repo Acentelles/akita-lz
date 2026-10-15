@@ -6,6 +6,8 @@ use core::str::FromStr;
 ///
 /// Each value names one verifier monomorphization. The textual form matches
 /// the case syntax in `.github/workflows/profile-bench.yml`.
+/// Tag 3 (the retired direct-only fp128 case) stays unused; tag 4 retains
+/// the offloading case identity. Older family frames still require admission.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum AkitaJoltCase {
@@ -42,9 +44,7 @@ impl AkitaJoltCase {
             Self::OneHotFp32 => "onehot_fp32:30:1",
             Self::OneHotFp64 => "onehot_fp64:30:1",
             Self::OneHotFp128 => "onehot_fp128:36:1",
-            Self::OneHotFp128MultiGroup => {
-                "onehot_fp128_multi_group:32:4"
-            }
+            Self::OneHotFp128MultiGroup => "onehot_fp128_multi_group:32:4",
         }
     }
 }
@@ -63,9 +63,7 @@ impl FromStr for AkitaJoltCase {
             "onehot_fp32:30:1" => Ok(Self::OneHotFp32),
             "onehot_fp64:30:1" => Ok(Self::OneHotFp64),
             "onehot_fp128:36:1" => Ok(Self::OneHotFp128),
-            "onehot_fp128_multi_group:32:4" => {
-                Ok(Self::OneHotFp128MultiGroup)
-            }
+            "onehot_fp128_multi_group:32:4" => Ok(Self::OneHotFp128MultiGroup),
             _ => Err(format!("unsupported Akita Jolt CI case `{value}`")),
         }
     }
@@ -91,7 +89,9 @@ mod tests {
     #[test]
     fn retired_mode_suffixes_and_direct_case_tag_are_rejected() {
         assert!("onehot_fp32:30:1:direct".parse::<AkitaJoltCase>().is_err());
-        assert!("onehot_fp128:36:1:recursive".parse::<AkitaJoltCase>().is_err());
+        assert!("onehot_fp128:36:1:recursive"
+            .parse::<AkitaJoltCase>()
+            .is_err());
         assert_eq!("onehot_fp128:36:1".parse(), Ok(AkitaJoltCase::OneHotFp128));
         assert!(AkitaJoltCase::from_tag(3).is_err());
     }

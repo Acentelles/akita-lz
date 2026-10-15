@@ -11,7 +11,7 @@ fn padded_setup_envelope_first(
     descriptor: u8,
 ) -> CompleteScheduleScore {
     CompleteScheduleScore {
-        objective: CompleteObjectiveBound::PaddedSetupEnvelopeFirst {
+        objective: CompleteObjectiveBound {
             setup_envelope_capacity: akita_params::padded_setup_prefix_len(setup_field_elements),
             first_direct_setup_capacity,
             exact_score: (proof_bytes as u128) * super::super::WORK_ELEMENTS_PER_OBJECTIVE_BYTE,
@@ -58,15 +58,14 @@ fn objective_bounds_prune_only_strict_numeric_losses() {
         cost: super::super::ProofCost::new(20, 0, 0, 0).unwrap(),
         setup_field_elements: 30,
     };
-    let padded_envelope_bound = |setup_field_elements, first_direct_setup_capacity, proof_bytes| {
-        CompleteObjectiveBound::PaddedSetupEnvelopeFirst {
+    let padded_envelope_bound =
+        |setup_field_elements, first_direct_setup_capacity, proof_bytes| CompleteObjectiveBound {
             setup_envelope_capacity: akita_params::padded_setup_prefix_len(setup_field_elements),
             first_direct_setup_capacity,
             exact_score: (proof_bytes as u128) * super::super::WORK_ELEMENTS_PER_OBJECTIVE_BYTE,
             proof_bytes,
             first_direct_output_witness_len: 1_000,
-        }
-    };
+        };
     assert!(padded_envelope_bound(31, 32, 1).is_strictly_worse_than(incumbent));
     assert!(!padded_envelope_bound(31, 8, usize::MAX).is_strictly_worse_than(incumbent));
     assert!(padded_envelope_bound(33, 1, 1).is_strictly_worse_than(incumbent));
@@ -150,7 +149,7 @@ fn actual_policy_can_select_a_noncontractive_complete_candidate() {
         [&contractive, &noncontractive],
         [&noncontractive, &contractive],
     ] {
-        let selected = select_complete_candidate(&policy, candidates, None)
+        let selected = select_complete_candidate(candidates, None)
             .expect("complete candidate selection")
             .expect("selected complete candidate");
         assert!(std::ptr::eq(selected, &noncontractive));
@@ -159,7 +158,6 @@ fn actual_policy_can_select_a_noncontractive_complete_candidate() {
 
 #[test]
 fn exact_work_score_can_outweigh_one_modeled_proof_byte() {
-    let policy = akita_config::policy_of::<akita_config::proof_optimized::fp128::Dense>();
     let smaller_proof = complete_candidate(100, 64, 1_000_000);
     let smaller_witness = complete_candidate(101, 64, 1_000);
 
@@ -167,7 +165,7 @@ fn exact_work_score_can_outweigh_one_modeled_proof_byte() {
         [&smaller_proof, &smaller_witness],
         [&smaller_witness, &smaller_proof],
     ] {
-        let selected = select_complete_candidate(&policy, candidates, None)
+        let selected = select_complete_candidate(candidates, None)
             .expect("complete candidate selection")
             .expect("selected complete candidate");
         assert!(std::ptr::eq(selected, &smaller_witness));
@@ -176,7 +174,6 @@ fn exact_work_score_can_outweigh_one_modeled_proof_byte() {
 
 #[test]
 fn exact_proof_tie_selects_the_smaller_setup_envelope() {
-    let policy = akita_config::policy_of::<akita_config::proof_optimized::fp128::Dense>();
     let larger_setup = complete_candidate(100, 65, 1_000);
     let smaller_setup = complete_candidate(100, 64, 1_000);
 
@@ -184,7 +181,7 @@ fn exact_proof_tie_selects_the_smaller_setup_envelope() {
         [&larger_setup, &smaller_setup],
         [&smaller_setup, &larger_setup],
     ] {
-        let selected = select_complete_candidate(&policy, candidates, None)
+        let selected = select_complete_candidate(candidates, None)
             .expect("complete candidate selection")
             .expect("selected complete candidate");
         assert!(std::ptr::eq(selected, &smaller_setup));
@@ -193,7 +190,6 @@ fn exact_proof_tie_selects_the_smaller_setup_envelope() {
 
 #[test]
 fn exact_numeric_tie_selects_the_smaller_root_output_witness() {
-    let policy = akita_config::policy_of::<akita_config::proof_optimized::fp128::Dense>();
     let larger_output = complete_candidate(100, 64, 1_001);
     let smaller_output = complete_candidate(100, 64, 1_000);
 
@@ -201,7 +197,7 @@ fn exact_numeric_tie_selects_the_smaller_root_output_witness() {
         [&larger_output, &smaller_output],
         [&smaller_output, &larger_output],
     ] {
-        let selected = select_complete_candidate(&policy, candidates, None)
+        let selected = select_complete_candidate(candidates, None)
             .expect("complete candidate selection")
             .expect("selected complete candidate");
         assert!(std::ptr::eq(selected, &smaller_output));

@@ -47,11 +47,9 @@ pub(crate) fn recursive_multi_group_round_trip_on<BaseCfg>(
     const _: () =
         assert!(PRE_GROUPS * PRE_GROUP_SIZE + FINAL_GROUP_SIZE == RECURSIVE_ROUND_TRIP_POLYS);
 
-    let base_scheme = load_workspace_scheme::<BaseCfg>().expect("workspace base schedule catalog");
-    let recursive_scheme =
-        load_workspace_scheme::<BaseCfg>().expect("workspace recursive schedule catalog");
+    let scheme = load_workspace_scheme::<BaseCfg>().expect("workspace schedule catalog");
     let pre_key = PolynomialGroupLayout::new(PRE_NV, PRE_GROUP_SIZE);
-    let pre_frozen = base_scheme
+    let pre_frozen = scheme
         .schedules()
         .resolve_key(&ScheduleLookupKey::single(pre_key))
         .expect("independent profile")
@@ -62,7 +60,7 @@ pub(crate) fn recursive_multi_group_round_trip_on<BaseCfg>(
         precommitteds: vec![pre_frozen, pre_frozen],
     };
     let opening_layout = schedule_key.opening_layout().expect("opening layout");
-    let schedule = recursive_scheme
+    let schedule = scheme
         .schedules()
         .resolve_key(&schedule_key)
         .expect("recursive profile schedule resolves")
@@ -89,7 +87,7 @@ pub(crate) fn recursive_multi_group_round_trip_on<BaseCfg>(
             private_handle: hint,
         } = stack
             .commit(
-                recursive_scheme.schedules(),
+                scheme.schedules(),
                 &stack.import_source(vec![poly.clone()]).expect("source"),
                 akita_cpu_backend::GroupContext::explicit(&pre_frozen),
             )
@@ -116,7 +114,7 @@ pub(crate) fn recursive_multi_group_round_trip_on<BaseCfg>(
         private_handle: final_hint,
     } = stack
         .commit(
-            recursive_scheme.schedules(),
+            scheme.schedules(),
             &stack.import_source(final_polys.clone()).expect("source"),
             akita_cpu_backend::GroupContext::scheduler_with_precommitted_groups(&precommitteds),
         )
@@ -164,11 +162,11 @@ pub(crate) fn recursive_multi_group_round_trip_on<BaseCfg>(
     let prover_claims = selected_prover_data::<BaseCfg>(
         OpeningClaims::from_groups(prover_groups).expect("prover claims"),
         prover_hints,
-        recursive_scheme.schedules(),
+        scheme.schedules(),
     );
     let selection = prover_claims.selection();
 
-    let proof = recursive_scheme
+    let proof = scheme
         .batched_prove(
             setup,
             prover_claims,
@@ -178,7 +176,7 @@ pub(crate) fn recursive_multi_group_round_trip_on<BaseCfg>(
         )
         .expect("generated-profile recursive proof");
 
-    let verifier_setup = recursive_scheme
+    let verifier_setup = scheme
         .setup_verifier_for_schedule(setup, &schedule, &opening_layout)
         .expect("verifier setup");
     let verify_claims = |final_openings: Vec<F>| {
@@ -201,7 +199,7 @@ pub(crate) fn recursive_multi_group_round_trip_on<BaseCfg>(
         GroupBatchStatement::new(selection, claims).expect("verifier statement")
     };
 
-    recursive_scheme
+    scheme
         .verifier(verifier_setup.clone())
         .and_then(|verifier| {
             verifier.batched_verify(
@@ -218,16 +216,17 @@ pub(crate) fn recursive_multi_group_round_trip_on<BaseCfg>(
         &verifier_setup,
         &first_setup_prefix_slot(&schedule),
     ) {
-        let alternate_result = recursive_scheme
-            .verifier(alternate_verifier_setup.clone())
-            .and_then(|verifier| {
-                verifier.batched_verify(
-                    &proof,
-                    transcript_domain,
-                    verify_claims(final_openings.clone()),
-                    BasisMode::Lagrange,
-                )
-            });
+        let alternate_result =
+            scheme
+                .verifier(alternate_verifier_setup.clone())
+                .and_then(|verifier| {
+                    verifier.batched_verify(
+                        &proof,
+                        transcript_domain,
+                        verify_claims(final_openings.clone()),
+                        BasisMode::Lagrange,
+                    )
+                });
         assert!(
             alternate_result.is_err(),
             "successor grouped opening must reject a full-prefix commitment whose active prefix agrees but tail differs"
@@ -235,7 +234,7 @@ pub(crate) fn recursive_multi_group_round_trip_on<BaseCfg>(
     }
 
     let reject_stage3_tamper = |tampered_proof: Vec<u8>, label: &str| {
-        let result = recursive_scheme
+        let result = scheme
             .verifier(verifier_setup.clone())
             .and_then(|verifier| {
                 verifier.batched_verify(
@@ -274,7 +273,7 @@ pub(crate) fn recursive_multi_group_round_trip_on<BaseCfg>(
 
     let mut tampered = final_openings;
     tampered[0] += F::from_u128_reduced(1);
-    let tampered_result = recursive_scheme
+    let tampered_result = scheme
         .verifier(verifier_setup.clone())
         .and_then(|verifier| {
             verifier.batched_verify(

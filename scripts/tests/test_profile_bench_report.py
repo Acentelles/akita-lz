@@ -2196,42 +2196,72 @@ const PROFILE_ALL_MODES: &[ProfileMode] = &[
         with self.assertRaises(ValueError):
             configured_cases(args)
 
-    def test_nv36_direct_renders_immediately_before_recursive(self) -> None:
-        from scripts.profile_bench_report import (
-            human_case_label,
-            normalize_case_summary,
-            report_case_sort_key,
-        )
+    def test_legacy_policy_baselines_collapse_deterministically(self) -> None:
+        from scripts.profile_bench_report import load_optional_case_summaries
 
         cases = [
-            normalize_case_summary(
-                {
-                    "mode": "onehot_fp128",
-                    "num_vars": 36,
-                    "num_polys": 1,
-                    "setup_contribution_mode": "direct",
-                    "benchmark_shard": "3-fp128-base",
-                }
-            ),
-            normalize_case_summary(
-                {
-                    "mode": "onehot_fp128",
-                    "num_vars": 36,
-                    "num_polys": 1,
-                    "setup_contribution_mode": "recursive",
-                    "benchmark_shard": "3-fp128-base",
-                }
-            ),
+            {"mode": "onehot_fp128", "num_vars": 36, "num_polys": 1,
+             "setup_contribution_mode": mode, "verify_total_s": timing}
+            for mode, timing in [("direct", 2.0), ("recursive", 1.0)]
         ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "summary.json"
+            for ordered in (cases, list(reversed(cases))):
+                path.write_text(json.dumps({"cases": ordered}), encoding="utf-8")
+                indexed = load_optional_case_summaries(directory)
+                self.assertEqual(len(indexed), 1)
+                baseline = next(iter(indexed.values()))
+                self.assertEqual(baseline["setup_contribution_mode"], "direct")
+                self.assertEqual(baseline["verify_total_s"], 2.0)
+            path.write_text(json.dumps({"cases": [cases[0], cases[0]]}), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "ambiguous duplicate"):
+                load_optional_case_summaries(directory)
 
-        ordered = sorted(cases, key=report_case_sort_key)
-        self.assertEqual(
-            [human_case_label(case) for case in ordered],
-            [
-                "Fp128 one-hot nv36",
-                "Fp128 one-hot nv36",
-            ],
+    def test_runtime_schedule_without_offload_count_is_accepted(self) -> None:
+        from scripts.profile_bench_report import extract_summary
+        summary = extract_summary(
+            'INFO runtime schedule label="onehot_fp128" fold_levels=3',
+            mode="onehot_fp128", num_vars=36, num_polys=1,
         )
+        self.assertNotIn("selected_offload_edges", summary)
+
+    def test_legacy_mode_alias_supports_merge_base_smoke_and_measurement(self) -> None:
+        from unittest import mock
+        from scripts import profile_bench_merge_base_policy as policy
+        from scripts import profile_bench_report as report
+        current = "onehot_fp128_multi_group_multi_chunk_w8r2"
+        legacy = policy.LEGACY_PROFILE_MODES[current]
+        case = policy.BenchCase(current, 32, 2)
+        with mock.patch.object(policy, "merge_base_profile_modes", return_value={legacy}):
+            self.assertEqual(policy.missing_modes_for_cases("base", [case]), [])
+        observed_modes = []
+        def run(command, **kwargs):
+            mode = kwargs["env"]["AKITA_MODE"]
+            observed_modes.append(mode)
+            if mode == current:
+                return subprocess.CompletedProcess(command, 1, "Unknown AKITA_MODE", "")
+            return subprocess.CompletedProcess(command, 0,
+                f'INFO runtime schedule label="{legacy}" selected_offload_edges=1', "")
+        with mock.patch.object(policy.subprocess, "run", side_effect=run):
+            self.assertEqual(policy.smoke_profile_case(pathlib.Path("profile"), case), (True, ""))
+        self.assertEqual(observed_modes, [current, legacy])
+        observed_modes.clear()
+        with tempfile.TemporaryDirectory() as directory, \
+             mock.patch.object(report.subprocess, "run", side_effect=run), \
+             mock.patch.object(report, "missing_required_run_metrics", return_value=[]):
+            summary, code = report.run_benchmark_case("profile", pathlib.Path(directory),
+                report.BenchmarkCaseSpec(current, 32, 2), allow_legacy_relation_mode=True)
+            self.assertEqual(code, 0)
+            self.assertEqual(summary["mode"], current)
+            self.assertEqual(summary["selected_offload_edges"], 1)
+            self.assertEqual(summary["env"]["AKITA_MODE"], legacy)
+        self.assertEqual(observed_modes, [current, legacy])
+
+    def test_renamed_grouped_mode_preserves_baseline_identity(self) -> None:
+        from scripts.profile_bench_report import normalize_case_summary
+        old = normalize_case_summary({"mode": "onehot_fp128_multi_group_recursive_multi_chunk_w8r2", "num_vars": 32, "num_polys": 2})
+        new = normalize_case_summary({"mode": "onehot_fp128_multi_group_multi_chunk_w8r2", "num_vars": 32, "num_polys": 2})
+        self.assertEqual(old["case_id"], new["case_id"])
 
     def test_write_aggregate_summaries_propagates_sibling_failure(self) -> None:
         from scripts.profile_bench_report import (

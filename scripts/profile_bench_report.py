@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 if __package__:
+    from .profile_bench_merge_base_policy import LEGACY_PROFILE_MODES
     from .profile_bench_fold_details import (
         PROOF_LEVEL_BYTE_FIELDS,
         challenge_line,
@@ -48,6 +49,7 @@ if __package__:
         value_with_baseline_delta,
     )
 else:
+    from profile_bench_merge_base_policy import LEGACY_PROFILE_MODES
     from profile_bench_fold_details import (
         PROOF_LEVEL_BYTE_FIELDS,
         challenge_line,
@@ -1031,7 +1033,8 @@ def extract_summary(
         elif "profile extension field" in line and kvs.get("label") == mode:
             summary["ext_degree"] = int(kvs["ext_degree"])
         elif "runtime schedule" in line and kvs.get("label") == mode:
-            summary["selected_offload_edges"] = int(kvs["selected_offload_edges"])
+            if "selected_offload_edges" in kvs:
+                summary["selected_offload_edges"] = int(kvs["selected_offload_edges"])
         elif "profile setup-contribution mode" in line and kvs.get("label") == mode:
             if "setup_contribution_mode" in kvs:
                 summary["setup_contribution_mode"] = normalize_setup_mode(
@@ -1604,6 +1607,11 @@ def run_benchmark_case(
     command = time_command(binary)
     completed = subprocess.run(command, capture_output=True, text=True, env=env)
     combined_log = completed.stdout + completed.stderr
+    legacy_mode = LEGACY_PROFILE_MODES.get(case.mode)
+    if allow_legacy_relation_mode and legacy_mode and "Unknown AKITA_MODE" in combined_log:
+        env["AKITA_MODE"] = legacy_mode
+        completed = subprocess.run(command, capture_output=True, text=True, env=env)
+        combined_log = completed.stdout + completed.stderr
 
     write_text(output_dir / "stdout.log", completed.stdout)
     write_text(output_dir / "stderr.log", completed.stderr)
@@ -1611,7 +1619,7 @@ def run_benchmark_case(
     write_text(output_dir / "command.txt", " ".join(shlex.quote(part) for part in command) + "\n")
 
     summary = extract_summary(
-        combined_log,
+        combined_log.replace(legacy_mode, case.mode) if legacy_mode else combined_log,
         mode=case.mode,
         num_vars=case.num_vars,
         num_polys=case.num_polys,
@@ -2231,6 +2239,8 @@ def normalize_case_summary(summary: dict[str, object]) -> dict[str, object]:
     normalized = dict(summary)
     allow_legacy_relation_mode = int(normalized.get("schema_version", 0)) < 9
     mode = str(normalized["mode"])
+    mode = next((current for current, legacy in LEGACY_PROFILE_MODES.items() if mode == legacy), mode)
+    normalized["mode"] = mode
     num_vars = int(normalized["num_vars"])
     num_polys = int(normalized.get("num_polys", 1))
     setup_mode = str(normalized.get("setup_contribution_mode", "unmeasured"))
@@ -2351,7 +2361,21 @@ def load_optional_case_summaries(dir_path: str) -> dict[str, dict[str, object]] 
     if not summary_path.exists():
         return None
     cases = load_case_summaries(summary_path)
-    return {str(case["case_id"]): case for case in cases}
+    indexed: dict[str, dict[str, object]] = {}
+    for case in cases:
+        key = str(case["case_id"])
+        previous = indexed.get(key)
+        # Historical summaries may contain both policies, whose IDs now collapse.
+        # The default historical baseline was direct; never select it by file order.
+        if previous is not None:
+            modes = {previous.get("setup_contribution_mode"), case.get("setup_contribution_mode")}
+            if modes == {"direct", "recursive"}:
+                if case.get("setup_contribution_mode") == "direct":
+                    indexed[key] = case
+                continue
+            raise ValueError(f"ambiguous duplicate benchmark case after normalization: {key}")
+        indexed[key] = case
+    return indexed
 
 
 def md_text(value: object) -> str:
