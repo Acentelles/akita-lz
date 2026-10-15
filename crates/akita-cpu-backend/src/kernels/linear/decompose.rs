@@ -2,6 +2,7 @@ use super::*;
 use akita_types::DigitBlocks;
 
 /// Decompose a block of ring elements into signed byte digit planes.
+#[cfg(test)]
 pub(crate) fn decompose_block_i8<F: Field + CanonicalEncoding, const D: usize>(
     block: &[CyclotomicRing<F, D>],
     num_digits: usize,
@@ -17,6 +18,7 @@ pub(crate) fn decompose_block_i8<F: Field + CanonicalEncoding, const D: usize>(
 /// # Panics
 ///
 /// Panics if `out.len() != rows.len() * num_digits`.
+#[cfg(test)]
 fn decompose_rows_i8_into<F: Field + CanonicalEncoding, const D: usize>(
     rows: &[CyclotomicRing<F, D>],
     out: &mut [[i8; D]],

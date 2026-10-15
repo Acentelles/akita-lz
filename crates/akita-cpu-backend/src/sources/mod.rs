@@ -1,5 +1,6 @@
 //! Physical polynomial sources, import layouts, and source-specific operations.
 
+pub(crate) mod block_digits;
 pub(crate) mod dense;
 pub(crate) mod flat_blocks;
 pub(crate) mod onehot;
