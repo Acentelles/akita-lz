@@ -54,9 +54,8 @@ latency claim. Do not force every large input to use exactly two offloads.
 The baseline survey at fddf785cf1d6011b508c271d78e69958d1fde4af contains
 584 cells across 60 field/source/chunk combinations: 561 successful results,
 23 planning timeouts, and no admission errors. Sixteen results reuse committed
-catalog rows. Newly generated results have canonical independently audited
-schedule artifacts. See [the full survey](../artifacts/offload-survey/README.md)
-for every tested point, transition bracket, provenance, and reproduction.
+catalog rows. Generated results passed independent catalog admission. The raw
+research records are excluded from the PR; representative observations follow.
 
 All 60 combinations have both zero and positive offload observations; 46 have
 two-offload observations. Small inputs commonly choose zero, but a universal
@@ -84,8 +83,8 @@ dense at 48. fp128 one-hot is non-monotone even at adjacent inputs:
 24:0, 25:1, 26:0, 27:1, 28:0, 29:1, under one policy digest.
 For fp128 one-hot with eight witness chunks over the first two levels, every
 integer nv=16…48 was checked: zero at 16–28, one at 29–34, two at 35–48.
-Other chunk combinations have different observed boundaries; the full report
-lists all 60 rather than extrapolating a single threshold.
+Other chunk combinations have different observed boundaries; these results do
+not establish a single threshold across fields, sources, and layouts.
 
 Planning durations are offline search diagnostics under concurrent load.
 Proof sizes are modeled payload estimates. Neither is a measured verifier
@@ -141,7 +140,7 @@ two offloads changes scope and is explicitly excluded.
 
 Update configuration and setup-offloading Book chapters, profiling usage,
 crate READMEs, live planner specs, and deleted-symbol guards. Commit this design
-record before implementation. Keep the complete baseline survey as evidence,
-with its original provenance; it is not a regenerated runtime catalog.
+record before implementation. Summarize the survey findings without committing
+the raw research records or survey artifacts.
 Prepare a PR description that states the API break, catalog migration,
 unchanged two-offload maximum, exact objective, data, validation, and limits.

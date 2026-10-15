@@ -42,9 +42,8 @@ The leading setup bucket covers every setup object. Within that bucket the
 objective favors a smaller remaining direct scan and then proof/work. Discrete
 geometry changes can make the selected count non-monotone: scalar fp128
 one-hot at nv24…29 selects 0,1,0,1,0,1. No fixed size threshold is imposed.
-The [Book](../../book/src/how/setup-offloading.md) explains the objective and
-the [baseline survey](../../artifacts/offload-survey/README.md) lists all 60
-field/source/chunk combinations with exact tested points and limitations.
+The [Book](../../book/src/how/setup-offloading.md) explains the objective,
+representative observations, and limitations.
 
 The output is an `akita_params::PlannedFoldSchedule`. Its protocol value is a
 typed `FoldSchedule { root, recursive_folds, terminal }`; its non-protocol
@@ -432,33 +431,3 @@ This boundary avoids a circular dependency while keeping a single source of trut
 - `src/bin/gen_schedule_artifacts.rs`: source for the `gen_schedule_artifacts` binary.
 - `src/generated_families.rs`: preset family list and regeneration hooks.
 - `artifacts/schedules/`: tracked external family artifacts.
-
-## Setup-offload boundary survey
-
-`offload_boundary_survey` plans one scalar input with the existing recursive
-objective, admitting zero, one, or two setup offloads at the root and first
-child. It accepts field tier, source kind, witness chunk count, activated levels,
-variable count, and output directory. Each successful result passes independent
-catalog admission and is saved as a canonical `.aks` artifact.
-
-```bash
-rtk cargo build --release -p akita-planner --features catalog-gen \
-  --example offload_boundary_survey
-python3 scripts/survey-offload-boundaries.py \
-  --binary target/release/examples/offload_boundary_survey
-python3 scripts/report-offload-boundaries.py
-```
-
-Results live in `artifacts/offload-survey/`. The TSV and report distinguish
-selected offload counts, planning errors, timeouts, and untested variable counts.
-The default grid covers dense and stock one-hot sources over fp32/fp64/fp128,
-with the unchunked layout and W2/W4/W8 at R1/R2/R3. Additional policy combinations
-are survey catalogs; adding them does not declare new application presets.
-Use `--cells field:source:chunks:levels:nv ...` for adjacent transition probes.
-After the coarse grid, `--refine --max-refinements 200` narrows observed changes,
-prioritizing zero-to-one changes. Equal endpoint counts can hide untested
-islands, so the report lists measured points without interpolation. Use a new
-`--output` directory when the planner source or policy changes; existing records
-are resume caches for the captured baseline. To replay the exact captured cells
-in a fresh directory, pass `--manifest artifacts/offload-survey/results.tsv`
-with a new `--output` path.

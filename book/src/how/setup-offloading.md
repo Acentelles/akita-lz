@@ -196,9 +196,6 @@ attribute every reversal to a specific losing candidate.
 Witness partitioning changes the boundaries. For fp128 one-hot W8R2, every
 integer nv=16…48 was checked: zero at 16–28, one at 29–34, two at 35–48.
 W means witness chunk count; it is distinct from the one-hot density K=256.
-The complete 60-combination table, adjacent transitions, wider brackets,
-timeouts, artifacts, and reproduction manifest are in
-`artifacts/offload-survey/README.md` in the repository.
 
 These are observed schedule choices, not universal thresholds or verifier
 benchmarks. fp64 dense timed out at nv40/48 and fp128 dense at nv48; a timeout
