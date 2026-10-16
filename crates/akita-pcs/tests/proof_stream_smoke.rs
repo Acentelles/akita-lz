@@ -16,7 +16,7 @@ macro_rules! onehot_roundtrip {
         type F = <Cfg as CommitmentConfig>::Field;
         type E = <Cfg as CommitmentConfig>::ExtField;
         const NV: usize = 14;
-        let schedules = akita_config::test_support::workspace_schedule_catalog::<Cfg>().unwrap();
+        let schedules = akita_config::test_support::workspace_schedule_catalog::<Cfg>(akita_params::ChunkedWitnessCfg::default_non_chunked()).unwrap();
         let scheme = AkitaCommitmentScheme::<Cfg>::new(schedules);
         let setup = scheme.setup_prover(NV, 1).unwrap();
         let backend = CpuBackend::new(setup.expanded.clone()).unwrap();
@@ -110,7 +110,7 @@ fn dense_fp128_roundtrip_inner() {
     type Cfg = fp128::Dense;
     type F = <Cfg as CommitmentConfig>::Field;
     const NV: usize = 14;
-    let schedules = akita_config::test_support::workspace_schedule_catalog::<Cfg>().unwrap();
+    let schedules = akita_config::test_support::workspace_schedule_catalog::<Cfg>(akita_params::ChunkedWitnessCfg::default_non_chunked()).unwrap();
     let scheme = AkitaCommitmentScheme::<Cfg>::new(schedules);
     let setup = scheme.setup_prover(NV, 1).unwrap();
     let backend = CpuBackend::new(setup.expanded.clone()).unwrap();

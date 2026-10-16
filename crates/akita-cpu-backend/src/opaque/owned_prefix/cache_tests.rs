@@ -9,7 +9,10 @@ use std::time::Duration;
 fn prefix_id() -> SetupPrefixSlotId {
     type Cfg = fp128::Dense;
     const NV: usize = 14;
-    let catalog = akita_config::test_support::workspace_schedule_catalog::<Cfg>().unwrap();
+    let catalog = akita_config::test_support::workspace_schedule_catalog::<Cfg>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    )
+    .unwrap();
     let row = catalog
         .resolve_key(&akita_params::ScheduleLookupKey::single(
             akita_params::PolynomialGroupLayout::new(NV, 1),

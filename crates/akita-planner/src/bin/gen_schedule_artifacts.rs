@@ -304,7 +304,7 @@ fn validate_materialized_catalog(
     .map_err(|error| format!("build regenerated catalog: {error}"))?
     .to_artifact_bytes()
     .map_err(|error| format!("encode regenerated catalog: {error}"))?;
-    let path = spec.output_dir.join(format!("{}.aks", spec.family_name));
+    let path = spec.output_path.clone();
     let existing = fs::read(&path).map_err(|error| format!("read {}: {error}", path.display()))?;
     let changed_rows = usize::from(existing != regenerated);
     Ok(CatalogComparison {

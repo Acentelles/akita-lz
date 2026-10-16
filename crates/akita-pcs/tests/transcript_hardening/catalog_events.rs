@@ -422,7 +422,7 @@ where
     <Cfg::Field as Unreduced>::Wide: From<Cfg::Field> + jolt_field::AdditiveGroup,
     S: GroupSource<Cfg>,
 {
-    let scheme = load_workspace_scheme::<Cfg>().expect("workspace schedule catalog");
+    let scheme = load_workspace_scheme::<Cfg>(chunking).expect("workspace schedule catalog");
     let family = Cfg::schedule_family_name();
     for row in representative_rows(scheme.schedules()) {
         let profiles = row.profiles();
@@ -464,7 +464,7 @@ where
 fn norm_route_separates_recursive_fp64_dense_rows() {
     let scheme = load_workspace_scheme::<
         akita_config::recursive_commitment::RecursiveCommitmentConfig<fp64::Dense>,
-    >()
+    >(akita_params::ChunkedWitnessCfg::default_non_chunked())
     .expect("workspace schedule catalog");
     let single = |num_vars: usize| {
         scheme

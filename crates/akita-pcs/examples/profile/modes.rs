@@ -77,7 +77,9 @@ fn run_dense_mode_for<FF, const D: usize, Cfg: CommitmentConfig<Field = FF>>(
         + 'static,
     Cfg::ExtField: ExtField<FF> + FpExtEncoding<FF> + Unreduced + Fold + AkitaSerialize + Valid,
 {
-    let scheme = load_workspace_scheme::<Cfg>().expect("workspace schedule artifact");
+    let scheme =
+        load_workspace_scheme::<Cfg>(akita_params::ChunkedWitnessCfg::default_non_chunked())
+            .expect("workspace schedule artifact");
     // The dense profile opens one polynomial at one point, so the schedule key
     // is the singleton root the prover actually resolves via
     // `new_from_opening_batch`.
@@ -95,6 +97,7 @@ fn run_dense_mode_for<FF, const D: usize, Cfg: CommitmentConfig<Field = FF>>(
 }
 
 fn run_onehot_mode_for<FF, const D: usize, Cfg: CommitmentConfig<Field = FF>>(
+    chunking: akita_params::ChunkedWitnessCfg,
     label: &str,
     title: &str,
     nv: usize,
@@ -115,7 +118,7 @@ fn run_onehot_mode_for<FF, const D: usize, Cfg: CommitmentConfig<Field = FF>>(
         + 'static,
     Cfg::ExtField: ExtField<FF> + FpExtEncoding<FF> + Unreduced + Fold + AkitaSerialize + Valid,
 {
-    let scheme = load_workspace_scheme::<Cfg>().expect("workspace schedule artifact");
+    let scheme = load_workspace_scheme::<Cfg>(chunking).expect("workspace schedule artifact");
     tracing::info!("{}", title);
     let group = PolynomialGroupLayout::new(nv, num_polys);
     if num_polys == 1 {
@@ -177,12 +180,13 @@ fn run_onehot_mode_for<FF, const D: usize, Cfg: CommitmentConfig<Field = FF>>(
 }
 
 fn run_onehot_mode<const D: usize, Cfg: CommitmentConfig<Field = F, ExtField = F>>(
+    chunking: akita_params::ChunkedWitnessCfg,
     label: &str,
     title: &str,
     nv: usize,
     num_polys: usize,
 ) {
-    run_onehot_mode_for::<F, D, Cfg>(label, title, nv, num_polys);
+    run_onehot_mode_for::<F, D, Cfg>(chunking, label, title, nv, num_polys);
 }
 
 #[cfg(not(feature = "profile-onehot-fp128"))]
@@ -388,7 +392,9 @@ fn run_profile_dense_fp128(nv: usize, num_polys: usize) {
     assert_singleton_mode("dense_fp128", num_polys);
     let prime = fp128_prime_label();
     let title = format!("=== dense_fp128 (fp128, {prime}, generated per-level dimensions) ===");
-    let scheme = load_workspace_scheme::<Cfg>().expect("workspace schedule artifact");
+    let scheme =
+        load_workspace_scheme::<Cfg>(akita_params::ChunkedWitnessCfg::default_non_chunked())
+            .expect("workspace schedule artifact");
     let root_dimension =
         resolve_layout(scheme.schedules(), PolynomialGroupLayout::singleton(nv)).d_a();
     match root_dimension {
@@ -404,7 +410,8 @@ fn run_profile_dense_fp128_multi_chunk_w8r2(nv: usize, num_polys: usize) {
     assert_eq!(nv, 16, "dense W8R2 profiles nv=16");
     assert_singleton_mode("dense_fp128_multi_chunk_w8r2", num_polys);
     let prime = fp128_prime_label();
-    let scheme = load_workspace_scheme::<Cfg>().expect("workspace schedule artifact");
+    let scheme = load_workspace_scheme::<Cfg>(akita_params::MultiChunkProfileId::W8R2.cfg())
+        .expect("workspace schedule artifact");
     run_dense_mode::<256, Cfg>(
         &scheme,
         "dense_fp128_multi_chunk_w8r2",
@@ -443,7 +450,9 @@ fn run_profile_onehot_fp128_with_cfg<
     );
     assert_singleton_mode(label, num_polys);
 
-    let scheme = load_workspace_scheme::<Cfg>().expect("workspace schedule artifact");
+    let scheme =
+        load_workspace_scheme::<Cfg>(akita_params::ChunkedWitnessCfg::default_non_chunked())
+            .expect("workspace schedule artifact");
     let group = PolynomialGroupLayout::new(nv, 1);
     let schedule = scheme
         .schedules()
@@ -485,6 +494,7 @@ fn run_multi_group_mode<
     Cfg: CommitmentConfig<Field = F, ExtField = F>
         + akita_config::recursive_commitment::RecursiveScheduleConfig,
 >(
+    chunking: akita_params::ChunkedWitnessCfg,
     label: &str,
     layout_note: &str,
     nv: usize,
@@ -501,6 +511,7 @@ fn run_multi_group_mode<
         fp128_prime_label()
     );
     run_recursive_multi_group_onehot::<F, D, Cfg>(
+        chunking,
         label,
         MULTI_GROUP_PRE_NUM_VARS,
         expected_final_nv,
@@ -516,6 +527,7 @@ fn run_profile_onehot_fp128_multi_group(nv: usize, num_polys: usize) {
         "onehot_fp128_multi_group supports direct setup contribution only"
     );
     run_multi_group_mode::<256, Cfg>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
         "onehot_fp128_multi_group",
         "generated per-level dimensions",
         nv,
@@ -527,6 +539,7 @@ fn run_profile_onehot_fp128_multi_group(nv: usize, num_polys: usize) {
 fn run_profile_onehot_fp128_multi_group_recursive(nv: usize, num_polys: usize) {
     type Cfg = fp128::OneHot;
     run_multi_group_mode::<256, Cfg>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
         "onehot_fp128_multi_group_recursive",
         "adaptive ring dimensions + recursive setup",
         nv,
@@ -537,7 +550,7 @@ fn run_profile_onehot_fp128_multi_group_recursive(nv: usize, num_polys: usize) {
 
 fn run_profile_onehot_fp128_multi_group_recursive_multi_chunk_w8r2(nv: usize, num_polys: usize) {
     type Cfg = fp128::OneHotMultiChunk;
-    run_multi_group_mode::<256, Cfg>(
+    run_multi_group_mode::<256, Cfg>(akita_params::MultiChunkProfileId::W8R2.cfg(),
         "onehot_fp128_multi_group_recursive_multi_chunk_w8r2",
         "adaptive ring dimensions + recursive setup offloading + W8R2 chunked witness: num_chunks=8 x 2 leading levels",
         nv,
@@ -562,7 +575,13 @@ fn run_profile_onehot_fp128_multi_chunk_named<
         profile.num_chunks(),
         profile.num_activated_levels(),
     );
-    run_onehot_mode::<D, Cfg>(label, &title, nv, num_polys);
+    run_onehot_mode::<D, Cfg>(
+        akita_params::ChunkedWitnessCfg::from_profile(profile),
+        label,
+        &title,
+        nv,
+        num_polys,
+    );
 }
 
 fn run_profile_onehot_fp128_multi_chunk_w8r2(nv: usize, num_polys: usize) {
@@ -595,7 +614,13 @@ fn run_profile_onehot_fp128_multi_chunk_w4r2(nv: usize, num_polys: usize) {
 fn run_profile_onehot_fp32(nv: usize, num_polys: usize) {
     type Cfg = fp32::OneHot;
     let title = small_field_onehot_title::<fp32::OneHot>("fp32", nv, num_polys);
-    run_onehot_mode_for::<fp32::Field, 256, Cfg>("onehot_fp32", &title, nv, num_polys);
+    run_onehot_mode_for::<fp32::Field, 256, Cfg>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        "onehot_fp32",
+        &title,
+        nv,
+        num_polys,
+    );
 }
 
 fn run_profile_dense_fp32(nv: usize, num_polys: usize) {
@@ -623,7 +648,13 @@ fn run_profile_dense_fp64(nv: usize, num_polys: usize) {
 fn run_profile_onehot_fp64(nv: usize, num_polys: usize) {
     type Cfg = fp64::OneHot;
     let title = small_field_onehot_title::<fp64::OneHot>("fp64", nv, num_polys);
-    run_onehot_mode_for::<fp64::Field, 256, Cfg>("onehot_fp64", &title, nv, num_polys);
+    run_onehot_mode_for::<fp64::Field, 256, Cfg>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        "onehot_fp64",
+        &title,
+        nv,
+        num_polys,
+    );
 }
 
 #[cfg(not(feature = "profile-onehot-fp128"))]

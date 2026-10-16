@@ -176,7 +176,7 @@ fn policy_for_domain(
 fn mixed_domain_search_beats_or_ties_singleton_d64() {
     use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-    let base_policy = policy_of::<OneHot>();
+    let base_policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let dimensions = [
         CommitmentRingDims::uniform(64),
         CommitmentRingDims {
@@ -201,7 +201,8 @@ fn mixed_domain_search_beats_or_ties_singleton_d64() {
         selected.estimate.estimated_proof_payload_bytes().unwrap(),
     );
 
-    let mut singleton_policy = policy_of::<OneHot>();
+    let mut singleton_policy =
+        policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     singleton_policy.ring_dimension_schedule = crate::RingDimensionSchedule {
         num_search_levels: 2,
         suffix_dimensions: &[64],
@@ -257,7 +258,7 @@ fn mixed_domain_search_beats_or_ties_singleton_d64() {
 fn statically_infeasible_multi_chunk_packing_domain_is_unsupported() {
     use akita_config::{policy_of, proof_optimized::fp32::OneHot, CommitmentConfig};
 
-    let mut policy = policy_of::<OneHot>();
+    let mut policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     policy.witness_chunk = akita_params::MultiChunkProfileId::W2R1.cfg();
     policy.ring_dimension_schedule = crate::RingDimensionSchedule {
         num_search_levels: 2,
@@ -297,7 +298,7 @@ fn feasible_packing_dimension_ignores_infeasible_smaller_dimensions() {
         CommitmentRingDims::uniform(256),
     ])
     .unwrap();
-    let mut policy = policy_for_domain(policy_of::<OneHot>(), &dimensions);
+    let mut policy = policy_for_domain(policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked()), &dimensions);
     policy.witness_chunk = akita_params::MultiChunkProfileId::W2R1.cfg();
     policy.selective_l2_response_model = crate::SelectiveL2ResponseModelId::Disabled;
     let admitted_dimensions =
@@ -367,7 +368,7 @@ fn adaptive_initial_ceiling_is_componentwise() {
     const A: &[usize] = &[64, 256, 1024];
     const B: &[usize] = &[64, 128, 256];
     const D: &[usize] = &[64, 128];
-    let mut policy = policy_of::<Dense>();
+    let mut policy = policy_of::<Dense>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     policy.ring_dimension_schedule = crate::RingDimensionSchedule {
         num_search_levels: 2,
         suffix_dimensions: &[64],
@@ -392,7 +393,8 @@ fn production_suffix_selects_l2_with_the_typed_response_model() {
     use akita_config::{policy_of, proof_optimized::fp128, CommitmentConfig};
     use akita_params::InnerCommitSecurityRoute;
 
-    let fp128_policy = policy_of::<fp128::OneHot>();
+    let fp128_policy =
+        policy_of::<fp128::OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let selected = find_schedule(
         onehot_group(40, 1),
         &fp128_policy,
@@ -422,7 +424,10 @@ fn bounded_recursive_setup_search_matches_exhaustive_on_small_fixture() {
     type Recursive = RecursiveCommitmentConfig<OneHot>;
 
     let domain = RingDimensionSearchDomain::new([CommitmentRingDims::uniform(64)]).unwrap();
-    let bounded = policy_for_domain(policy_of::<Recursive>(), &domain);
+    let bounded = policy_for_domain(
+        policy_of::<Recursive>(akita_params::ChunkedWitnessCfg::default_non_chunked()),
+        &domain,
+    );
     assert_eq!(
         bounded.recursive_setup_search_policy,
         crate::RecursiveSetupSearchPolicy::RootAndFirstChildV1
@@ -508,7 +513,8 @@ fn adaptive_frontier_matches_unpruned_traversal_and_hand_priced_role_optima() {
         .zip(expected_root_dimensions)
         .enumerate()
     {
-        let mut base_policy = policy_of::<OneHot>();
+        let mut base_policy =
+            policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
         base_policy.selective_l2_response_model = crate::SelectiveL2ResponseModelId::Disabled;
         let policy = policy_for_domain(base_policy, &domain);
         let key = onehot_group(14, 1);
@@ -569,7 +575,8 @@ fn adaptive_search_parallel_generation_is_descriptor_deterministic() {
     let handles = (0..8)
         .map(|_| {
             std::thread::spawn(|| {
-                let base_policy = policy_of::<OneHot>();
+                let base_policy =
+                    policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
                 let domain = RingDimensionSearchDomain::new([
                     CommitmentRingDims {
                         inner: 128,
@@ -604,7 +611,7 @@ fn adaptive_search_parallel_generation_is_descriptor_deterministic() {
 fn adaptive_search_rejects_an_advertised_unsupported_role_dimension() {
     use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-    let base_policy = policy_of::<OneHot>();
+    let base_policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let d64 = CommitmentRingDims::uniform(64);
     let unsupported_uniform_d512 = CommitmentRingDims::uniform(512);
     let domain =
@@ -625,7 +632,7 @@ fn adaptive_search_rejects_an_advertised_unsupported_role_dimension() {
 fn adaptive_nv36_minimizes_setup_envelope_before_first_direct_setup() {
     use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-    let base_policy = policy_of::<OneHot>();
+    let base_policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let d64 = CommitmentRingDims::uniform(64);
     let d128_mixed = CommitmentRingDims {
         inner: 128,
@@ -650,7 +657,10 @@ fn adaptive_nv36_minimizes_setup_envelope_before_first_direct_setup() {
     .expect("nv36 mixed planner");
     let rank_one_capped_domain = RingDimensionSearchDomain::new([d64, d128_mixed, d128])
         .expect("rank-one-capped comparison domain");
-    let mut comparison_policy = policy_for_domain(policy_of::<OneHot>(), &rank_one_capped_domain);
+    let mut comparison_policy = policy_for_domain(
+        policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked()),
+        &rank_one_capped_domain,
+    );
     comparison_policy.setup_field_budget = None;
     let rank_one_capped = find_schedule(
         onehot_group(36, 1),
@@ -716,7 +726,7 @@ fn adaptive_nv36_minimizes_setup_envelope_before_first_direct_setup() {
 fn adaptive_search_rejects_missing_suffix_and_unsupported_role_dimensions() {
     use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-    let base_policy = policy_of::<OneHot>();
+    let base_policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let missing_d64 = RingDimensionSearchDomain::new([
         CommitmentRingDims::uniform(128),
         CommitmentRingDims {
@@ -770,7 +780,7 @@ fn adaptive_search_supports_direct_multi_chunk_policy() {
         Some(akita_params::MultiChunkProfileId::W4R3),
         Some(akita_params::MultiChunkProfileId::W8R3),
     ] {
-        let mut policy = policy_of::<OneHot>();
+        let mut policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
         policy.witness_chunk = profile.map_or_else(
             akita_params::ChunkedWitnessCfg::default_non_chunked,
             |profile| profile.cfg(),
@@ -844,7 +854,7 @@ fn adaptive_search_supports_direct_multi_chunk_policy() {
 fn adaptive_search_validates_key_and_policy_at_entry() {
     use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-    let base_policy = policy_of::<OneHot>();
+    let base_policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let domain = RingDimensionSearchDomain::new([
         CommitmentRingDims::uniform(64),
         CommitmentRingDims::uniform(256),
@@ -882,7 +892,7 @@ fn adaptive_search_validates_key_and_policy_at_entry() {
 fn adaptive_search_applies_setup_budget_in_physical_fields() {
     use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-    let mut policy = policy_of::<OneHot>();
+    let mut policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let domain = RingDimensionSearchDomain::new([
         CommitmentRingDims::uniform(64),
         CommitmentRingDims {

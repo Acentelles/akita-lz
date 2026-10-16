@@ -229,21 +229,25 @@ fn materialized_entry(
     spec: &EmitSpec,
     request: &PlanningRequest,
 ) -> Result<MaterializedRequestOutcome, String> {
-    let (key, result, reused_preplan) = match request {
-        PlanningRequest::Scalar(key) => {
-            let lookup = ScheduleLookupKey::single(*key);
-            let preplanned = spec
-                .preplanned_scalar
-                .iter()
-                .find(|(preplanned_key, _)| preplanned_key == key);
-            let result =
-                preplanned.map_or_else(|| (spec.regen)(*key), |(_, schedule)| Ok(schedule.clone()));
-            (lookup, result, preplanned.is_some())
-        }
-        PlanningRequest::Grouped(request) => {
-            let key = request.key();
-            (key, (spec.regen_group_batch)(request.clone()), false)
-        }
+    let (key, contracts) = match request {
+        PlanningRequest::Scalar(key) => (ScheduleLookupKey::single(*key), Vec::new()),
+        PlanningRequest::Grouped(request) => (request.key(), request.source_contracts()),
+    };
+    let preplanned = spec
+        .preplanned
+        .iter()
+        .find(|(planned_key, _)| *planned_key == key);
+    let reused_preplan = preplanned.is_some();
+    let result = match preplanned {
+        Some((_, schedule)) => Ok(schedule.clone()),
+        None => crate::find_schedule(
+            &key,
+            spec.source_contract,
+            &contracts,
+            &spec.policy,
+            spec.ring_challenge_config,
+        )
+        .map(|planned| planned.schedule),
     };
     let entry = |schedule| MaterializedEntry {
         request: request.clone(),
@@ -279,18 +283,19 @@ mod tests {
     #[test]
     fn conflicting_contracts_for_one_lookup_geometry_reject_before_planning() {
         let group = PolynomialGroupLayout::singleton(14);
-        let descriptor = akita_config::test_support::workspace_schedule_catalog::<Dense>()
-            .unwrap()
-            .resolve_key(&ScheduleLookupKey::single(group))
-            .unwrap()
-            .profiles()
-            .final_group;
+        let descriptor = akita_config::test_support::workspace_schedule_catalog::<Dense>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        )
+        .unwrap()
+        .resolve_key(&ScheduleLookupKey::single(group))
+        .unwrap()
+        .profiles()
+        .final_group;
         let family = crate::generated_families::ALL_GENERATED_FAMILIES
             .iter()
             .find(|family| family.family_name() == Dense::schedule_family_name())
             .unwrap();
         let mut spec = crate::generated_families::empty_emit_spec(family, PathBuf::new()).unwrap();
-        spec.regen_group_batch = |_| panic!("conflicting contracts must reject before planning");
         spec.grouped_requests = [
             PrecommittedProducer::from_config::<Dense>(descriptor).unwrap(),
             PrecommittedProducer::from_config::<DenseBounded>(descriptor).unwrap(),
@@ -302,5 +307,43 @@ mod tests {
             .err()
             .expect("conflicting producer contracts must reject");
         assert!(error.contains("conflicting producer contracts"));
+    }
+    #[test]
+    fn emitter_plans_with_the_selected_runtime_geometry() {
+        use akita_config::proof_optimized::fp128::OneHot;
+        use akita_params::ChunkedWitnessCfg;
+        let family = crate::generated_families::ALL_GENERATED_FAMILIES
+            .iter()
+            .find(|family| family.family_name() == OneHot::schedule_family_name())
+            .unwrap();
+        let mut spec = crate::generated_families::empty_emit_spec(family, PathBuf::new()).unwrap();
+        let chunking = ChunkedWitnessCfg {
+            num_chunks: 2,
+            num_activated_levels: 4,
+        };
+        spec.policy.witness_chunk = chunking;
+        spec.keys = vec![PolynomialGroupLayout::singleton(17)];
+        let outputs = render_schedule_artifact_outputs_with_validation(
+            &[spec],
+            MaterializationDiagnostics::default(),
+            |_, rows| {
+                assert_eq!(rows.len(), 1);
+                Ok(())
+            },
+        )
+        .unwrap();
+        let catalog = akita_config::TrustedScheduleCatalog::<OneHot>::from_artifact_bytes(
+            outputs[0].body.as_bytes(),
+            chunking,
+        )
+        .unwrap();
+        assert_eq!(catalog.policy().witness_chunk, chunking);
+        assert!(
+            akita_config::TrustedScheduleCatalog::<OneHot>::from_artifact_bytes(
+                outputs[0].body.as_bytes(),
+                ChunkedWitnessCfg::default_non_chunked(),
+            )
+            .is_err()
+        );
     }
 }

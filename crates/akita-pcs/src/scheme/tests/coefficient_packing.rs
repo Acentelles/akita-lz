@@ -15,8 +15,10 @@ type RecursiveEvaluationTraceCfg =
 
 #[test]
 fn synthetic_packing_row_is_derived_from_one_checked_authority() {
-    let catalog = akita_config::test_support::workspace_schedule_catalog::<PackingCfg>()
-        .expect("workspace schedule catalog");
+    let catalog = akita_config::test_support::workspace_schedule_catalog::<PackingCfg>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    )
+    .expect("workspace schedule catalog");
     let key = ScheduleLookupKey {
         final_group: PolynomialGroupLayout::singleton(20),
         precommitteds: Vec::new(),
@@ -98,8 +100,10 @@ fn synthetic_packing_row_is_derived_from_one_checked_authority() {
 
 #[test]
 fn fixed_root_packing_rejects_a_stale_successor_length() {
-    let catalog = akita_config::test_support::workspace_schedule_catalog::<PackingCfg>()
-        .expect("workspace schedule catalog");
+    let catalog = akita_config::test_support::workspace_schedule_catalog::<PackingCfg>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    )
+    .expect("workspace schedule catalog");
     let opening_batch = OpeningClaimsLayout::new(20, 1).unwrap();
     let key = ScheduleLookupKey::single(opening_batch.root_final_group_layout().unwrap());
     let row = PackingCfg::derive_catalog_row(&catalog, &key, 64, 1).unwrap();
@@ -135,7 +139,7 @@ fn packing_round_trip(prefixed_fold_count: usize) {
     std::thread::Builder::new()
         .stack_size(512 * 1024 * 1024)
         .spawn(move || {
-            let catalog = akita_config::test_support::workspace_schedule_catalog::<PackingCfg>()
+            let catalog = akita_config::test_support::workspace_schedule_catalog::<PackingCfg>(akita_params::ChunkedWitnessCfg::default_non_chunked())
                 .expect("workspace schedule catalog");
             let num_vars = 20;
             let opening_batch = OpeningClaimsLayout::new(num_vars, 1).unwrap();
@@ -145,10 +149,17 @@ fn packing_round_trip(prefixed_fold_count: usize) {
             let schedules = akita_config::ValidatedScheduleCatalog::try_new(
                 PackingCfg::schedule_family_name(),
                 [(row.profiles().clone(), row.schedule().clone())],
-                &akita_config::policy_of::<PackingCfg>(),
+                &akita_config::policy_of::<PackingCfg>(
+                    akita_params::ChunkedWitnessCfg::default_non_chunked(),
+                ),
                 PackingCfg::ring_challenge_config,
             )
-            .and_then(akita_config::TrustedScheduleCatalog::<PackingCfg>::new)
+            .and_then(|catalog| {
+                akita_config::TrustedScheduleCatalog::<PackingCfg>::new(
+                    catalog,
+                    akita_params::ChunkedWitnessCfg::default_non_chunked(),
+                )
+            })
             .expect("packing schedule catalog");
             let scheme = PackingScheme::new(schedules);
             let root = &row.schedule().root.params;
@@ -324,7 +335,7 @@ fn packing_round_trip(prefixed_fold_count: usize) {
                             let error = akita_config::ResolvedScheduleRow::try_new(
                                 row.0,
                                 row.1,
-                                &akita_config::policy_of::<$config>(),
+                                catalog.policy(),
                             )
                             .expect_err(concat!(
                                 $context,

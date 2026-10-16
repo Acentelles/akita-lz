@@ -96,13 +96,13 @@ where
     ) -> Result<akita_config::ResolvedScheduleRow, AkitaError> {
         let (policy, ring_challenge_config) = if key.precommitteds.is_empty() {
             (
-                policy_of::<Envelope>(),
+                policy_of::<Envelope>(akita_params::ChunkedWitnessCfg::default_non_chunked()),
                 Envelope::ring_challenge_config
                     as fn(usize) -> Result<SparseChallengeConfig, AkitaError>,
             )
         } else {
             (
-                policy_of::<Final>(),
+                policy_of::<Final>(akita_params::ChunkedWitnessCfg::default_non_chunked()),
                 Final::ring_challenge_config
                     as fn(usize) -> Result<SparseChallengeConfig, AkitaError>,
             )
@@ -124,6 +124,6 @@ where
             )?,
             precommitteds: key.precommitteds.clone(),
         };
-        akita_config::ResolvedScheduleRow::try_new(profiles, schedule, &policy_of::<Self>())
+        akita_config::ResolvedScheduleRow::try_new(profiles, schedule, &policy_of::<Self>(akita_params::ChunkedWitnessCfg::default_non_chunked()))
     }
 }
