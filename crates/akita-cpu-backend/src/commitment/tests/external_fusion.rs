@@ -286,7 +286,7 @@ fn fused_external_encoder_appends_without_ordinary_submission() {
     let sources: [&dyn CommitmentSource<F>; 1] = [&source];
 
     let output = executor
-        .execute_uncompressed_stages(&plan, &sources)
+        .execute_uncompressed_stages(&plan, &sources, None)
         .unwrap();
     assert_eq!(
         output.u().ring_dim(),

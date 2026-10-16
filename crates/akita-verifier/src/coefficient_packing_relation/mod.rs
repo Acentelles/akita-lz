@@ -1,7 +1,7 @@
 //! Compact coefficient-packing relation semantics for the Stage 2 verifier.
 //!
-//! The prover expands each validated packing group into relation events and
-//! Stage 2 terms (`akita_types::prepare_coefficient_packing_batch_semantics`).
+//! The prover prepares compact Stage 2 semantics; CPU consumers explicitly
+//! expand validated packing groups into relation events.
 //! The verifier builds compact tensor factors from the same validated groups
 //! and evaluates them at the Stage 2 final point.
 
@@ -22,8 +22,8 @@ fn prepare_coefficient_packing_verifier_group<F, E>(
     validated: &ValidatedCoefficientPackingGroup<'_, '_, F, E>,
 ) -> Result<CoefficientPackingVerifierGroupSemantics<E>, AkitaError>
 where
-    F: Field,
-    E: Field,
+    F: Field + CanonicalEncoding,
+    E: ExtField<F>,
 {
     let compact_factors = compact::prepare_compact_factors(validated)?;
     Ok(CoefficientPackingVerifierGroupSemantics {

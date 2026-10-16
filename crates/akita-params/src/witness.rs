@@ -366,6 +366,23 @@ impl WitnessQuotientRowLayout {
         Self { geometry, range }
     }
 
+    /// Physical witness address of one quotient digit's coordinate.
+    pub fn coefficient_index(
+        &self,
+        quotient_digit: usize,
+        coordinate_plane: usize,
+        modulus_coefficient: usize,
+    ) -> Result<usize, AkitaError> {
+        let physical_coefficient = self
+            .geometry
+            .physical_coefficient_index(coordinate_plane, modulus_coefficient)?;
+        let local = quotient_digit
+            .checked_mul(self.geometry.physical_coefficient_width())
+            .and_then(|base| base.checked_add(physical_coefficient))
+            .ok_or_else(|| AkitaError::InvalidSetup("witness R index overflow".into()))?;
+        checked_range_index(&self.range, local, "witness R")
+    }
+
     #[must_use]
     pub const fn geometry(&self) -> RelationRowGeometry {
         self.geometry
@@ -961,14 +978,7 @@ impl WitnessLayout {
                 "witness R semantic index out of range".into(),
             ));
         }
-        let physical_coefficient = row
-            .geometry
-            .physical_coefficient_index(coordinate_plane, modulus_coefficient)?;
-        let local = quotient_digit
-            .checked_mul(row.geometry.physical_coefficient_width())
-            .and_then(|base| base.checked_add(physical_coefficient))
-            .ok_or_else(|| AkitaError::InvalidSetup("witness R index overflow".into()))?;
-        checked_range_index(&row.range, local, "witness R")
+        row.coefficient_index(quotient_digit, coordinate_plane, modulus_coefficient)
     }
 }
 

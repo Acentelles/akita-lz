@@ -32,7 +32,7 @@ orchestration lives in `akita-pcs`.
 | `akita-labinius-prover` (`dev`) | Opt-in LaBinius extension: binary source commitment, lowered root witness, and the root reduction prover |
 | `akita-labinius-pcs` (`dev`) | Opt-in LaBinius extension: a polynomial commitment for a binary source that discharges the root reduction's claims with a nested Akita proof; ships its own schedule catalogs |
 
-**Dependency graph and ownership rules:** [`docs/crate-graph.md`](../../../docs/crate-graph.md).
+**Dependency graph and ownership rules:** [`docs/crate-graph.md`](https://github.com/LayerZero-Labs/akita/blob/main/docs/crate-graph.md).
 CI enforces one-way boundaries via `scripts/check-crate-deps.sh`.
 The LaBinius prover crate depends on its verifier crate, never the reverse.
 The LaBinius PCS crate depends on both and on `akita-pcs`.
@@ -192,7 +192,10 @@ only at dispatch; all arithmetic kernels keep their associated handle types.
 ## Backend routing
 
 Backend routing is always available through `batched_prove`; it requires no
-Cargo feature. A fold reduces a private witness to a smaller successor witness.
+Cargo feature. A nonterminal fold reduces the current claims to an opening of
+a successor witness. The complete successor witness need not be smaller than
+its input.
+
 Before preparing any executor, a caller-defined policy resolves the owner of
 every fold. Each producer commits its successor once. On a switch, the source
 exports a typed packet, a registered bridge converts it, and the destination

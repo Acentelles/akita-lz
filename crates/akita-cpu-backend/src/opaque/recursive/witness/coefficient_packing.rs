@@ -1,11 +1,11 @@
 use super::{RecursiveWitnessFlat, SuffixWitnessBatchView};
-use crate::arithmetic::coefficient_packing::{
-    coefficient_packing_partials_from_position_source, FusedPackingWeights,
-};
+use crate::arithmetic::coefficient_packing::FusedPackingWeights;
 use crate::opaque::{
     CpuBackend, SubringCoefficientPackingBatchKernel, SubringCoefficientPackingPartials,
     SubringCoefficientPackingPlan,
 };
+use crate::sources::block_digits::PackedDigits;
+use crate::sources::dense::seam_packing_partials;
 use akita_error::AkitaError;
 use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced};
 
@@ -25,25 +25,14 @@ where
             actual: view.live_ring_elems,
         });
     }
-    let coordinates = coefficient_packing_partials_from_position_source::<F, E, _, D>(
-        fused_weights,
+    let coordinates = seam_packing_partials::<F, E, _, D>(
+        &PackedDigits {
+            digits: view.digits,
+            num_rings: view.live_ring_elems,
+        },
+        view.live_coeff_len,
         view.num_vars(),
-        |position| {
-            view.ring_elem(position).ok_or_else(|| {
-                AkitaError::Internal(
-                    "coefficient packing witness position is missing from the validated view"
-                        .into(),
-                )
-            })
-        },
-        |position, coefficient_index, source| {
-            let flat_index = position * D + coefficient_index;
-            if flat_index < view.live_coeff_len {
-                F::from_i8(source[coefficient_index])
-            } else {
-                F::zero()
-            }
-        },
+        fused_weights,
     )?;
     SubringCoefficientPackingPartials::new(point.geometry(), point.num_live_blocks(), coordinates)
 }
