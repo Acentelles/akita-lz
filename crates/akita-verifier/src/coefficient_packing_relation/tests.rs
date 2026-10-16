@@ -7,8 +7,8 @@ use akita_params::{BasisMode, SisModulusProfileId};
 use akita_types::{
     coefficient_packing_fixture, coefficient_packing_multigroup_fixture,
     coefficient_packing_relation_events, prepare_coefficient_packing_batch_semantics,
-    validate_coefficient_packing_batch_groups, CoefficientPackingFixture,
-    CoefficientPackingGroupSemantics, PreparedSubringCoefficientPackingPoint, RelationWeightEvent,
+    CoefficientPackingFixture, CoefficientPackingGroupSemantics,
+    PreparedSubringCoefficientPackingPoint, RelationWeightEvent,
 };
 use jolt_field::{
     Ext2, FpExt4, One, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59, Ring, Zero,
@@ -212,14 +212,15 @@ where
             .unwrap()
             .groups()[0]
             .clone();
-    let events = validate_coefficient_packing_batch_groups(
-        &batch_inputs(fixture, &points, alpha),
-        |group| coefficient_packing_relation_events(&group),
-    )
-    .unwrap()
-    .concat();
     let expanded =
         prepare_coefficient_packing_batch_semantics(batch_inputs(fixture, &points, alpha)).unwrap();
+    let events = expanded
+        .groups()
+        .iter()
+        .map(coefficient_packing_relation_events::<Base, Extension>)
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap()
+        .concat();
     let semantics = &expanded.groups()[0];
     let padded_len = semantics.physical_field_len().next_power_of_two();
     let point = (0..padded_len.trailing_zeros())
@@ -482,12 +483,14 @@ fn multi_group_compact_factors_follow_relation_group_order() {
         claim_coefficients: &fixture.claim_coefficients,
     };
     let compact_batch = prepare_coefficient_packing_verifier_batch_semantics(inputs()).unwrap();
-    let events = validate_coefficient_packing_batch_groups(&inputs(), |group| {
-        coefficient_packing_relation_events(&group)
-    })
-    .unwrap()
-    .concat();
     let expanded = prepare_coefficient_packing_batch_semantics(inputs()).unwrap();
+    let events = expanded
+        .groups()
+        .iter()
+        .map(coefficient_packing_relation_events::<F, E>)
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap()
+        .concat();
     assert_eq!(
         compact_batch
             .groups()

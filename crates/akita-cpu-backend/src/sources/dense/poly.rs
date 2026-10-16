@@ -1,7 +1,6 @@
 //! Dense polynomial storage and constructors.
 
-use crate::kernels::linear::try_centered_i8;
-use crate::sources::poly_helpers::{try_small_i8_cache_from_ring_coeffs, SignedDigitBasis};
+use crate::sources::poly_helpers::SignedDigitBasis;
 use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
 use akita_algebra::CyclotomicRing;
 use akita_error::{checked, AkitaError};
@@ -50,9 +49,6 @@ pub struct DensePoly<F: Field> {
     /// Flat field coefficients in sequential block order (untagged compact
     /// [`RingVec`]; see [`MIN_FLAT_COEFF_LEN`] for the physical padding).
     coeffs: RingVec<F>,
-    /// Flat centered-`i8` mirror of `coeffs` (same physical length and
-    /// padding), present only when every live coefficient is small.
-    pub(super) small_i8_coeffs: Option<Vec<i8>>,
     digit_cache: OnceLock<DenseDigitCache>,
 }
 
@@ -61,7 +57,6 @@ impl<F: Field + Clone> Clone for DensePoly<F> {
         Self {
             num_vars: self.num_vars,
             coeffs: self.coeffs.clone(),
-            small_i8_coeffs: self.small_i8_coeffs.clone(),
             digit_cache: OnceLock::new(),
         }
     }
@@ -69,9 +64,7 @@ impl<F: Field + Clone> Clone for DensePoly<F> {
 
 impl<F: Field + PartialEq> PartialEq for DensePoly<F> {
     fn eq(&self, other: &Self) -> bool {
-        self.num_vars == other.num_vars
-            && self.coeffs == other.coeffs
-            && self.small_i8_coeffs == other.small_i8_coeffs
+        self.num_vars == other.num_vars && self.coeffs == other.coeffs
     }
 }
 
@@ -97,19 +90,6 @@ impl<F: Field> DensePoly<F> {
     /// Full physical (zero-padded) flat coefficient buffer.
     pub fn field_coeffs(&self) -> &[F] {
         self.coeffs.coeffs()
-    }
-
-    pub(crate) fn cached_digit_parts(
-        &self,
-        ring_dimension: usize,
-        num_digits: usize,
-        log_basis: u32,
-    ) -> Option<&[i8]> {
-        let cache = self.digit_cache.get()?;
-        (cache.ring_d == ring_dimension
-            && cache.num_digits == num_digits
-            && cache.log_basis == log_basis)
-            .then_some(cache.planes.as_slice())
     }
 
     /// Ring-element count viewed at dimension `ring_d`.
@@ -148,15 +128,6 @@ impl<F: Field> DensePoly<F> {
         })?;
         Ok(as_ring_view::<F, D>(live))
     }
-
-    /// Live small-i8 mirror viewed as per-ring coefficient planes at `D`.
-    pub(super) fn small_i8_ring_coeffs<const D: usize>(&self) -> Option<&[[i8; D]]> {
-        let flat = self.small_i8_coeffs.as_deref()?;
-        let needed = self.num_ring_elems_at(D).checked_mul(D)?;
-        let (chunks, remainder) = flat.get(..needed)?.as_chunks::<D>();
-        debug_assert!(remainder.is_empty());
-        Some(chunks)
-    }
 }
 
 impl<F: Field + CanonicalEncoding> DensePoly<F> {
@@ -189,28 +160,6 @@ impl<F: Field + CanonicalEncoding> DensePoly<F> {
 
         let physical_len = expected_len.max(MIN_FLAT_COEFF_LEN);
 
-        // Padding zeros are centered-0 (trivially small-i8), so a poly whose
-        // live coefficients are all small stays all-small — identical to the
-        // old per-ring check over the zero-padded last ring.
-        let q = (-F::one())
-            .to_u128_checked()
-            .ok_or_else(|| AkitaError::InvalidInput("field modulus does not fit u128".into()))?
-            + 1;
-        let half_q = q / 2;
-        let mut small_i8_coeffs = Vec::with_capacity(physical_len);
-        let mut all_small_i8 = true;
-        for coeff in evals.iter() {
-            if let Some(centered) = try_centered_i8(*coeff, q, half_q) {
-                small_i8_coeffs.push(centered);
-            } else {
-                all_small_i8 = false;
-                break;
-            }
-        }
-        if all_small_i8 {
-            small_i8_coeffs.resize(physical_len, 0);
-        }
-
         // Reuse an owned evaluation vector. Borrowed inputs pay the same
         // single copy as before, while profile and application builders can
         // transfer large buffers without doubling their resident memory.
@@ -220,7 +169,6 @@ impl<F: Field + CanonicalEncoding> DensePoly<F> {
         Ok(Self {
             num_vars,
             coeffs: RingVec::from_coeffs(coeffs),
-            small_i8_coeffs: all_small_i8.then_some(small_i8_coeffs),
             digit_cache: OnceLock::new(),
         })
     }
@@ -247,14 +195,6 @@ impl<F: Field + CanonicalEncoding> DensePoly<F> {
         }
         let physical_len = total.max(MIN_FLAT_COEFF_LEN);
 
-        let small_i8_coeffs = try_small_i8_cache_from_ring_coeffs(&coeffs).map(|planes| {
-            let mut flat = Vec::with_capacity(physical_len);
-            for plane in &planes {
-                flat.extend_from_slice(plane);
-            }
-            flat.resize(physical_len, 0i8);
-            flat
-        });
         let mut flat = Vec::with_capacity(physical_len);
         for ring in &coeffs {
             flat.extend_from_slice(ring.coefficients());
@@ -264,7 +204,6 @@ impl<F: Field + CanonicalEncoding> DensePoly<F> {
         Ok(Self {
             num_vars: total.trailing_zeros() as usize,
             coeffs: RingVec::from_coeffs(flat),
-            small_i8_coeffs,
             digit_cache: OnceLock::new(),
         })
     }
