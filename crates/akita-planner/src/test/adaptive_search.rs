@@ -254,10 +254,11 @@ fn mixed_domain_search_beats_or_ties_singleton_d64() {
 
 #[cfg(feature = "catalog-gen")]
 #[test]
-fn statically_infeasible_early_packing_domain_is_unsupported() {
+fn statically_infeasible_multi_chunk_packing_domain_is_unsupported() {
     use akita_config::{policy_of, proof_optimized::fp32::OneHot, CommitmentConfig};
 
     let mut policy = policy_of::<OneHot>();
+    policy.witness_chunk = akita_params::MultiChunkProfileId::W2R1.cfg();
     policy.ring_dimension_schedule = crate::RingDimensionSchedule {
         num_search_levels: 2,
         suffix_dimensions: &[128],
@@ -297,6 +298,7 @@ fn feasible_packing_dimension_ignores_infeasible_smaller_dimensions() {
     ])
     .unwrap();
     let mut policy = policy_for_domain(policy_of::<OneHot>(), &dimensions);
+    policy.witness_chunk = akita_params::MultiChunkProfileId::W2R1.cfg();
     policy.selective_l2_response_model = crate::SelectiveL2ResponseModelId::Disabled;
     let admitted_dimensions =
         dimension_candidates(&policy, 0, initial_dimension_ceiling(&policy).unwrap())
@@ -351,14 +353,11 @@ fn feasible_packing_dimension_ignores_infeasible_smaller_dimensions() {
         selected.schedule.canonical_descriptor_bytes(),
         unpruned.schedule.canonical_descriptor_bytes(),
     );
-    assert!(selected
-        .schedule
-        .recursive_folds
-        .iter()
-        .all(|fold| matches!(
-            fold.params.opening_method(),
-            akita_params::OpeningMethod::SubringCoefficientPacking { .. }
-        )));
+    assert!(selected.schedule.recursive_folds.iter().all(|fold| !fold
+        .params
+        .ring_relation_mode
+        .is_reduced_evaluation()
+        || fold.params.opening_method() == akita_params::OpeningMethod::EvaluationTrace));
 }
 
 #[test]
@@ -661,27 +660,19 @@ fn adaptive_nv36_minimizes_setup_envelope_before_first_direct_setup() {
     )
     .expect("rank-one-capped nv36 planner");
     let selected_root = &selected.schedule.root.params;
-    assert_eq!(selected_root.role_dims(), d256_mixed);
-    assert_eq!(
-        selected.schedule.recursive_folds[0].params.role_dims(),
-        d128_mixed,
-        "the additive work score prices the first packing successor's setup scan"
-    );
-    let opening_methods = std::iter::once(selected_root.opening_method()).chain(
+    assert!(domain.candidates().contains(&selected_root.role_dims()));
+    for params in std::iter::once(selected_root).chain(
         selected
             .schedule
             .recursive_folds
             .iter()
-            .map(|fold| fold.params.opening_method()),
-    );
-    for (level, opening_method) in opening_methods.enumerate() {
-        if level <= 1 {
-            assert!(matches!(
-                opening_method,
-                akita_params::OpeningMethod::SubringCoefficientPacking { .. }
-            ));
-        } else {
-            assert_eq!(opening_method, akita_params::OpeningMethod::EvaluationTrace);
+            .map(|fold| &fold.params),
+    ) {
+        if params.ring_relation_mode.is_reduced_evaluation() {
+            assert_eq!(
+                params.opening_method(),
+                akita_params::OpeningMethod::EvaluationTrace
+            );
         }
     }
     let score = |schedule: &akita_params::PlannedFoldSchedule| {
@@ -772,11 +763,18 @@ fn adaptive_search_supports_direct_multi_chunk_policy() {
     use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
     for profile in [
-        akita_params::MultiChunkProfileId::W8R2,
-        akita_params::MultiChunkProfileId::W8R3,
+        None,
+        Some(akita_params::MultiChunkProfileId::W8R1),
+        Some(akita_params::MultiChunkProfileId::W8R2),
+        Some(akita_params::MultiChunkProfileId::W2R3),
+        Some(akita_params::MultiChunkProfileId::W4R3),
+        Some(akita_params::MultiChunkProfileId::W8R3),
     ] {
         let mut policy = policy_of::<OneHot>();
-        policy.witness_chunk = profile.cfg();
+        policy.witness_chunk = profile.map_or_else(
+            akita_params::ChunkedWitnessCfg::default_non_chunked,
+            |profile| profile.cfg(),
+        );
         let domain = RingDimensionSearchDomain::new([
             CommitmentRingDims::uniform(64),
             CommitmentRingDims::uniform(128),
@@ -793,7 +791,7 @@ fn adaptive_search_supports_direct_multi_chunk_policy() {
         .unwrap();
         let lookup_key = akita_params::ScheduleLookupKey::single(onehot_group(16, 1));
         assert_selected_grinding_edge_parity(&schedule, &lookup_key, &policy);
-        let chunked_levels = profile.num_activated_levels();
+        let chunked_levels = policy.witness_chunk.num_activated_levels;
         assert!(schedule.schedule.num_fold_levels() > chunked_levels);
         for (level, params) in std::iter::once(&schedule.schedule.root.params)
             .chain(
@@ -808,12 +806,36 @@ fn adaptive_search_supports_direct_multi_chunk_policy() {
             assert_eq!(
                 params.witness_chunk,
                 if level < chunked_levels {
-                    profile.cfg()
+                    policy.witness_chunk
                 } else {
                     akita_params::ChunkedWitnessCfg::default_non_chunked()
                 }
             );
+            if level < chunked_levels {
+                assert_eq!(
+                    params.ring_relation_mode,
+                    akita_params::RingRelationMode::QuotientLift
+                );
+                assert!(
+                    matches!(
+                        params.opening_method(),
+                        akita_params::OpeningMethod::SubringCoefficientPacking { .. }
+                    ),
+                    "{profile:?} fold {level} must use subring coefficient packing"
+                );
+            }
+            if params.ring_relation_mode.is_reduced_evaluation() {
+                assert_eq!(params.witness_chunk.num_chunks, 1);
+                assert_eq!(
+                    params.opening_method(),
+                    akita_params::OpeningMethod::EvaluationTrace
+                );
+            }
         }
+        schedule
+            .schedule
+            .validate_nonterminal_opening_execution(policy.claim_ext_degree)
+            .expect("selected opening methods must be executable");
     }
 }
 

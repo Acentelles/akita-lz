@@ -26,7 +26,6 @@ fn root_candidate_classes<Cfg: CommitmentConfig>(
         crate::schedule_params::initial_dimension_ceiling(&policy)?,
     )? {
         for opening in PlannerOpeningCandidate::coefficient_packing_domain(
-            0,
             policy.claim_ext_degree,
             dimensions,
         )? {
@@ -176,7 +175,6 @@ fn valid_small_grouped_root_has_a_schedule() {
         opening: 64,
     };
     let producer_opening = PlannerOpeningCandidate::coefficient_packing(
-        0,
         policy.claim_ext_degree,
         producer_dimensions,
         64,

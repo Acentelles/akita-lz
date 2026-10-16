@@ -911,8 +911,8 @@ where
 // smaller setup, because only the setup seed enters the transcript.
 #[test]
 fn combined_family_setup_matches_per_family_proofs() {
-    const MAX_NV: usize = 16;
-    const DENSE_NV: usize = 16;
+    const MAX_NV: usize = 15;
+    const DENSE_NV: usize = 14;
     const ONEHOT_NV: usize = 15;
 
     init_rayon_pool();

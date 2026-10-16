@@ -298,7 +298,7 @@ fn recursive_packing_candidate_uses_exact_geometry_and_linf_route() {
         opening: 64,
     };
     let opening =
-        PlannerOpeningCandidate::coefficient_packing(1, policy.claim_ext_degree, dimensions, 64)
+        PlannerOpeningCandidate::coefficient_packing(policy.claim_ext_degree, dimensions, 64)
             .expect("valid packing request")
             .expect("packing geometry");
     let request = RecursiveCandidateRequest {
@@ -457,14 +457,10 @@ fn packing_split_bounds_preserve_the_exhaustive_candidate_frontier() {
         ),
     ];
     for (policy, dimensions, log_basis) in cases {
-        let opening = PlannerOpeningCandidate::coefficient_packing(
-            1,
-            policy.claim_ext_degree,
-            dimensions,
-            64,
-        )
-        .expect("valid packing request")
-        .expect("production packing geometry");
+        let opening =
+            PlannerOpeningCandidate::coefficient_packing(policy.claim_ext_degree, dimensions, 64)
+                .expect("valid packing request")
+                .expect("production packing geometry");
         let derive = |without_bounds| {
             let request = RecursiveCandidateRequest {
                 input_chunks: None,
@@ -523,7 +519,7 @@ fn root_packing_candidates_use_adversarial_linf_and_exact_d_width() {
         opening: 64,
     };
     let opening =
-        PlannerOpeningCandidate::coefficient_packing(0, policy.claim_ext_degree, dimensions, 64)
+        PlannerOpeningCandidate::coefficient_packing(policy.claim_ext_degree, dimensions, 64)
             .unwrap()
             .unwrap();
     let key = ScheduleLookupKey::single(PolynomialGroupLayout::new(16, 2));
@@ -624,7 +620,7 @@ fn root_packing_candidates_use_adversarial_linf_and_exact_d_width() {
         precommitteds: vec![frozen_group],
     };
     let precommit_opening =
-        PlannerOpeningCandidate::coefficient_packing(0, policy.claim_ext_degree, dimensions, 128)
+        PlannerOpeningCandidate::coefficient_packing(policy.claim_ext_degree, dimensions, 128)
             .unwrap()
             .unwrap();
     let source_contract = Dense::committed_source_contract().unwrap();
@@ -721,7 +717,6 @@ fn root_packing_candidates_use_adversarial_linf_and_exact_d_width() {
     );
 
     let precommit_domain = PlannerOpeningCandidate::coefficient_packing_domain(
-        0,
         policy.claim_ext_degree,
         CommitmentRingDims {
             inner: frozen_group.inner.matrix.ring_dimension(),
@@ -937,7 +932,7 @@ fn guided_root_slice_survives_grouped_local_pruning() {
         opening: 64,
     };
     let opening =
-        PlannerOpeningCandidate::coefficient_packing(0, policy.claim_ext_degree, dimensions, 64)
+        PlannerOpeningCandidate::coefficient_packing(policy.claim_ext_degree, dimensions, 64)
             .expect("valid final packing opening")
             .expect("final packing geometry");
     let scalar_key = ScheduleLookupKey::single(PolynomialGroupLayout::new(24, 2));
@@ -963,7 +958,7 @@ fn guided_root_slice_survives_grouped_local_pruning() {
         precommitteds: vec![frozen],
     };
     let precommit_opening =
-        PlannerOpeningCandidate::coefficient_packing(0, policy.claim_ext_degree, dimensions, 128)
+        PlannerOpeningCandidate::coefficient_packing(policy.claim_ext_degree, dimensions, 128)
             .expect("valid precommit packing opening")
             .expect("precommit packing geometry");
     let derive = |guide| {
@@ -1079,11 +1074,11 @@ fn setup_prefix_cache_separates_equal_width_opening_methods() {
     let challenge = SparseChallengeConfig::production_for_ring_dim(128).unwrap();
     let trace = PlannerOpeningCandidate::evaluation_trace(challenge);
     let exact_packing =
-        PlannerOpeningCandidate::coefficient_packing(1, policy.claim_ext_degree, dimensions, 128)
+        PlannerOpeningCandidate::coefficient_packing(policy.claim_ext_degree, dimensions, 128)
             .unwrap()
             .unwrap();
     let reduced_packing =
-        PlannerOpeningCandidate::coefficient_packing(1, policy.claim_ext_degree, dimensions, 64)
+        PlannerOpeningCandidate::coefficient_packing(policy.claim_ext_degree, dimensions, 64)
             .unwrap()
             .unwrap();
     let mut cache = SetupPrefixSearchCache::default();

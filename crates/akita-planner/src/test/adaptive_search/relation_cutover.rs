@@ -49,10 +49,7 @@ fn bounded_suffix_dp_matches_unpruned_fixed_cutover_search() {
         .iter()
         .position(|mode| mode.is_reduced_evaluation())
         .expect("the fixture must select a nonempty reduced suffix");
-    assert!(
-        cutover > 0,
-        "the fixture must retain a nonempty quotient prefix"
-    );
+    assert!(cutover >= 2);
     assert!(relation_modes[..cutover]
         .iter()
         .all(|mode| *mode == akita_params::RingRelationMode::QuotientLift));
