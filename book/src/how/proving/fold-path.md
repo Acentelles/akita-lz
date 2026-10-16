@@ -8,7 +8,7 @@ opening method for each nonterminal fold.
 | `SubringCoefficientPacking` | Required for nonterminal folds at absolute levels 0 and 1 | omitted |
 | `EvaluationTrace` | Later nonterminal folds and the terminal path | required only when the claim field is a proper extension |
 
-See [base-field coefficients vs extension evaluation points](../../foundations/rings-and-fields.md#base-field-coefficients-vs-extension-evaluation-points).
+See [Coefficients and evaluation points have different roles](../../foundations/rings-and-fields.md#coefficients-and-evaluation-points-have-different-roles).
 For the packing path, read the three obligations in order: the [direct scalar
 opening](./field-ring-reduction.md#subring-coefficient-packing-shorter-partials),
 the [source/fold consistency
@@ -46,6 +46,16 @@ Every group consumed by one fold uses the same method family. Packing groups
 may use different challenge subring dimensions. A setup prefix inherits the
 method selected by the fold that consumes it. The commitment itself does not
 record that method.
+
+For coefficient packing, ring-switch finalization prepares one compact batch
+of checked group semantics. The batch retains shared sparse challenges, alpha
+powers, row weights, gadgets, and witness addresses. It supplies both the
+Stage 2 opening terms and the CPU relation events. The CPU calls
+`coefficient_packing_relation_events` on those groups when it needs expanded
+weights; shared preparation does not evaluate the challenges or allocate events.
+This keeps both consumers tied to the same fold inputs while allowing other
+backends to consume the compact batch directly. The verifier evaluates its
+challenges once per group when building compact factors.
 
 ## Implementation map
 
