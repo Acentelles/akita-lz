@@ -403,6 +403,7 @@ impl SuffixTopology {
 
     pub(crate) fn relation_domain(
         self,
+        absolute_level: usize,
         witness_chunk: akita_params::ChunkedWitnessCfg,
         opening: akita_params::OpeningMethod,
         diagnostics: Option<&crate::diagnostics::PlannerDiagnostics>,
@@ -413,6 +414,7 @@ impl SuffixTopology {
         };
         RelationSearchDomain::for_topology(
             relation_phase,
+            absolute_level,
             witness_chunk,
             RelationCandidateTopology::new(consumes_setup_prefix, opening),
             diagnostics,

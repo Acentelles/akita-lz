@@ -11,16 +11,21 @@ fn set_valid_setup_prefix(params: &mut CommittedGroupParams, natural_len: usize)
 }
 
 #[test]
-fn single_chunk_root_and_level_one_admit_reduced_evaluation() {
-    for cutover in [0, 1] {
+fn single_chunk_root_and_level_one_reject_reduced_evaluation() {
+    for level in [0, 1] {
         let mut schedule = recursive_schedule(64, 64, false);
-        if cutover == 0 {
-            schedule.root.params.ring_relation_mode = RingRelationMode::ReducedEvaluation;
-        }
-        schedule.recursive_folds[0].params.ring_relation_mode = RingRelationMode::ReducedEvaluation;
-        schedule
+        let params = if level == 0 {
+            &mut schedule.root.params
+        } else {
+            &mut schedule.recursive_folds[0].params
+        };
+        params.ring_relation_mode = RingRelationMode::ReducedEvaluation;
+        let error = schedule
             .validate_structure()
-            .expect("single-chunk early reduced suffix is eligible");
+            .expect_err("the first two folds require quotient lift even without chunking");
+        assert!(error
+            .to_string()
+            .contains(&format!("level {level} ring relation mode")));
     }
 }
 

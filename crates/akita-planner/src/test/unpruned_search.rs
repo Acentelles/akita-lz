@@ -193,16 +193,13 @@ pub(super) fn find_schedule(
                     continue;
                 }
                 let mut root_openings = Vec::new();
-                if !akita_params::fold_requires_coefficient_packing(
-                    policy.chunks_at_level(0),
-                    policy.claim_ext_degree,
-                    true,
-                ) && try_extension_opening_reduction_level_bytes(
-                    policy.challenge_field_bits()?,
-                    policy.claim_ext_degree,
-                    key,
-                )?
-                .is_some()
+                if !akita_params::fold_requires_coefficient_packing(policy.chunks_at_level(0), 0)
+                    && try_extension_opening_reduction_level_bytes(
+                        policy.challenge_field_bits()?,
+                        policy.claim_ext_degree,
+                        key,
+                    )?
+                    .is_some()
                 {
                     root_openings.extend(
                         ring_challenge_config(root_dimensions.d_a())

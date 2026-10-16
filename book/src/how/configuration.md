@@ -146,12 +146,11 @@ witnesses. The choice is independent of raw versus compressed payload and of
 the `L∞` versus `L2` response-security route.
 
 The currently admitted reduced mode is deliberately narrower than its
-algebraic definition. The first `num_activated_levels` multi-chunk folds require
-quotient lift. At single-chunk folds, including a base-field root and level 1,
-the planner may choose one monotone reduced-evaluation suffix, but only for
-`EvaluationTrace` openings with direct setup contribution. Extension-field roots
-retain packing because their commitments bind canonical coefficients. A reduced fold
-cannot consume an incoming setup prefix, defer the A/B/D setup product to Stage
+algebraic definition. The first two folds and every multi-chunk fold require
+subring packing and quotient lift. At later single-chunk folds, the planner may choose one monotone
+reduced-evaluation suffix, but only for `EvaluationTrace` openings with direct setup contribution. Extension-field roots
+retain packing because their commitments bind canonical coefficients. A reduced
+fold cannot consume an incoming setup prefix, defer the A/B/D setup product to Stage
 3, or switch back to quotient lifting later. These are product-scope admission
 rules, not claims that the excluded combinations are mathematically
 impossible. Runtime schedule validation checks them before proving or
@@ -295,15 +294,13 @@ prefer the smaller root output witness before the canonical descriptor breaks
 the final tie. This allows a larger A ring to win when its lower module rank
 reduces the complete setup or proof suffix.
 
-Chunking requires coefficient packing at the first `num_activated_levels` folds.
-A three-level multi-chunk profile uses packing at levels 0, 1, and 2, with the
-configured suffix ring dimensions at level 2.
-A multi-chunk state with no complete packing assignment is unsupported.
-Single-chunk nonterminal folds may choose coefficient packing or evaluation
-trace wherever their source encoding supports it. Base-field roots may choose
-either method when chunking is disabled. Extension-field roots always use
-packing: their canonical commitments cannot be reinterpreted as the tensor
-projection required by extension-field evaluation trace. The terminal uses evaluation
+The first two committed folds require coefficient packing and quotient lift,
+regardless of chunking. Every later multi-chunk fold has the same requirement.
+A three-level multi-chunk profile therefore uses packing at levels 0, 1, and 2,
+with the configured suffix ring dimensions at level 2. A mandatory packing state
+with no complete packing assignment is unsupported. Single-chunk nonterminal
+folds at level 2 or later may choose coefficient packing or evaluation trace
+where their source encoding supports it. The terminal uses evaluation
 trace. Its seed is priced separately, so a zero EOR packing candidate cannot
 be mistaken for a terminal opening.
 

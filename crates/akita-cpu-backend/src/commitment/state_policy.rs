@@ -814,15 +814,14 @@ where
         plan: &CompressionChainPlan,
         relation_mode: RingRelationMode,
     ) -> Result<PortableCompressionState<F>, AkitaError> {
-        self.validate_outer_compression_mode(plan, relation_mode)?;
         match relation_mode {
             RingRelationMode::QuotientLift => PortableCompressionState::quotient_lift(
                 self.outer_compression_witness(plan)?,
                 self.outer_compression_quotients(plan)?,
             ),
-            RingRelationMode::ReducedEvaluation => {
-                PortableCompressionState::reduced_evaluation(self.outer_compression_witness(plan)?)
-            }
+            RingRelationMode::ReducedEvaluation => PortableCompressionState::reduced_evaluation(
+                self.reduced_outer_compression_witness(plan)?,
+            ),
         }
     }
 }

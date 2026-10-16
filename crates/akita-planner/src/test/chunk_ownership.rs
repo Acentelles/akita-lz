@@ -78,9 +78,7 @@ impl IncomingWidthFixture {
             policy: &policy,
             input_chunks: Some(*shape),
             payload_mode: akita_params::CommitmentPayloadMode::Compressed,
-            opening: PlannerOpeningCandidate::evaluation_trace(
-                OneHot::ring_challenge_config(64).unwrap(),
-            ),
+            opening,
             dimensions,
             current_witness_len: witness_len,
             source: crate::InnerBasisSource::BalancedDigits { log_basis: 2 },

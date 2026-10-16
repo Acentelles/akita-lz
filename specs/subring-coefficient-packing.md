@@ -181,7 +181,7 @@ coefficient permutations or alternative subring embeddings.
 ### Protocol boundary
 
 There is one subring coefficient packing opening method. This implementation
-requires it at every multi-chunk nonterminal fold and permits it at single-chunk
+requires it at folds 0 and 1 and every multi-chunk nonterminal fold and permits it at later single-chunk
 folds. Its partial digits become part
 of the ordinary flat witness committed for the next fold. The descriptor MUST
 bind `k`, `s`, and the extension coordinate order.
@@ -1220,17 +1220,16 @@ for a coefficient-packing fold.
 
 ### Level policy
 
-The policy applies to every field profile. Chunking requires packing at
-`num_activated_levels` nonterminal folds, without a minimum two-fold prefix.
-Independently, extension-field roots retain packing over canonical coefficients.
+The policy applies to every field profile. Folds 0 and 1 require packing and
+quotient lift regardless of chunking. Every later multi-chunk fold also requires
+packing and quotient lift.
 
-1. Every multi-chunk nonterminal fold enumerates complete subring packing
-   assignments across every group and admissible dimension.
-2. Single-chunk nonterminal folds may choose either opening method where the
-   source encoding supports it, including base-field roots and level 1.
-   Extension-field roots require packing. The planner may select reduced
-   evaluation at a direct single-chunk fold with `EvaluationTrace`; packing
-   requires quotient lift.
+1. The first two folds and every multi-chunk nonterminal fold enumerate complete
+   subring packing assignments across every group and admissible dimension.
+2. Single-chunk nonterminal folds at level 2 or later may choose either opening
+   method where the source encoding supports it. The planner may select reduced
+   evaluation at a direct single-chunk fold in that suffix with `EvaluationTrace`;
+   packing requires quotient lift.
 3. The terminal uses `EvaluationTrace` and Hachi, with EOR where it applies.
 4. The planner does not add a fold to reach a minimum packing depth.
 5. If a multi-chunk level has no statically feasible packing assignment, the
@@ -1245,8 +1244,8 @@ coefficient packing geometry per original root group.
 
 A setup prefix is another precommitted group at the fold that consumes it. It
 uses that consuming fold's selected opening method. A multi-chunk consumer
-requires `SubringCoefficientPacking`; a single-chunk consumer may use either
-method.
+requires `SubringCoefficientPacking`, as do consumers at folds 0 and 1; a later
+single-chunk consumer may use either method.
 
 ### Independent challenge subring and A ring dimensions
 
@@ -1379,8 +1378,8 @@ The planner MUST keep the search bounded in the following ways.
 3. Use the fixed audited list of `s` values.
 4. Apply geometry, challenge entropy, dispatcher support, and divisibility
    admission before rank lookup.
-5. Require subring packing at every multi-chunk fold. Search both opening
-   methods at single-chunk folds without a minimum level restriction.
+5. Require subring packing at folds 0 and 1 and every multi-chunk fold. Search
+   both opening methods at single-chunk folds at level 2 or later.
 6. Apply B slicing only after A and `t_hat` geometry is known.
 7. Keep the existing deterministic frontier and memo state objective.
 8. Keep the current equal-role suffix after the adaptive prefix.
@@ -1429,7 +1428,8 @@ The planner MUST keep the search bounded in the following ways.
 - Split subring and embedded challenge evaluations in ring switch preparation.
 - Replace the trace specific Stage 2 term with the coefficient packing opening
   term at levels 0 and 1.
-- Use the selected opening path at single-chunk folds and `EvaluationTrace` at the terminal.
+- Use the selected opening path at single-chunk folds at level 2 or later and
+  `EvaluationTrace` at the terminal.
 - Preserve current cyclic/negacyclic A setup caches.
 
 ### `akita-verifier`

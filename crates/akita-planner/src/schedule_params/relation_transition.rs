@@ -129,6 +129,7 @@ impl RelationSearchDomain {
     /// Enumerate the complete legal transition domain for one fold topology.
     pub(crate) fn for_topology(
         phase: RingRelationPhase,
+        absolute_level: usize,
         witness_chunk: akita_params::ChunkedWitnessCfg,
         topology: RelationCandidateTopology,
         diagnostics: Option<&crate::diagnostics::PlannerDiagnostics>,
@@ -153,7 +154,7 @@ impl RelationSearchDomain {
                 }
             }
         }
-        let domain = match phase.candidate_modes(witness_chunk, topology) {
+        let domain = match phase.candidate_modes(absolute_level, witness_chunk, topology) {
             [RingRelationMode::QuotientLift, RingRelationMode::ReducedEvaluation] => Self::QuotientAndReduced,
             [RingRelationMode::QuotientLift] => Self::QuotientOnly,
             [RingRelationMode::ReducedEvaluation] => Self::ReducedOnly,

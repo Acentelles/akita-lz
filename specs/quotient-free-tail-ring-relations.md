@@ -60,30 +60,31 @@ The production feature is a one-way tail cutover, not a freely selectable bit
 at every level:
 
 ```text
-multi-chunk prefix        single-chunk committed folds                 terminal
-QuotientLift ...          QuotientLift ... ReducedEvaluation suffix    clear/direct
-                         ^ earliest eligible cutover; possibly the root
+folds 0/1 + multi-chunk prefix   later single-chunk committed folds          terminal
+QuotientLift ...                QuotientLift ... ReducedEvaluation suffix   clear/direct
+                               ^ earliest eligible cutover: level 2 or later
 ```
 
-The cutover is eligible only when the current fold is single-chunk, after
-any `num_activated_levels` multi-chunk folds. A single-chunk base-field root
-or level-1 fold is eligible. Extension-field roots retain packing over canonical
-coefficients. The selected fold and every later committed fold MUST consume no
-incoming setup prefix and MUST create no setup prefix for a successor. The terminal already verifies a
+The cutover is eligible only at level 2 or later, when the current fold is
+single-chunk. Folds 0 and 1 and every multi-chunk fold require coefficient
+packing and quotient lift. The selected fold and every later committed fold MUST
+consume no incoming setup prefix and MUST create no setup prefix for a successor.
+The terminal already verifies a
 clear response without carrying a recursive relation quotient, so it does not
 store this mode.
 
 This scope has four consequences.
 
-1. Multi-chunk folds never use reduced evaluation. Single-chunk folds,
-   including a base-field root and level 1, may begin the reduced-evaluation suffix.
+1. Folds 0 and 1 and every multi-chunk fold never use reduced evaluation.
+   Later single-chunk folds may begin the reduced-evaluation suffix.
 2. Reduced evaluation composes with evaluation trace, raw or compressed
    commitment payloads, Linf or selective L2 security, mixed role dimensions,
    witness chunking, and extension-opening reduction (EOR).
 3. It does not compose with an incoming setup prefix or Stage 3 in this
    feature. The rank-two reduced-evaluation Stage-3 construction remains
    valid future work, but is outside this tail scope.
-4. Subring coefficient packing is required at every multi-chunk fold.
+4. Subring coefficient packing is required at folds 0 and 1 and every
+   multi-chunk fold.
    Reduced evaluation starts only in the single-chunk evaluation-trace suffix
    and needs no packing-specific implementation.
 
@@ -96,7 +97,7 @@ This scope has four consequences.
 | Schedule enum | `RingRelationMode::{QuotientLift, ReducedEvaluation}` |
 | Selection granularity | One mode per nonterminal fold |
 | Search shape | At most one monotone cutover per complete schedule |
-| Earliest cutover | First eligible single-chunk fold, possibly a base-field root |
+| Earliest cutover | First eligible single-chunk fold at level 2 or later |
 | Setup-prefix eligibility | No incoming prefix at the cutover or later; no later offload edge |
 | Opening method in the supported suffix | `OpeningMethod::EvaluationTrace` |
 | Ordinary quotient rows | Omitted in `ReducedEvaluation` |
@@ -146,8 +147,8 @@ search.
 
 #### Tail eligibility
 
-- `FoldSchedule` MUST reject `ReducedEvaluation` at every multi-chunk fold,
-  including the root. Single-chunk base-field roots and level-1 folds are eligible.
+- `FoldSchedule` MUST reject `ReducedEvaluation` at folds 0 and 1 and every
+  multi-chunk fold. Only single-chunk folds at level 2 or later are eligible.
 - A `ReducedEvaluation` fold MUST have
   `FoldParams::incoming_setup_prefix().is_none()`.
 - Once a schedule enters `ReducedEvaluation`, every later nonterminal fold MUST
@@ -631,7 +632,7 @@ replacement for the planner’s other choices.
 | Existing axis | Reduced-evaluation suffix | Rule |
 |---|---|---|
 | `EvaluationTrace` | Supported | Required in this feature |
-| `SubringCoefficientPacking` | Forbidden | Reduced evaluation requires evaluation trace; packing remains available at single-chunk folds and required at multi-chunk folds |
+| `SubringCoefficientPacking` | Forbidden | Reduced evaluation requires evaluation trace; packing is required at folds 0 and 1 and every multi-chunk fold |
 | Linf A security | Supported | Relation mode does not change the SIS security route |
 | Selective L2 A security | Supported | The physical Z norm proof is unchanged; source moments omit R |
 | Compressed payload | Supported | F/H digits remain; all ordinary and compression quotient digits disappear |
@@ -698,11 +699,10 @@ L2 = FoldSchedule::recursive_folds[1]
 T  = FoldSchedule::terminal
 ```
 
-`ReducedEvaluation` is valid only at single-chunk folds using direct
-`EvaluationTrace` with no incoming setup prefix or outgoing Stage-3 edge.
-Absolute level does not determine eligibility: a single-chunk base-field root
-or L1 fold may begin the suffix, while every multi-chunk fold is ineligible.
-Extension-field roots remain on coefficient packing over canonical coefficients.
+`ReducedEvaluation` is valid only at single-chunk folds at level 2 or later,
+using direct `EvaluationTrace` with no incoming setup prefix or outgoing Stage-3
+edge. Folds 0 and 1 require coefficient packing and quotient lift even when
+single-chunk; every later multi-chunk fold has the same requirement.
 
 ### Setup-prefix direction
 
@@ -741,13 +741,13 @@ Transitions are:
 QuotientPrefix --QuotientLift--> QuotientPrefix
 
 QuotientPrefix --ReducedEvaluation--> ReducedEvaluationSuffix
-    only if the current fold is single-chunk
+    only if level >= 2 and the current fold is single-chunk
     and incoming_setup_prefix is None
     and opening method is EvaluationTrace
     and a setup-direct child edge is selected
 
 ReducedEvaluationSuffix --ReducedEvaluation--> ReducedEvaluationSuffix
-    only if the current fold is single-chunk
+    only if level >= 2 and the current fold is single-chunk
     and incoming_setup_prefix is None
     and opening method is EvaluationTrace
     only through setup-direct child edges
@@ -809,6 +809,6 @@ That record is operational context and is not normative.
 - [`selective-l2-fold-security-sizing.md`](selective-l2-fold-security-sizing.md),
   independent Linf/L2 route selection and typed source moments.
 - [`subring-coefficient-packing.md`](subring-coefficient-packing.md), current
-  chunk-dependent packing policy and single-chunk opening choices.
+  mandatory two-fold packing prefix, multi-chunk packing, and later single-chunk opening choices.
 - [`specs/SPEC_REVIEW.md`](SPEC_REVIEW.md), required review rubric before
   implementation approval.

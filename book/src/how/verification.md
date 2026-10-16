@@ -131,10 +131,9 @@ and feed the same next-witness opening into the successor. There is no
 proof-controlled mode bit or fallback path.
 
 Schedule validation admits reduced evaluation only as a monotone single-chunk
-suffix after the `num_activated_levels` multi-chunk folds, with
-evaluation-trace openings and direct setup contribution. A single-chunk
-base-field root or level-1 fold may begin that suffix. Extension-field roots
-retain coefficient packing. The reduced suffix rejects packing, incoming setup
+suffix after the first two folds and all multi-chunk folds, with
+evaluation-trace openings and direct setup contribution. Folds 0 and 1 require
+coefficient packing and quotient lift even when single-chunk. The reduced suffix rejects packing, incoming setup
 prefixes, deferred Stage 3, and any later return to quotient lifting before
 transcript replay. Raw versus compressed payload and `L∞` versus `L2` response security
 remain independent choices within that admitted suffix.

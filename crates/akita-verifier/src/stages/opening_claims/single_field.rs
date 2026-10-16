@@ -8,12 +8,12 @@ use akita_serialization::AkitaSerialize;
 use akita_types::{prepare_opening_point, FpExtEncoding, OpeningClaims, PreparedOpeningPoint};
 use jolt_field::{CanonicalEncoding, ExtField, Field, Ring};
 
-/// Prepare each single-field opening group without EOR.
-pub(crate) fn prepare_single_field_groups<F, E, C>(
-    block_claims: &OpeningClaims<'_, E, C>,
+/// Recursive-suffix single-field preparation: per-group `prepare_opening_point`
+/// over the suffix opening groups, no EOR.
+pub(crate) fn prepare_single_field_suffix_groups<F, E>(
+    block_claims: &OpeningClaims<'_, E>,
     lp: &CommittedGroupParams,
     opening_batch: &OpeningClaimsLayout,
-    basis: BasisMode,
 ) -> Result<Vec<PreparedOpeningPoint<F, E>>, AkitaError>
 where
     F: Field + CanonicalEncoding + akita_serialization::AkitaSerialize,
@@ -44,7 +44,7 @@ where
                 };
                 if !point_width_is_valid {
                     return Err(AkitaError::InvalidInput(format!(
-                        "group point width mismatch: group={group_index}, \
+                        "suffix group point width mismatch: group={group_index}, \
                          groups={}, setup_prefix={}, target_len={target_len}, actual_len={}",
                         opening_batch.num_groups(),
                         lp.setup_prefix().is_some(),
@@ -53,7 +53,7 @@ where
                 }
                 prepare_opening_point::<F, E, D>(
                     group_protocol_point,
-                    basis,
+                    BasisMode::Lagrange,
                     group_lp.num_positions_per_block(),
                     group_lp.num_live_blocks(),
                     group_alpha_bits,

@@ -49,27 +49,33 @@ fn relation_transition_authority_is_monotone_and_part_of_the_memo_identity() {
     let direct_trace = super::RelationCandidateTopology::DirectEvaluationTrace;
     let single_chunk = akita_params::ChunkedWitnessCfg::default_non_chunked();
     assert_eq!(
-        prefix.candidate_modes(single_chunk, direct_trace),
+        prefix.candidate_modes(2, single_chunk, direct_trace),
         &[QuotientLift, ReducedEvaluation]
     );
     assert_eq!(
-        prefix.candidate_modes(akita_params::MultiChunkProfileId::W8R3.cfg(), direct_trace,),
+        prefix.candidate_modes(
+            2,
+            akita_params::MultiChunkProfileId::W8R3.cfg(),
+            direct_trace,
+        ),
         &[QuotientLift]
     );
     assert_eq!(
         prefix.candidate_modes(
+            2,
             single_chunk,
             super::RelationCandidateTopology::DirectCoefficientPacking,
         ),
         &[QuotientLift]
     );
     assert_eq!(
-        reduced.candidate_modes(single_chunk, direct_trace),
+        reduced.candidate_modes(2, single_chunk, direct_trace),
         &[ReducedEvaluation]
     );
     assert_eq!(prefix.after(ReducedEvaluation), reduced);
     assert!(reduced
         .candidate_modes(
+            2,
             single_chunk,
             super::RelationCandidateTopology::SetupPrefixedEvaluationTrace
         )
@@ -422,7 +428,7 @@ fn restricted_search_recovers_pruned_query_tradeoff() {
     let state = super::SuffixState {
         input_chunks: None,
         level: 1,
-        current_witness_len: 2_097_152,
+        current_witness_len: 215_104,
         current_lb: 3,
         source_moment: None,
         dimension_ceiling: akita_params::CommitmentRingDims::uniform(256),
@@ -456,16 +462,11 @@ fn restricted_search_recovers_pruned_query_tradeoff() {
     let find = |target| {
         candidates
             .iter()
-            .find(|candidate| {
-                candidate.next_witness_len == 405_504
-                    && candidate.params.ring_relation_mode
-                        == akita_params::RingRelationMode::ReducedEvaluation
-                    && coords(candidate) == target
-            })
+            .find(|candidate| candidate.next_witness_len == 201_856 && coords(candidate) == target)
             .unwrap()
     };
-    let high_query = find([262_144, 262_144, 32, 256, 256, 688]);
-    let low_query = find([524_288, 524_288, 32, 256, 256, 688]);
+    let high_query = find([65_536, 65_536, 32, 256, 256, 0]);
+    let low_query = find([524_288, 327_680, 32, 256, 256, 0]);
     let child_state = super::SuffixState {
         input_chunks: None,
         level: 2,

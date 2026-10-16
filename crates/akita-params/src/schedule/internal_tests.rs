@@ -55,7 +55,7 @@ fn rejects_evaluation_trace_at_the_third_multi_chunk_fold() {
     }];
     for level in [0, 1] {
         validate_level_opening_execution(level, 1, 1, &groups)
-            .expect("single-chunk early folds admit evaluation trace");
+            .expect_err("the first two folds require packing even without chunking");
     }
     validate_level_opening_execution(2, 1, 1, &groups)
         .expect("the single-chunk suffix uses evaluation trace");
@@ -74,15 +74,9 @@ fn rejects_evaluation_trace_at_the_third_multi_chunk_fold() {
 }
 
 #[test]
-fn packing_requirement_preserves_canonical_extension_roots() {
-    for degree in [1, 2, 4] {
-        assert_eq!(
-            fold_requires_coefficient_packing(1, degree, true),
-            degree > 1
-        );
-        assert!(!fold_requires_coefficient_packing(1, degree, false));
-        for is_root in [false, true] {
-            assert!(fold_requires_coefficient_packing(8, degree, is_root));
-        }
+fn packing_requirement_covers_the_first_two_folds_and_all_multi_chunk_folds() {
+    for level in 0..5 {
+        assert_eq!(fold_requires_coefficient_packing(1, level), level < 2);
+        assert!(fold_requires_coefficient_packing(8, level));
     }
 }

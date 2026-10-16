@@ -105,6 +105,7 @@ fn visit_fold_opening(
     for &payload_mode in state.payload_phase.candidate_modes(state.level, false) {
         for relation_transition in relation::transitions(
             state.relation_state,
+            state.level,
             crate::policy::witness_chunk_at_level(policy, state.level),
         ) {
             if fold_opening.opening.is_coefficient_packing()
@@ -226,8 +227,7 @@ pub(super) fn visit_suffixes(
             let mut fold_work = Vec::new();
             if !akita_params::fold_requires_coefficient_packing(
                 ctx.policy.chunks_at_level(state.level),
-                ctx.policy.claim_ext_degree,
-                false,
+                state.level,
             ) {
                 fold_work.extend(trace_work);
             }

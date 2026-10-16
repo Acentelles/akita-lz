@@ -2,7 +2,7 @@ use super::terminal::verify_terminal_suffix;
 use super::{verify_fold, NextWitnessPlan, PreparedFoldReplay, SetupPrefixOpening};
 use crate::prepared_cache::TerminalNttCache;
 use crate::stages::opening_claims::{
-    finalize_claims, prepare_single_field_groups, verify_coefficient_packing_suffix_prefix,
+    finalize_claims, prepare_single_field_suffix_groups, verify_coefficient_packing_suffix_prefix,
     verify_extension_claim_suffix_prefix, FoldClaimMaterial, PreparedFoldOpeningPoint,
 };
 use akita_error::AkitaError;
@@ -152,12 +152,8 @@ where
             level,
         )?
     } else if const { <E as ExtField<F>>::DEGREE == 1 } {
-        let prepared = prepare_single_field_groups::<F, E, _>(
-            &block_claims,
-            lp,
-            &opening_batch,
-            current_state.basis,
-        )?;
+        let prepared =
+            prepare_single_field_suffix_groups::<F, E>(&block_claims, lp, &opening_batch)?;
         for (group_index, point) in group_points.iter().enumerate() {
             akita_transcript::public_extensions::<F, E, _>(
                 grinding.state_mut(),

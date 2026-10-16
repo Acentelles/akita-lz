@@ -178,8 +178,7 @@ fn opening_work_domain(
     let policy = ctx.policy;
     let packing_required = akita_params::fold_requires_coefficient_packing(
         policy.chunks_at_level(state.level),
-        policy.claim_ext_degree,
-        root_level_key.is_some(),
+        state.level,
     );
     let terminal_seed_is_relevant = state_allows_terminal_seed(
         root_level_key.is_some(),
@@ -631,6 +630,7 @@ impl<'a> CandidateDomain<'a> {
                     let relation_domain = state
                         .topology
                         .relation_domain(
+                            state.level,
                             crate::policy::witness_chunk_at_level(ctx.policy, state.level),
                             work.opening.method(),
                             ctx.diagnostics,
@@ -747,6 +747,7 @@ impl<'a> CandidateDomain<'a> {
             let relation_domain = state
                 .topology
                 .relation_domain(
+                    state.level,
                     crate::policy::witness_chunk_at_level(ctx.policy, state.level),
                     work.opening.method(),
                     ctx.diagnostics,
@@ -823,7 +824,7 @@ mod tests {
     }
 
     #[test]
-    fn single_chunk_opening_domain_keeps_both_methods_until_reduced_cutover() {
+    fn opening_domain_requires_packing_prefix_then_keeps_both_methods_until_cutover() {
         use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
         let policy = policy_of::<OneHot>();
@@ -871,10 +872,12 @@ mod tests {
                     key.final_group,
                 )
                 .unwrap();
-                assert!(work
-                    .iter()
-                    .any(|work| !work.opening.is_coefficient_packing()
-                        && work.purpose != OpeningPurpose::TerminalOnly));
+                assert_eq!(
+                    work.iter()
+                        .any(|work| !work.opening.is_coefficient_packing()
+                            && work.purpose != OpeningPurpose::TerminalOnly),
+                    level >= 2
+                );
                 assert_eq!(
                     work.iter()
                         .any(|work| work.opening.is_coefficient_packing()),

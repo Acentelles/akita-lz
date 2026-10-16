@@ -186,6 +186,20 @@ impl<F: Field> PortableCommitmentHandle<F> {
         CompressionChainWitness::new(plan.clone(), stages)
     }
 
+    /// Rebuild a reduced-mode compression witness and reject any retained
+    /// polynomial-modulus quotient images.
+    pub(crate) fn reduced_outer_compression_witness(
+        &self,
+        plan: &CompressionChainPlan,
+    ) -> Result<CompressionChainWitness, AkitaError> {
+        if !self.outer_compression_quotients.is_empty() {
+            return Err(AkitaError::InvalidInput(
+                "reduced commitment hint must not retain compression quotient rows".into(),
+            ));
+        }
+        self.outer_compression_witness(plan)
+    }
+
     /// Recover the retained quotient rows under the derived compression plan.
     pub(crate) fn outer_compression_quotients(
         &self,
@@ -231,25 +245,29 @@ impl<F: Field> PortableCommitmentHandle<F> {
         for (bytes, map) in self.outer_compression_stages.iter().zip(plan.maps()) {
             PackedNegativeBinary::validate_bytes(*map, bytes)?;
         }
-        // Reusable root commitments may retain quotient-lift caches even when
-        // the consuming schedule selects reduced evaluation. Validate any cache
-        // present; reduced material consumption omits it from the witness.
-        if relation_mode == RingRelationMode::QuotientLift
-            || !self.outer_compression_quotients.is_empty()
-        {
-            if self.outer_compression_quotients.len() != plan.maps().len() {
-                return Err(AkitaError::InvalidInput(
-                    "commitment hint compression quotient count disagrees with the derived plan"
-                        .into(),
-                ));
-            }
-            for (quotient, map) in self.outer_compression_quotients.iter().zip(plan.maps()) {
-                if quotient.ring_dim() != map.ring_dimension()
-                    || quotient.coeff_len() != map.output_coefficients()
-                {
+        match relation_mode {
+            RingRelationMode::QuotientLift => {
+                if self.outer_compression_quotients.len() != plan.maps().len() {
                     return Err(AkitaError::InvalidInput(
-                        "commitment hint compression quotient shape disagrees with the derived plan"
+                        "commitment hint compression quotient count disagrees with the derived plan"
                             .into(),
+                    ));
+                }
+                for (quotient, map) in self.outer_compression_quotients.iter().zip(plan.maps()) {
+                    if quotient.ring_dim() != map.ring_dimension()
+                        || quotient.coeff_len() != map.output_coefficients()
+                    {
+                        return Err(AkitaError::InvalidInput(
+                            "commitment hint compression quotient shape disagrees with the derived plan"
+                                .into(),
+                        ));
+                    }
+                }
+            }
+            RingRelationMode::ReducedEvaluation => {
+                if !self.outer_compression_quotients.is_empty() {
+                    return Err(AkitaError::InvalidInput(
+                        "reduced commitment hint must not retain compression quotient rows".into(),
                     ));
                 }
             }
@@ -713,6 +731,10 @@ mod tests {
         .unwrap();
         hint.validate_outer_compression_mode(&plan, RingRelationMode::QuotientLift)
             .unwrap();
+        assert!(hint
+            .validate_outer_compression_mode(&plan, RingRelationMode::ReducedEvaluation)
+            .is_err());
+        assert!(hint.reduced_outer_compression_witness(&plan).is_err());
 
         let mut encoded = Vec::new();
         hint.serialize_uncompressed(&mut encoded).unwrap();
@@ -720,17 +742,6 @@ mod tests {
             PortableCommitmentHandle::<F>::deserialize_uncompressed(&encoded[..], &()).unwrap();
         assert_eq!(decoded, hint);
         assert_eq!(decoded.outer_compression_witness(&plan).unwrap(), witness);
-        decoded
-            .validate_outer_compression_mode(&plan, RingRelationMode::ReducedEvaluation)
-            .unwrap();
-        let reduced = crate::commitment::OuterCompressionState::outer_compression_material(
-            &decoded,
-            &plan,
-            RingRelationMode::ReducedEvaluation,
-        )
-        .unwrap();
-        assert_eq!(reduced.witness(), &witness);
-        assert!(reduced.quotients().is_none());
         assert_eq!(
             decoded.outer_compression_quotients(&plan).unwrap(),
             quotients
@@ -786,6 +797,10 @@ mod tests {
 
         assert_eq!(decoded, hint);
         assert_eq!(decoded.outer_compression_witness(&plan).unwrap(), witness);
+        assert_eq!(
+            decoded.reduced_outer_compression_witness(&plan).unwrap(),
+            witness
+        );
         assert!(decoded.outer_compression_quotients(&plan).is_err());
     }
 }

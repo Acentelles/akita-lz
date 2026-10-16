@@ -35,6 +35,7 @@ pub(crate) fn root_level_candidates_with_fresh_preparation(
         opening,
         crate::schedule_params::RelationSearchDomain::for_topology(
             akita_params::RingRelationPhase::QuotientPrefix,
+            0,
             crate::policy::witness_chunk_at_level(policy, 0),
             akita_params::RelationCandidateTopology::new(false, opening.method()),
             None,
@@ -99,6 +100,7 @@ pub(crate) fn exhaustive_root_candidates_for_reference(
                 continue;
             }
             for &relation_mode in akita_params::RingRelationPhase::QuotientPrefix.candidate_modes(
+                0,
                 crate::policy::witness_chunk_at_level(policy, 0),
                 akita_params::RelationCandidateTopology::new(false, opening.method()),
             ) {

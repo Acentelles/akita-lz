@@ -29,9 +29,10 @@ const QUOTIENT_OR_REDUCED: &[OracleRelationTransition] = &[QUOTIENT, REDUCED];
 
 pub(super) fn transitions(
     state: OracleRelationState,
+    absolute_level: usize,
     witness_chunk: akita_params::ChunkedWitnessCfg,
 ) -> &'static [OracleRelationTransition] {
-    let eligible = witness_chunk.num_chunks == 1;
+    let eligible = absolute_level >= 2 && witness_chunk.num_chunks == 1;
     match (state, eligible) {
         (OracleRelationState::QuotientPrefix, true) => QUOTIENT_OR_REDUCED,
         (OracleRelationState::QuotientPrefix, false) => QUOTIENT_ONLY,

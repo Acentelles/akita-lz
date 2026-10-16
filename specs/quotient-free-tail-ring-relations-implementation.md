@@ -605,11 +605,11 @@ feature is accepted.
 
 #### Eligibility and schedule binding
 
-- [x] Reduced evaluation is rejected at every multi-chunk fold and at canonical
-      extension-field roots.
-- [x] Reduced evaluation is accepted at any single-chunk fold, including a
-      base-field root or L1, when the complete suffix has no setup prefix or
-      outgoing Stage-3 edge and uses direct evaluation trace.
+- [x] Reduced evaluation is rejected at folds 0 and 1, even when single-chunk,
+      and at every later multi-chunk fold.
+- [x] Reduced evaluation is accepted at single-chunk folds at level 2 or later,
+      when the complete suffix has no setup prefix or outgoing Stage-3 edge and
+      uses direct evaluation trace.
 - [x] A reduced-evaluation fold with an incoming setup prefix is rejected.
 - [x] A schedule that returns from reduced evaluation to quotient lifting is
       rejected.
@@ -646,14 +646,14 @@ feature is accepted.
       rejects both an absent EOR proof and a tampered EOR partial.
 - [x] Mixed A/B/D dimensions.
 - [x] Multi-chunk folds reject reduced evaluation, including a third multi-chunk
-      fold; single-chunk base-field roots and L1 folds may start a direct
+      fold; single-chunk folds at level 2 or later may start a direct
       evaluation-trace suffix.
 - [x] Each forbidden matrix cell has a negative schedule-validation test.
 
 #### Planner
 
 - [x] The planner may choose no cutover or any eligible single-chunk,
-      direct-evaluation-trace cutover from the same exact search engine.
+      direct-evaluation-trace cutover at level 2 or later from the same exact search engine.
 - [x] Every complete candidate contains at most one quotient-to-reduced-evaluation
       transition.
 - [x] A small exhaustive oracle enumerates all `m + 1` monotone cutovers and
@@ -745,8 +745,7 @@ when production eligibility would reject the early level. Algebra equivalence
 belongs in the relation engine; schedule eligibility belongs in separate
 tests. End-to-end PCS tests MUST use only single-chunk, direct-evaluation-trace
 reduced-evaluation suffixes with no incoming setup prefix or outgoing Stage-3
-edge. Eligible base-field roots and L1 folds are included; multi-chunk folds and
-canonical extension-field roots are excluded.
+edge. Folds 0 and 1 and every multi-chunk fold are excluded.
 
 Tamper tests should modify:
 
@@ -815,9 +814,9 @@ The verifier can perform reduced evaluation efficiently even for dense setup, bu
 the generic prover loses the current compact rank-one relation table. Early
 folds also contain more lanes and challenges while quotient rows are a smaller
 fraction of the recursive witness. The planner therefore prices each eligible
-single-chunk fold and may start a setup-direct evaluation-trace suffix at a
-base-field root, L1, or a later fold. Multi-chunk folds and canonical
-extension-field roots remain ineligible.
+single-chunk fold at level 2 or later and may start a setup-direct
+evaluation-trace suffix there. Folds 0 and 1 and every multi-chunk fold remain
+ineligible.
 
 ### Independent per-level mode bits
 
@@ -832,8 +831,8 @@ A fixed threshold is useful for diagnostics and produced the initial
 proof-size preview. It is not a durable planner policy: witness geometry,
 payload compression, L2 availability, and fold count vary by family and row.
 The production planner searches the one cutover under its complete objective,
-while eligibility requires a single-chunk, direct-evaluation-trace suffix with
-no incoming setup prefix or outgoing Stage-3 edge.
+while eligibility requires a single-chunk, direct-evaluation-trace suffix at
+level 2 or later with no incoming setup prefix or outgoing Stage-3 edge.
 
 ### Treat reduced evaluation as a Boolean sizing toggle only
 
@@ -852,7 +851,8 @@ relations too. The implementation therefore covers them.
 
 The mathematics applies to the packing consistency relation over its smaller
 modulus and coordinate planes. Current schedules require coefficient packing
-at multi-chunk folds and allow it at single-chunk folds; reduced evaluation
+at folds 0 and 1 and every multi-chunk fold, and allow it at later single-chunk
+folds; reduced evaluation
 requires direct evaluation trace. Implementing the combination would expand
 that opening-method boundary. It is deferred.
 

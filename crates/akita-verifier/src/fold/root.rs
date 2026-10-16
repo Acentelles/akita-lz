@@ -1,8 +1,5 @@
 use super::{verify_fold, FoldVerifyOutput, NextWitnessPlan, PreparedFoldReplay};
-use crate::stages::opening_claims::{
-    finalize_claims, prepare_single_field_groups, verify_coefficient_packing_root_prefix,
-    FoldClaimMaterial, PreparedFoldOpeningPoint,
-};
+use crate::stages::opening_claims::{finalize_claims, verify_coefficient_packing_root_prefix};
 use akita_error::AkitaError;
 use akita_params::{
     BasisMode, CommittedGroupParams, FoldParams, OpeningClaimsLayout, RelationWitnessGeometry,
@@ -30,6 +27,16 @@ where
     E: FpExtEncoding<F> + ExtField<F> + Ring + AkitaSerialize + MulBaseUnreduced<F>,
 {
     root_lp.validate_opening_batch(opening_batch)?;
+    for group_index in 0..opening_batch.num_groups() {
+        if !matches!(
+            root_lp
+                .group_params_geometry(opening_batch, group_index)?
+                .opening_method(),
+            akita_params::OpeningMethod::SubringCoefficientPacking { .. }
+        ) {
+            return Err(AkitaError::InvalidProof);
+        }
+    }
     let relation_geometry = RelationWitnessGeometry::for_level(root_lp, opening_batch, E::DEGREE)?;
     let relation_layout = relation_geometry.rhs_layout();
     for group_index in 0..opening_batch.num_groups() {
@@ -61,31 +68,13 @@ where
         )?;
     }
     let openings = claims.flat_evaluations();
-    let material = match root_lp.opening_method() {
-        akita_params::OpeningMethod::SubringCoefficientPacking { .. } => {
-            verify_coefficient_packing_root_prefix::<F, E>(
-                claims,
-                &openings,
-                opening_batch,
-                basis,
-                root_lp,
-            )?
-        }
-        akita_params::OpeningMethod::EvaluationTrace if E::DEGREE == 1 => {
-            let prepared =
-                prepare_single_field_groups::<F, E, _>(claims, root_lp, opening_batch, basis)?;
-            FoldClaimMaterial {
-                prepared_points: prepared
-                    .into_iter()
-                    .map(PreparedFoldOpeningPoint::EvaluationTrace)
-                    .collect(),
-                openings: openings.clone(),
-                reduction_final_claims: None,
-                reduction_factors: None,
-            }
-        }
-        akita_params::OpeningMethod::EvaluationTrace => return Err(AkitaError::InvalidProof),
-    };
+    let material = verify_coefficient_packing_root_prefix::<F, E>(
+        claims,
+        &openings,
+        opening_batch,
+        basis,
+        root_lp,
+    )?;
     akita_transcript::public_extensions::<F, E, _>(
         grinding.state_mut(),
         akita_types::FoldSite::Openings { level: 0 }.id()?,

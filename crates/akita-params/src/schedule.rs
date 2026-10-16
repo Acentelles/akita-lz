@@ -18,15 +18,9 @@ pub use profiles::{
 pub use sis_occurrences::{ScheduleSisBound, ScheduleSisOccurrence, ScheduleSisRole};
 pub use sizing::{detect_field_modulus, r_decomp_levels};
 
-/// Whether chunking or the root's canonical source encoding requires packing.
-/// Extension-field evaluation trace consumes tensor-projected coefficients,
-/// whereas reusable root commitments always bind canonical coefficients.
-pub const fn fold_requires_coefficient_packing(
-    num_chunks: usize,
-    extension_degree: usize,
-    is_root: bool,
-) -> bool {
-    num_chunks > 1 || (is_root && extension_degree > 1)
+/// Whether the mandatory two-fold prefix or chunking requires packing.
+pub const fn fold_requires_coefficient_packing(num_chunks: usize, absolute_level: usize) -> bool {
+    absolute_level < 2 || num_chunks > 1
 }
 
 /// Transcript binding used for one fold's outgoing witness state.
@@ -381,6 +375,7 @@ impl FoldSchedule {
         }
         if !crate::RingRelationPhase::QuotientPrefix
             .candidate_modes(
+                0,
                 root_commitment.witness_chunk,
                 crate::RelationCandidateTopology::new(false, root_commitment.opening_method()),
             )
@@ -405,6 +400,7 @@ impl FoldSchedule {
             let absolute_level = index + 1;
             if !relation_phase
                 .candidate_modes(
+                    absolute_level,
                     step.params.witness_chunk,
                     crate::RelationCandidateTopology::new(
                         consumes_setup_prefix,
@@ -521,9 +517,8 @@ impl FoldSchedule {
     /// Validate the opening methods currently admitted by nonterminal proving
     /// and verification.
     ///
-    /// Subring coefficient packing is required at every multi-chunk fold.
-    /// Single-chunk folds admit either method where their encoding supports it;
-    /// extension-field roots retain packing over canonical coefficients. Every group
+    /// Subring coefficient packing is required at folds 0 and 1 and every
+    /// multi-chunk fold. Later single-chunk folds admit either method. Every group
     /// consumed by one fold uses the same method family. Packing requires the
     /// audited production challenge family under the L-infinity A route.
     pub fn validate_nonterminal_opening_execution(
@@ -676,8 +671,7 @@ fn validate_level_opening_execution(
         first.opening_method,
         OpeningMethod::SubringCoefficientPacking { .. }
     );
-    let packing_required =
-        fold_requires_coefficient_packing(num_chunks, extension_degree, absolute_level == 0);
+    let packing_required = fold_requires_coefficient_packing(num_chunks, absolute_level);
     if packing_required && !packing_family {
         return Err(AkitaError::InvalidSetup(format!(
             "nonterminal level {absolute_level} requires subring coefficient packing"
