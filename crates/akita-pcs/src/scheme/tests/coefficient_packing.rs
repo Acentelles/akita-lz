@@ -9,8 +9,9 @@ type PackingCfg = crate::test_support::RootCoefficientPackingConfig<fp32::Dense>
 type PackingField = <PackingCfg as CommitmentConfig>::Field;
 type PackingExt = <PackingCfg as CommitmentConfig>::ExtField;
 type PackingScheme = AkitaCommitmentScheme<PackingCfg>;
-type RootEvaluationTraceCfg = crate::test_support::EarlyEvaluationTraceConfig<fp32::Dense, 0>;
-type RecursiveEvaluationTraceCfg = crate::test_support::EarlyEvaluationTraceConfig<fp32::Dense, 1>;
+type RootEvaluationTraceCfg = crate::test_support::UnsupportedEvaluationTraceConfig<fp32::Dense, 0>;
+type RecursiveEvaluationTraceCfg =
+    crate::test_support::UnsupportedEvaluationTraceConfig<fp32::Dense, 1>;
 
 #[test]
 fn synthetic_packing_row_is_derived_from_one_checked_authority() {
@@ -280,22 +281,21 @@ fn fixed_root_packing_round_trips_in_both_bases() {
                         ))
                         .is_err());
 
-                    macro_rules! early_evaluation_trace_admission_error {
+                    macro_rules! unsupported_evaluation_trace_admission_error {
                         ($config:ty, $context:literal, $expected:literal) => {{
                             let row = <$config>::derive_row(&catalog, &key)
                                 .expect(concat!($context, " test row must derive"));
                             row.1
                                 .validate_structure()
                                 .expect(concat!($context, " test row must be structurally valid"));
-                            let error = akita_config::ValidatedScheduleCatalog::try_new(
-                                <$config>::schedule_family_name(),
-                                [row],
+                            let error = akita_config::ResolvedScheduleRow::try_new(
+                                row.0,
+                                row.1,
                                 &akita_config::policy_of::<$config>(),
-                                <$config>::ring_challenge_config,
                             )
                             .expect_err(concat!(
                                 $context,
-                                " must reject at the trusted catalog boundary"
+                                " must reject at the executable row boundary"
                             ));
                             assert!(
                                 matches!(
@@ -308,14 +308,14 @@ fn fixed_root_packing_round_trips_in_both_bases() {
                         }};
                     }
 
-                    early_evaluation_trace_admission_error!(
+                    unsupported_evaluation_trace_admission_error!(
                         RootEvaluationTraceCfg,
                         "root EvaluationTrace",
                         "nonterminal level 0 requires subring coefficient packing"
                     );
-                    early_evaluation_trace_admission_error!(
+                    unsupported_evaluation_trace_admission_error!(
                         RecursiveEvaluationTraceCfg,
-                        "level-1 EvaluationTrace",
+                        "multi-chunk level-1 EvaluationTrace",
                         "nonterminal level 1 requires subring coefficient packing"
                     );
                 }

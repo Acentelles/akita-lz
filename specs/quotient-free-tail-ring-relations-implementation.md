@@ -605,10 +605,11 @@ feature is accepted.
 
 #### Eligibility and schedule binding
 
-- [x] Reduced evaluation is rejected at root L0.
-- [x] Reduced evaluation is rejected at recursive L1.
-- [x] Reduced evaluation is accepted at L2 or later when the complete suffix has
-      no setup prefix and uses evaluation trace.
+- [x] Reduced evaluation is rejected at every multi-chunk fold and at canonical
+      extension-field roots.
+- [x] Reduced evaluation is accepted at any single-chunk fold, including a
+      base-field root or L1, when the complete suffix has no setup prefix or
+      outgoing Stage-3 edge and uses direct evaluation trace.
 - [x] A reduced-evaluation fold with an incoming setup prefix is rejected.
 - [x] A schedule that returns from reduced evaluation to quotient lifting is
       rejected.
@@ -644,15 +645,15 @@ feature is accepted.
       selects a shipped reduced suffix with EOR, verifies the honest proof, and
       rejects both an absent EOR proof and a tampered EOR partial.
 - [x] Mixed A/B/D dimensions.
-- [x] A multi-chunk eligible fold, if any production or focused fixture reaches
-      level 2 with more than one chunk; otherwise a constructed type-level
-      fixture covers it.
+- [x] Multi-chunk folds reject reduced evaluation, including a third multi-chunk
+      fold; single-chunk base-field roots and L1 folds may start a direct
+      evaluation-trace suffix.
 - [x] Each forbidden matrix cell has a negative schedule-validation test.
 
 #### Planner
 
-- [x] The planner may choose no cutover, an L2 cutover, or a later cutover from
-      the same exact search engine.
+- [x] The planner may choose no cutover or any eligible single-chunk,
+      direct-evaluation-trace cutover from the same exact search engine.
 - [x] Every complete candidate contains at most one quotient-to-reduced-evaluation
       transition.
 - [x] A small exhaustive oracle enumerates all `m + 1` monotone cutovers and
@@ -742,7 +743,10 @@ access errors.
 Focused fixtures SHOULD expose both modes under the same public relation even
 when production eligibility would reject the early level. Algebra equivalence
 belongs in the relation engine; schedule eligibility belongs in separate
-tests. End-to-end PCS tests MUST use only eligible L2+ tail schedules.
+tests. End-to-end PCS tests MUST use only single-chunk, direct-evaluation-trace
+reduced-evaluation suffixes with no incoming setup prefix or outgoing Stage-3
+edge. Eligible base-field roots and L1 folds are included; multi-chunk folds and
+canonical extension-field roots are excluded.
 
 Tamper tests should modify:
 
@@ -810,9 +814,10 @@ the retained baseline, not the selected new feature.
 The verifier can perform reduced evaluation efficiently even for dense setup, but
 the generic prover loses the current compact rank-one relation table. Early
 folds also contain more lanes and challenges while quotient rows are a smaller
-fraction of the recursive witness. This feature therefore starts at L2
-and only in a setup-direct tail. Earlier activation requires new benchmarks and
-a scope revision.
+fraction of the recursive witness. The planner therefore prices each eligible
+single-chunk fold and may start a setup-direct evaluation-trace suffix at a
+base-field root, L1, or a later fold. Multi-chunk folds and canonical
+extension-field roots remain ineligible.
 
 ### Independent per-level mode bits
 
@@ -827,7 +832,8 @@ A fixed threshold is useful for diagnostics and produced the initial
 proof-size preview. It is not a durable planner policy: witness geometry,
 payload compression, L2 availability, and fold count vary by family and row.
 The production planner searches the one cutover under its complete objective,
-while eligibility fixes only the lower bound `level >= 2`.
+while eligibility requires a single-chunk, direct-evaluation-trace suffix with
+no incoming setup prefix or outgoing Stage-3 edge.
 
 ### Treat reduced evaluation as a Boolean sizing toggle only
 
@@ -845,10 +851,10 @@ relations too. The implementation therefore covers them.
 ### Add packing-specific reduced evaluation now
 
 The mathematics applies to the packing consistency relation over its smaller
-modulus and coordinate planes. Current schedules use coefficient packing only
-at L0 and L1, while reduced evaluation is forbidden there. Implementing the
-combination would add untestable production surface and weaken the desired
-scope boundary. It is deferred.
+modulus and coordinate planes. Current schedules require coefficient packing
+at multi-chunk folds and allow it at single-chunk folds; reduced evaluation
+requires direct evaluation trace. Implementing the combination would expand
+that opening-method boundary. It is deferred.
 
 ### Force setup offloading and use rank-two Stage 3
 

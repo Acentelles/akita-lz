@@ -267,12 +267,13 @@ impl<Envelope, Final> Clone for EnvelopeFinalGroupConfig<Envelope, Final> {
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct RootCoefficientPackingConfig<Base>(PhantomData<fn() -> Base>);
 
-/// Test-only adapter that exposes an otherwise well-formed early
-/// EvaluationTrace row so public prove/verify admission can prove it rejects
-/// before transcript mutation. `LEVEL=0` mutates the root; `LEVEL=1` mutates
-/// the first recursive witness and its incoming prefix.
+/// Test-only adapter for rejected evaluation-trace rows. `LEVEL=0` mutates
+/// the canonical extension-field root; `LEVEL=1` mutates the first recursive
+/// witness and its incoming prefix and makes that fold multi-chunk.
 #[derive(Clone, Copy, Debug, Default)]
-pub(crate) struct EarlyEvaluationTraceConfig<Base, const LEVEL: usize>(PhantomData<fn() -> Base>);
+pub(crate) struct UnsupportedEvaluationTraceConfig<Base, const LEVEL: usize>(
+    PhantomData<fn() -> Base>,
+);
 
 impl<Base> RootCoefficientPackingConfig<Base>
 where
@@ -307,26 +308,23 @@ where
             ));
         }
         let base = catalog.resolve_key(key)?;
-        let successor_template = match base.schedule().recursive_folds.first() {
-            Some(successor) => successor.clone(),
-            None => {
-                let grouped_key = ScheduleLookupKey {
-                    final_group: key.final_group,
-                    precommitteds: vec![base.profiles().final_group],
-                };
-                catalog
-                    .resolve_key(&grouped_key)?
-                    .schedule()
-                    .recursive_folds
-                    .first()
-                    .cloned()
-                    .ok_or_else(|| {
-                        AkitaError::InvalidSetup(
-                            "packing Stage 3 test requires a recursive successor template".into(),
-                        )
-                    })?
-            }
+        // The grouped row supplies a packing-capable quotient successor for
+        // Stage 3; the scalar row may already enter a reduced-evaluation suffix.
+        let grouped_key = ScheduleLookupKey {
+            final_group: key.final_group,
+            precommitteds: vec![base.profiles().final_group],
         };
+        let successor_template = catalog
+            .resolve_key(&grouped_key)?
+            .schedule()
+            .recursive_folds
+            .first()
+            .cloned()
+            .ok_or_else(|| {
+                AkitaError::InvalidSetup(
+                    "packing Stage 3 test requires a recursive successor template".into(),
+                )
+            })?;
         let mut schedule = base.schedule().clone();
         let policy = policy_of::<Self>();
         let root = &mut schedule.root.params;
@@ -440,6 +438,15 @@ where
             .blocks
             .live_ring_elements_per_claim =
             root_output_witness_len.div_ceil(successor_witness.d_a());
+        let successor_field_len = akita_error::checked::product([
+            successor_witness.blocks().live_ring_elements_per_claim,
+            successor_witness.d_a(),
+        ])
+        .ok_or_else(|| AkitaError::InvalidSetup("packing successor input overflow".into()))?;
+        let successor_num_vars = akita_error::checked::ceil_log2(successor_field_len)
+            .ok_or_else(|| AkitaError::InvalidSetup("packing successor input is empty".into()))?;
+        successor_witness.own_group_mut().profile.group =
+            akita_params::PolynomialGroupLayout::singleton(successor_num_vars);
 
         let root_setup_natural_len = akita_params::active_setup_field_len(root, &opening_batch)?;
         let root_setup_prefix_len = akita_params::padded_setup_prefix_len(root_setup_natural_len);
@@ -671,7 +678,7 @@ where
     }
 }
 
-impl<Base, const LEVEL: usize> EarlyEvaluationTraceConfig<Base, LEVEL>
+impl<Base, const LEVEL: usize> UnsupportedEvaluationTraceConfig<Base, LEVEL>
 where
     Base: CommitmentConfig + 'static,
 {
@@ -721,6 +728,10 @@ where
             LEVEL == 0,
         );
         if LEVEL == 1 {
+            params.witness_chunk = akita_params::ChunkedWitnessCfg {
+                num_chunks: 2,
+                num_activated_levels: 2,
+            };
             schedule.recursive_folds[0]
                 .params
                 .own_group_mut()
@@ -828,7 +839,7 @@ where
     }
 }
 
-impl<Base, const LEVEL: usize> CommitmentConfig for EarlyEvaluationTraceConfig<Base, LEVEL>
+impl<Base, const LEVEL: usize> CommitmentConfig for UnsupportedEvaluationTraceConfig<Base, LEVEL>
 where
     Base: CommitmentConfig + 'static,
 {

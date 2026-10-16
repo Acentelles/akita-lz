@@ -631,7 +631,7 @@ replacement for the planner’s other choices.
 | Existing axis | Reduced-evaluation suffix | Rule |
 |---|---|---|
 | `EvaluationTrace` | Supported | Required in this feature |
-| `SubringCoefficientPacking` | Not reachable | Packing is restricted to L0/L1; reduced evaluation starts at L2 |
+| `SubringCoefficientPacking` | Forbidden | Reduced evaluation requires evaluation trace; packing remains available at single-chunk folds and required at multi-chunk folds |
 | Linf A security | Supported | Relation mode does not change the SIS security route |
 | Selective L2 A security | Supported | The physical Z norm proof is unchanged; source moments omit R |
 | Compressed payload | Supported | F/H digits remain; all ordinary and compression quotient digits disappear |
@@ -642,7 +642,7 @@ replacement for the planner’s other choices.
 | Outgoing setup offload / Stage 3 | Forbidden after cutover | The reduced-evaluation suffix cannot create a later prefix |
 | Extension-opening reduction | Supported | Evaluation-trace final claim and EOR transcript remain unchanged |
 | Mixed role dimensions | Supported | Prepare terminal residue kernels from exact checked physical equality windows |
-| Multi-chunk witness | Supported | `WitnessLayout` remains chunk-major; mode only removes the shared R ranges |
+| Multi-chunk witness | Forbidden | Every multi-chunk fold uses coefficient packing and quotient lift |
 | Frozen root precommitments | Not present in the suffix | Current recursive folds reject precommitted groups independently |
 | Clear terminal response | Existing behavior | Not represented by the new enum |
 
@@ -698,8 +698,11 @@ L2 = FoldSchedule::recursive_folds[1]
 T  = FoldSchedule::terminal
 ```
 
-`ReducedEvaluation` is valid only for `L >= 2`. A schedule with no second
-recursive fold simply has no eligible reduced-evaluation level.
+`ReducedEvaluation` is valid only at single-chunk folds using direct
+`EvaluationTrace` with no incoming setup prefix or outgoing Stage-3 edge.
+Absolute level does not determine eligibility: a single-chunk base-field root
+or L1 fold may begin the suffix, while every multi-chunk fold is ineligible.
+Extension-field roots remain on coefficient packing over canonical coefficients.
 
 ### Setup-prefix direction
 
@@ -738,13 +741,15 @@ Transitions are:
 QuotientPrefix --QuotientLift--> QuotientPrefix
 
 QuotientPrefix --ReducedEvaluation--> ReducedEvaluationSuffix
-    only if level >= 2
+    only if the current fold is single-chunk
     and incoming_setup_prefix is None
     and opening method is EvaluationTrace
     and a setup-direct child edge is selected
 
 ReducedEvaluationSuffix --ReducedEvaluation--> ReducedEvaluationSuffix
-    only with incoming_setup_prefix None
+    only if the current fold is single-chunk
+    and incoming_setup_prefix is None
+    and opening method is EvaluationTrace
     only through setup-direct child edges
 ```
 
@@ -804,6 +809,6 @@ That record is operational context and is not normative.
 - [`selective-l2-fold-security-sizing.md`](selective-l2-fold-security-sizing.md),
   independent Linf/L2 route selection and typed source moments.
 - [`subring-coefficient-packing.md`](subring-coefficient-packing.md), current
-  L0/L1 packing policy and later evaluation-trace cutover.
+  chunk-dependent packing policy and single-chunk opening choices.
 - [`specs/SPEC_REVIEW.md`](SPEC_REVIEW.md), required review rubric before
   implementation approval.
