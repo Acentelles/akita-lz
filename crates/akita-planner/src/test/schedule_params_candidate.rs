@@ -643,7 +643,6 @@ fn root_packing_candidates_use_adversarial_linf_and_exact_d_width() {
             &policy,
             dimensions,
             opening,
-            crate::schedule_params::RelationSearchDomain::QuotientOnly,
             &prepared,
             inner_basis,
             Dense::opening_basis_range().0,

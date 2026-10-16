@@ -204,7 +204,6 @@ struct MultiGroupRootCandidateCtx<'a> {
 }
 
 struct RootFinalGroupCandidateInput<'a> {
-    relation_mode: akita_params::RingRelationMode,
     log_basis_inner: u32,
     log_basis_open: u32,
     position_index_bits: usize,
@@ -342,7 +341,6 @@ pub(crate) fn root_level_candidates_for_prepared_producers(
     policy: &PlannerPolicy,
     dimensions: CommitmentRingDims,
     opening: PlannerOpeningCandidate,
-    relation_domain: crate::schedule_params::RelationSearchDomain,
     prepared_producers: &PreparedRootProducers,
     candidate_log_basis_inner: u32,
     candidate_log_basis_open: u32,
@@ -401,63 +399,61 @@ pub(crate) fn root_level_candidates_for_prepared_producers(
     split_domain.dedup();
 
     let mut candidates = Vec::new();
-    for &relation_mode in relation_domain.transitions() {
-        for &block_index_bits in &split_domain {
-            let position_index_bits = reduced_vars - block_index_bits;
-            let num_live_blocks = 1usize << block_index_bits;
-            let mut slice_candidates = Vec::new();
-            for outer_slice_count in akita_params::CommitmentSliceCount::ALL {
-                if guide.is_some_and(|guide| outer_slice_count != guide.outer_slice_count) {
-                    continue;
-                }
-                if outer_slice_count
-                    .validate_for_commitment(
-                        0,
-                        akita_params::CommitmentPayloadMode::Compressed,
-                        num_live_blocks,
-                    )
-                    .is_err()
-                {
-                    continue;
-                }
-                let Some(mut candidate_params) = root_final_group_level_params_candidate(
-                    &candidate_ctx,
-                    RootFinalGroupCandidateInput {
-                        relation_mode,
-                        log_basis_inner: candidate_log_basis_inner,
-                        log_basis_open: candidate_log_basis_open,
-                        position_index_bits,
-                        block_index_bits,
-                        outer_slice_count,
-                        precommitted_groups: &prepared_producers.groups,
-                        precommitted_d_width: prepared_producers.d_width,
-                    },
-                )?
-                else {
-                    continue;
-                };
-                candidate_params.witness_chunk = crate::policy::witness_chunk_at_level(policy, 0);
-                if !candidate_params.compression_sources_supported()? {
-                    continue;
-                }
-                slice_candidates.push(candidate_params);
+
+    for &block_index_bits in &split_domain {
+        let position_index_bits = reduced_vars - block_index_bits;
+        let num_live_blocks = 1usize << block_index_bits;
+        let mut slice_candidates = Vec::new();
+        for outer_slice_count in akita_params::CommitmentSliceCount::ALL {
+            if guide.is_some_and(|guide| outer_slice_count != guide.outer_slice_count) {
+                continue;
             }
-            for candidate_params in crate::schedule_params::prune_locally_unprofitable_slices(
-                policy,
+            if outer_slice_count
+                .validate_for_commitment(
+                    0,
+                    akita_params::CommitmentPayloadMode::Compressed,
+                    num_live_blocks,
+                )
+                .is_err()
+            {
+                continue;
+            }
+            let Some(mut candidate_params) = root_final_group_level_params_candidate(
+                &candidate_ctx,
+                RootFinalGroupCandidateInput {
+                    log_basis_inner: candidate_log_basis_inner,
+                    log_basis_open: candidate_log_basis_open,
+                    position_index_bits,
+                    block_index_bits,
+                    outer_slice_count,
+                    precommitted_groups: &prepared_producers.groups,
+                    precommitted_d_width: prepared_producers.d_width,
+                },
+            )?
+            else {
+                continue;
+            };
+            candidate_params.witness_chunk = crate::policy::witness_chunk_at_level(policy, 0);
+            if !candidate_params.compression_sources_supported()? {
+                continue;
+            }
+            slice_candidates.push(candidate_params);
+        }
+        for candidate_params in crate::schedule_params::prune_locally_unprofitable_slices(
+            policy,
+            &opening_batch,
+            slice_candidates,
+        )? {
+            let Some(output_witness_len) = root_batch_next_w_len(
+                field_bits,
+                policy.claim_ext_degree,
+                &candidate_params,
                 &opening_batch,
-                slice_candidates,
-            )? {
-                let Some(output_witness_len) = root_batch_next_w_len(
-                    field_bits,
-                    policy.claim_ext_degree,
-                    &candidate_params,
-                    &opening_batch,
-                )?
-                else {
-                    continue;
-                };
-                candidates.push((candidate_params, output_witness_len));
-            }
+            )?
+            else {
+                continue;
+            };
+            candidates.push((candidate_params, output_witness_len));
         }
     }
 
@@ -469,7 +465,6 @@ fn root_final_group_level_params_candidate(
     input: RootFinalGroupCandidateInput<'_>,
 ) -> Result<Option<CommittedGroupParams>, AkitaError> {
     let RootFinalGroupCandidateInput {
-        relation_mode,
         log_basis_inner,
         log_basis_open,
         position_index_bits,
@@ -617,7 +612,7 @@ fn root_final_group_level_params_candidate(
         groups,
         open_commit_matrix,
         akita_params::CommitmentPayloadMode::Compressed,
-        relation_mode,
+        akita_params::RingRelationMode::QuotientLift,
         akita_params::CommittedSourceEncoding::for_producer(
             ctx.opening.method(),
             policy.claim_ext_degree,

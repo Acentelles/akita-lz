@@ -721,7 +721,6 @@ impl<'a> CandidateDomain<'a> {
     pub(super) fn visit_root_batches(
         &self,
         ctx: &SuffixCtx<'_>,
-        state: SuffixState<'_>,
         open_lb: u32,
         mut visit: impl FnMut(GeneratedCandidates) -> Result<(), AkitaError>,
     ) -> Result<(), AkitaError> {
@@ -744,15 +743,6 @@ impl<'a> CandidateDomain<'a> {
             else {
                 continue;
             };
-            let relation_domain = state
-                .topology
-                .relation_domain(
-                    state.level,
-                    crate::policy::witness_chunk_at_level(ctx.policy, state.level),
-                    work.opening.method(),
-                    ctx.diagnostics,
-                )?
-                .filtered(ctx.relation_mode_filter)?;
             for inner_lb in self.inner_basis_range.clone() {
                 let mut dimension_candidates = root_level_candidates_for_prepared_producers(
                     root_key,
@@ -760,7 +750,6 @@ impl<'a> CandidateDomain<'a> {
                     ctx.policy,
                     work.dimensions,
                     work.opening,
-                    relation_domain,
                     &preparation,
                     inner_lb,
                     open_lb,
@@ -774,11 +763,6 @@ impl<'a> CandidateDomain<'a> {
                 let mut terminal = Vec::new();
                 let mut folds = Vec::new();
                 for (params, next_witness_len) in dimension_candidates {
-                    if !relation_domain.admits(params.ring_relation_mode) {
-                        return Err(AkitaError::InvalidSetup(
-                            "materialized mode disagrees with relation domain".into(),
-                        ));
-                    }
                     if (!self.adaptation_guided || self.guide_terminal.is_some())
                         && work.purpose.allows_terminal()
                     {
