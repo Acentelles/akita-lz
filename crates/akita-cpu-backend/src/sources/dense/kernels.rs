@@ -13,7 +13,8 @@ use crate::opaque::{
     SubringCoefficientPackingPartials, SubringCoefficientPackingPlan,
 };
 use crate::opaque::{OpeningBatchKernel, OpeningFoldKernel, OpeningFoldOutput};
-use akita_error::AkitaError;
+use crate::sources::block_digits::{RingValueSource, RingValues};
+use akita_error::{checked, AkitaError};
 use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced};
 
 impl<F, E, const D: usize> OpeningFoldKernel<DenseView<'_, F, D>, F, D> for CpuBackend<F, E>
@@ -198,21 +199,14 @@ where
                     actual: rings.len(),
                 });
             }
-            let coordinates = coefficient_packing_partials_from_position_source::<F, E, _, D>(
-                fused_weights,
+            let live_coeff_len = checked::product([rings.len(), D]).ok_or_else(|| {
+                AkitaError::InvalidInput("dense coefficient-packing extent overflow".into())
+            })?;
+            let coordinates = seam_packing_partials(
+                &rings,
+                live_coeff_len,
                 RootPolyMeta::<F>::num_vars(*poly),
-                |position| {
-                    rings
-                        .get(position)
-                        .map(|ring| ring.coefficients())
-                        .ok_or_else(|| {
-                            AkitaError::Internal(
-                                "dense coefficient-packing position is outside its admitted source"
-                                    .into(),
-                            )
-                        })
-                },
-                |_, coefficient, source| source[coefficient],
+                fused_weights,
             )?;
             SubringCoefficientPackingPartials::new(
                 point.geometry(),
@@ -221,6 +215,44 @@ where
             )
         })
         .collect()
+}
+
+pub(crate) fn seam_packing_partials<F, E, S, const D: usize>(
+    source: &S,
+    live_coeff_len: usize,
+    source_num_vars: usize,
+    fused_weights: &FusedPackingWeights<'_, E>,
+) -> Result<Vec<F>, AkitaError>
+where
+    F: Field,
+    E: ExtField<F> + akita_types::FpExtEncoding<F> + MulBaseUnreduced<F>,
+    S: RingValueSource<F, D>,
+{
+    let full_len = checked::product([source.num_rings(), D]).ok_or_else(|| {
+        AkitaError::InvalidInput("coefficient-packing source extent overflow".into())
+    })?;
+    if live_coeff_len == full_len {
+        coefficient_packing_partials_from_position_source::<F, E, _, D>(
+            fused_weights,
+            source_num_vars,
+            |position| source.values(position),
+            |_, coefficient, values| values.coeff(coefficient),
+        )
+    } else {
+        coefficient_packing_partials_from_position_source::<F, E, _, D>(
+            fused_weights,
+            source_num_vars,
+            |position| source.values(position),
+            |position, coefficient, values| {
+                let flat_index = position * D + coefficient;
+                if flat_index < live_coeff_len {
+                    values.coeff(coefficient)
+                } else {
+                    F::zero()
+                }
+            },
+        )
+    }
 }
 
 impl<F, E, const D: usize> SubringCoefficientPackingBatchKernel<DenseBatchView<'_, F, D>, F, E, D>
