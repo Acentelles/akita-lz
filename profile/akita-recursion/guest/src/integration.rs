@@ -62,6 +62,7 @@ where
         + Valid,
 {
     start_cycle_tracking("deserialize_input");
+    // Every supported AkitaJoltCase currently expects a single-chunk catalog.
     let (schedules, input) = match akita_recursion_glue::split_schedule_catalog::<Cfg>(
         input,
         akita_params::ChunkedWitnessCfg::default_non_chunked(),

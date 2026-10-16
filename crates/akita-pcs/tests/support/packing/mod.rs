@@ -83,8 +83,7 @@ where
             })?;
         let policy = catalog.policy();
         let mut schedule = base.schedule().clone();
-        schedule.root =
-            root::build_root(&schedule.root, key, challenge_subring_dimension, policy)?;
+        schedule.root = root::build_root(&schedule.root, key, challenge_subring_dimension, policy)?;
         schedule.recursive_folds.clear();
         let mut opening_batch = key.opening_layout()?;
         for level in 1..=prefixed_fold_count {
@@ -157,7 +156,6 @@ where
         Base::committed_source_class()
     }
 
-
     fn recursive_setup_planning() -> bool {
         Base::recursive_setup_planning()
     }
@@ -205,7 +203,6 @@ where
     fn committed_source_class() -> akita_params::sis::CommittedSourceClass {
         Base::committed_source_class()
     }
-
 
     fn recursive_setup_planning() -> bool {
         Base::recursive_setup_planning()

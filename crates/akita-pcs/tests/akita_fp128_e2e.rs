@@ -93,7 +93,7 @@ mod matrix_drivers;
 
 use akita_config::{proof_optimized::fp128, CommitmentConfig};
 use akita_cpu_backend::CpuBackend;
-use akita_params::{BasisMode, OpeningClaimsLayout};
+use akita_params::{BasisMode, ChunkedWitnessCfg, MultiChunkProfileId, OpeningClaimsLayout};
 use akita_types::{GroupBatchStatement, OpeningClaims, PolynomialGroupClaims};
 use common::proof_size::prove_matching_byte_model;
 use common::*;
@@ -109,7 +109,8 @@ macro_rules! matrix_test {
         fn $name() {
             init_rayon_pool();
             run_on_large_stack(|| {
-                prove_verify_dense_roundtrip::<$cfg>($chunking,
+                prove_verify_dense_roundtrip::<$cfg>(
+                    $chunking,
                     &[$($nv),+],
                     concat!("completeness/", stringify!($name)).as_bytes(),
                 );
@@ -121,7 +122,8 @@ macro_rules! matrix_test {
         fn $name() {
             init_rayon_pool();
             run_on_large_stack(|| {
-                prove_verify_onehot_roundtrip::<$cfg>($chunking,
+                prove_verify_onehot_roundtrip::<$cfg>(
+                    $chunking,
                     &[$($nv),+],
                     concat!("completeness/", stringify!($name)).as_bytes(),
                 );
@@ -134,7 +136,8 @@ macro_rules! matrix_test {
         fn $name() {
             init_rayon_pool();
             run_on_large_stack(|| {
-                prove_verify_dense_precommitted_roundtrip::<$cfg>($chunking,
+                prove_verify_dense_precommitted_roundtrip::<$cfg>(
+                    $chunking,
                     &[$($nv),+],
                     concat!("completeness/", stringify!($name)).as_bytes(),
                 );
@@ -147,7 +150,8 @@ macro_rules! matrix_test {
         fn $name() {
             init_rayon_pool();
             run_on_large_stack(|| {
-                prove_verify_onehot_precommitted_roundtrip::<$cfg>($chunking,
+                prove_verify_onehot_precommitted_roundtrip::<$cfg>(
+                    $chunking,
                     &[$($nv),+],
                     concat!("completeness/", stringify!($name)).as_bytes(),
                 );
@@ -159,7 +163,8 @@ macro_rules! matrix_test {
         #[test]
         #[ignore = "production-sized; run explicitly with --release"]
         fn $name() {
-            prove_verify_recursive_direct_roundtrip::<$base_cfg>($chunking,
+            prove_verify_recursive_direct_roundtrip::<$base_cfg>(
+                $chunking,
                 concat!("completeness/", stringify!($name)).as_bytes(),
             );
         }
@@ -169,7 +174,8 @@ macro_rules! matrix_test {
         #[test]
         #[ignore = "production-sized; run explicitly with --release"]
         fn $name() {
-            recursive_multi_group_round_trip::<$base_cfg>($chunking,
+            recursive_multi_group_round_trip::<$base_cfg>(
+                $chunking,
                 concat!("completeness/", stringify!($name)).as_bytes(),
                 |_| {},
             );
@@ -193,11 +199,11 @@ macro_rules! matrix_test {
 // ----------------------------------------------------------------------------
 // Dense × single-chunk × direct × non-recursive    [14, 16, 24, 26]
 // ----------------------------------------------------------------------------
-matrix_test!(dense; fp128_dense; fp128::Dense; akita_params::ChunkedWitnessCfg::default_non_chunked(); nvs=[14, 16, 24, 26]);
+matrix_test!(dense; fp128_dense; fp128::Dense; ChunkedWitnessCfg::default_non_chunked(); nvs=[14, 16, 24, 26]);
 
 // Dense × single-chunk × precommitted × non-recursive    [16]
 // Catalog row: final=(16,1) <- pre=[(14,1)].
-matrix_test!(dense_pre; fp128_dense_pre; fp128::Dense; akita_params::ChunkedWitnessCfg::default_non_chunked(); final_nvs=[16]);
+matrix_test!(dense_pre; fp128_dense_pre; fp128::Dense; ChunkedWitnessCfg::default_non_chunked(); final_nvs=[16]);
 
 // ----------------------------------------------------------------------------
 // Dense × multi-chunk × direct × non-recursive    [16]  (feature-gated)
@@ -208,7 +214,7 @@ fn fp128_dense_mc() {
     run_on_large_stack(|| {
         let catalog = akita_config::test_support::workspace_schedule_catalog::<
             fp128::DenseMultiChunk,
-        >(akita_params::MultiChunkProfileId::W8R2.cfg())
+        >(MultiChunkProfileId::W8R2.cfg())
         .expect("dense multi-chunk catalog");
         let schedule = catalog
             .resolve_key(&akita_params::ScheduleLookupKey::single(
@@ -230,7 +236,7 @@ fn fp128_dense_mc() {
             "W8R2 regression profile must retain eight witness chunks"
         );
         prove_verify_dense_roundtrip::<fp128::DenseMultiChunk>(
-            akita_params::MultiChunkProfileId::W8R2.cfg(),
+            MultiChunkProfileId::W8R2.cfg(),
             &[16],
             b"completeness/fp128_dense_mc",
         );
@@ -249,36 +255,36 @@ fn fp128_dense_mc() {
 // ----------------------------------------------------------------------------
 // OneHot × single-chunk × direct × non-recursive    [12, 15, 20, 28]
 // ----------------------------------------------------------------------------
-matrix_test!(onehot; fp128_onehot; fp128::OneHot; akita_params::ChunkedWitnessCfg::default_non_chunked(); nvs=[12, 15, 20, 28]);
+matrix_test!(onehot; fp128_onehot; fp128::OneHot; ChunkedWitnessCfg::default_non_chunked(); nvs=[12, 15, 20, 28]);
 
 // OneHot × single-chunk × precommitted × non-recursive    [16, 20]
 // Catalog rows: final=(16,1) and final=(20,1), both <- pre=[(14,1)].
-matrix_test!(onehot_pre; fp128_onehot_pre; fp128::OneHot; akita_params::ChunkedWitnessCfg::default_non_chunked(); final_nvs=[16, 20]);
+matrix_test!(onehot_pre; fp128_onehot_pre; fp128::OneHot; ChunkedWitnessCfg::default_non_chunked(); final_nvs=[16, 20]);
 
 // ----------------------------------------------------------------------------
 // OneHot × single-chunk × direct × recursive    (production-sized, ignored)
 // RecursiveCommitmentConfig, no user precommit; uses fp128_onehot_recursive.rs schedule.
 // ----------------------------------------------------------------------------
-matrix_test!(recursive_direct; fp128_onehot_rec; fp128::OneHot; akita_params::ChunkedWitnessCfg::default_non_chunked());
+matrix_test!(recursive_direct; fp128_onehot_rec; fp128::OneHot; ChunkedWitnessCfg::default_non_chunked());
 
 // ----------------------------------------------------------------------------
 // OneHot × single-chunk × precommitted × recursive    (production-sized, ignored)
 // RecursiveCommitmentConfig + user precommit; profiles from the base config's scalar row.
 // ----------------------------------------------------------------------------
-matrix_test!(recursive_pre; fp128_onehot_rec_pre; fp128::OneHot; akita_params::ChunkedWitnessCfg::default_non_chunked());
+matrix_test!(recursive_pre; fp128_onehot_rec_pre; fp128::OneHot; ChunkedWitnessCfg::default_non_chunked());
 
 // ----------------------------------------------------------------------------
 // OneHot × multi-chunk × direct × recursive    (production-sized, ignored)
 // RecursiveCommitmentConfig<OneHotMultiChunk>; uses fp128_onehot_recursive_multi_chunk_w8r2.rs.
 // ----------------------------------------------------------------------------
-matrix_test!(recursive_direct; fp128_onehot_mc_rec; fp128::OneHotMultiChunk; akita_params::MultiChunkProfileId::W8R2.cfg());
+matrix_test!(recursive_direct; fp128_onehot_mc_rec; fp128::OneHotMultiChunk; MultiChunkProfileId::W8R2.cfg());
 
 // ----------------------------------------------------------------------------
 // OneHot × multi-chunk × precommitted × recursive    (production-sized, ignored)
 // RecursiveCommitmentConfig<OneHotMultiChunk> + user precommit;
 // profiles from the base config's scalar row.
 // ----------------------------------------------------------------------------
-matrix_test!(recursive_pre; fp128_onehot_mc_rec_pre; fp128::OneHotMultiChunk; akita_params::MultiChunkProfileId::W8R2.cfg());
+matrix_test!(recursive_pre; fp128_onehot_mc_rec_pre; fp128::OneHotMultiChunk; MultiChunkProfileId::W8R2.cfg());
 
 // ----------------------------------------------------------------------------
 // OneHot × multi-chunk × direct × non-recursive    [32]
@@ -291,7 +297,7 @@ matrix_test!(recursive_pre; fp128_onehot_mc_rec_pre; fp128::OneHotMultiChunk; ak
 fn fp128_onehot_mc_catalog_resolves() {
     let catalog =
         akita_config::test_support::workspace_schedule_catalog::<fp128::OneHotMultiChunk>(
-            akita_params::MultiChunkProfileId::W8R2.cfg(),
+            MultiChunkProfileId::W8R2.cfg(),
         )
         .expect("one-hot multi-chunk catalog");
     let opening_batch = OpeningClaimsLayout::new(32, 1).expect("opening batch");
@@ -310,7 +316,7 @@ fn fp128_onehot_mc() {
     init_rayon_pool();
     run_on_large_stack(|| {
         prove_verify_onehot_roundtrip::<fp128::OneHotMultiChunk>(
-            akita_params::MultiChunkProfileId::W8R2.cfg(),
+            MultiChunkProfileId::W8R2.cfg(),
             &[32],
             b"completeness/fp128_onehot_mc",
         );
@@ -334,10 +340,8 @@ fn fp128_onehot_mc() {
 #[test]
 fn fp128_onehot_batched() {
     fn run(nv: usize, batch_size: usize) {
-        let scheme = load_workspace_scheme::<OneHotCfg>(
-            akita_params::ChunkedWitnessCfg::default_non_chunked(),
-        )
-        .expect("workspace schedule catalog");
+        let scheme = load_workspace_scheme::<OneHotCfg>(ChunkedWitnessCfg::default_non_chunked())
+            .expect("workspace schedule catalog");
         let polys: Vec<_> = (0..batch_size)
             .map(|i| make_onehot_poly::<OneHotCfg>(nv, 0xa66e_0000 + nv as u64 * 100 + i as u64))
             .collect();
@@ -391,10 +395,8 @@ fn fp128_onehot_batched() {
 #[test]
 fn fp128_dense_batched() {
     fn run(nv: usize, batch_size: usize) {
-        let scheme = load_workspace_scheme::<DenseCfg>(
-            akita_params::ChunkedWitnessCfg::default_non_chunked(),
-        )
-        .expect("workspace schedule catalog");
+        let scheme = load_workspace_scheme::<DenseCfg>(ChunkedWitnessCfg::default_non_chunked())
+            .expect("workspace schedule catalog");
         let seeds: Vec<u64> = (0..batch_size)
             .map(|i| 0xd3e5_0000 + nv as u64 * 100 + i as u64)
             .collect();
@@ -463,10 +465,8 @@ fn fp128_dense_batched() {
 #[test]
 fn fp128_onehot_oversized_setup() {
     fn run(setup_nv: usize, poly_nv: usize) {
-        let scheme = load_workspace_scheme::<OneHotCfg>(
-            akita_params::ChunkedWitnessCfg::default_non_chunked(),
-        )
-        .expect("workspace schedule catalog");
+        let scheme = load_workspace_scheme::<OneHotCfg>(ChunkedWitnessCfg::default_non_chunked())
+            .expect("workspace schedule catalog");
         let opening_batch = OpeningClaimsLayout::new(poly_nv, 1).expect("singleton opening batch");
         let layout = scheme
             .schedules()
@@ -561,10 +561,8 @@ fn fp128_dense_monomial_basis() {
     init_rayon_pool();
     run_on_large_stack(|| {
         const NV: usize = 14;
-        let scheme = load_workspace_scheme::<DenseCfg>(
-            akita_params::ChunkedWitnessCfg::default_non_chunked(),
-        )
-        .expect("workspace schedule catalog");
+        let scheme = load_workspace_scheme::<DenseCfg>(ChunkedWitnessCfg::default_non_chunked())
+            .expect("workspace schedule catalog");
         let evals = dense_field_evals(NV, 0xb0b0_0000);
         let poly =
             akita_cpu_backend::DensePoly::<F>::from_field_evals(NV, &evals).expect("dense poly");

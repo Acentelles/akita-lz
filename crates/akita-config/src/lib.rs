@@ -150,6 +150,9 @@ impl<Cfg: CommitmentConfig> std::fmt::Debug for TrustedScheduleCatalog<Cfg> {
 impl<Cfg: CommitmentConfig> TrustedScheduleCatalog<Cfg> {
     /// Bind a catalog to `Cfg` and an explicit runtime chunking policy.
     ///
+    /// `chunking` must come from trusted caller configuration, independently of
+    /// the catalog being admitted; do not derive it from `catalog.policy()`.
+    ///
     /// # Errors
     ///
     /// Rejects invalid chunking, mismatched policy identity, or invalid rows.

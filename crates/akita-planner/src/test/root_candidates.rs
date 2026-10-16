@@ -108,7 +108,7 @@ pub(crate) fn exhaustive_root_candidates_for_reference(
             else {
                 continue;
             };
-            params.witness_chunk = crate::policy::witness_chunk_at_level(policy, 0);
+            params.witness_chunk = policy.witness_chunk_at_level(0);
             let Some(output_witness_len) = root_batch_next_w_len(
                 policy.decomposition.field_bits(),
                 policy.claim_ext_degree,

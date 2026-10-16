@@ -1,10 +1,10 @@
 //! Packing-fixture digit sizing, output matrices, and terminal geometry.
 use akita_config::CommitmentConfig;
-use akita_schedules::PlannerPolicy;
 use akita_error::AkitaError;
 use akita_params::sis::{
     BalancedSignedDigitFoldPolicy, FoldWitnessNorms, HonestFoldPolicy, HonestFoldSizingQuery,
 };
+use akita_schedules::PlannerPolicy;
 
 pub(super) fn rebuild_group_output_matrices(
     params: &mut akita_params::CommittedGroupParams,

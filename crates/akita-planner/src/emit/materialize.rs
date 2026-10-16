@@ -295,7 +295,12 @@ mod tests {
             .iter()
             .find(|family| family.family_name() == Dense::schedule_family_name())
             .unwrap();
-        let mut spec = crate::generated_families::empty_emit_spec(family, PathBuf::new()).unwrap();
+        let mut spec = crate::generated_families::empty_emit_spec(
+            family,
+            (family.policy)().witness_chunk,
+            PathBuf::new(),
+        )
+        .unwrap();
         spec.grouped_requests = [
             PrecommittedProducer::from_config::<Dense>(descriptor).unwrap(),
             PrecommittedProducer::from_config::<DenseBounded>(descriptor).unwrap(),
@@ -316,12 +321,12 @@ mod tests {
             .iter()
             .find(|family| family.family_name() == OneHot::schedule_family_name())
             .unwrap();
-        let mut spec = crate::generated_families::empty_emit_spec(family, PathBuf::new()).unwrap();
         let chunking = ChunkedWitnessCfg {
             num_chunks: 2,
             num_activated_levels: 4,
         };
-        spec.policy.witness_chunk = chunking;
+        let mut spec =
+            crate::generated_families::empty_emit_spec(family, chunking, PathBuf::new()).unwrap();
         spec.keys = vec![PolynomialGroupLayout::singleton(17)];
         let outputs = render_schedule_artifact_outputs_with_validation(
             &[spec],
@@ -361,7 +366,12 @@ mod tests {
             .iter()
             .find(|family| family.family_name() == OneHot::schedule_family_name())
             .unwrap();
-        let mut spec = crate::generated_families::empty_emit_spec(family, PathBuf::new()).unwrap();
+        let mut spec = crate::generated_families::empty_emit_spec(
+            family,
+            (family.policy)().witness_chunk,
+            PathBuf::new(),
+        )
+        .unwrap();
         spec.keys = vec![group];
         spec.preplanned = vec![(ScheduleLookupKey::single(group), row.schedule().clone())];
         render_schedule_artifact_outputs_with_validation(

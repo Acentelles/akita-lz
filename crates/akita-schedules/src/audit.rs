@@ -238,13 +238,13 @@ fn audit_committed_params(
     }
     params.validate_block_geometry()?;
     params.witness_chunk.validate()?;
-    let expected_chunks = policy.chunks_at_level(fold_level);
-    if params.witness_chunk.num_chunks != expected_chunks {
+    let expected = policy.witness_chunk_at_level(fold_level);
+    if params.witness_chunk != expected {
         return Err(invalid(
             label,
             &format!(
-                "witness chunks {} disagree with policy count {expected_chunks} at fold level {fold_level}",
-                params.witness_chunk.num_chunks,
+                "witness chunks {:?} disagree with policy geometry {expected:?} at fold level {fold_level}",
+                params.witness_chunk,
             ),
         ));
     }

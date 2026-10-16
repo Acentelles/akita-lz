@@ -150,6 +150,7 @@ fn load_blob(input: &Path) -> Result<Vec<u8>, String> {
 macro_rules! strict_decode_and_verify {
     ($blob:expr, $field:ty, $cfg:ty, $d:expr) => {{
         type CaseExt = <$cfg as CommitmentConfig>::ExtField;
+        // Every supported AkitaJoltCase currently expects a single-chunk catalog.
         let (schedules, inner_blob) = akita_recursion_glue::split_schedule_catalog::<$cfg>(
             $blob,
             akita_params::ChunkedWitnessCfg::default_non_chunked(),

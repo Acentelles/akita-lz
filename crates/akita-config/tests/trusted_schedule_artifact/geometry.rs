@@ -23,7 +23,7 @@ fn catalog_construction_rejects_rows_with_different_chunk_width_or_depth() {
         (
             chunked.catalog(),
             MultiChunkProfileId::W2R2.cfg(),
-            "recursive fold 1 final group",
+            "root final group",
         ),
         (
             chunked.catalog(),
@@ -31,7 +31,7 @@ fn catalog_construction_rejects_rows_with_different_chunk_width_or_depth() {
                 num_chunks: 2,
                 num_activated_levels: 4,
             },
-            "recursive fold 2 final group",
+            "root final group",
         ),
     ] {
         let error = ValidatedScheduleCatalog::try_new(
@@ -74,4 +74,32 @@ fn artifact_rejects_single_chunk_rows_under_a_matching_multi_chunk_policy_digest
         if message.starts_with("root final group") && message.contains("witness chunks")),
         "{error}"
     );
+}
+
+#[test]
+fn catalog_rejects_noncanonical_per_fold_activation_depth() {
+    let chunking = MultiChunkProfileId::W2R3.cfg();
+    let catalog = checked_in_catalog::<fp128::OneHotMultiChunkW2R3>(chunking);
+    let row = catalog.rows().next().unwrap();
+    for level in [0, 1] {
+        let mut schedule = row.schedule().clone();
+        let params = if level == 0 {
+            &mut schedule.root.params
+        } else {
+            &mut schedule.recursive_folds[0].params
+        };
+        params.witness_chunk.num_activated_levels = 7;
+        let error = ValidatedScheduleCatalog::try_new(
+            catalog.family_name(),
+            [(row.profiles().clone(), schedule)],
+            catalog.policy(),
+            fp128::OneHotMultiChunkW2R3::ring_challenge_config,
+        )
+        .expect_err("each fold must carry the canonical activation depth");
+        assert!(
+            matches!(error, AkitaError::InvalidSetup(ref message)
+            if message.contains("witness chunks") && message.contains("policy geometry")),
+            "{error}"
+        );
+    }
 }

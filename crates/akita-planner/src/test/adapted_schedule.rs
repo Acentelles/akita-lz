@@ -309,8 +309,10 @@ fn adapted_schedule_forces_the_frozen_split_after_grouped_growth() {
 #[test]
 fn adapted_schedule_falls_back_to_the_full_search_when_the_frozen_suffix_is_infeasible() {
     let policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
-    let catalog = akita_config::test_support::workspace_schedule_catalog::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked())
-        .expect("one-hot catalog");
+    let catalog = akita_config::test_support::workspace_schedule_catalog::<OneHot>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    )
+    .expect("one-hot catalog");
     let main_group = PolynomialGroupLayout::singleton(14);
     let main_row = catalog
         .resolve_key(&ScheduleLookupKey::single(main_group))

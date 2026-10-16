@@ -124,6 +124,10 @@ where
             )?,
             precommitteds: key.precommitteds.clone(),
         };
-        akita_config::ResolvedScheduleRow::try_new(profiles, schedule, &policy_of::<Self>(akita_params::ChunkedWitnessCfg::default_non_chunked()))
+        akita_config::ResolvedScheduleRow::try_new(
+            profiles,
+            schedule,
+            &policy_of::<Self>(akita_params::ChunkedWitnessCfg::default_non_chunked()),
+        )
     }
 }

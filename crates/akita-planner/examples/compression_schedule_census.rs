@@ -272,7 +272,7 @@ fn main() -> Result<(), String> {
             }
             schedules += 1;
         }
-        for request in (family.grouped_requests)(&preplans)
+        for request in (family.grouped_requests)(&preplans, (family.policy)().witness_chunk)
             .map_err(|error| format!("{} group keys: {error}", family.family_name()))?
         {
             let key = request.key();

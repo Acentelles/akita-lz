@@ -139,8 +139,10 @@ fn packing_round_trip(prefixed_fold_count: usize) {
     std::thread::Builder::new()
         .stack_size(512 * 1024 * 1024)
         .spawn(move || {
-            let catalog = akita_config::test_support::workspace_schedule_catalog::<PackingCfg>(akita_params::ChunkedWitnessCfg::default_non_chunked())
-                .expect("workspace schedule catalog");
+            let catalog = akita_config::test_support::workspace_schedule_catalog::<PackingCfg>(
+                akita_params::ChunkedWitnessCfg::default_non_chunked(),
+            )
+            .expect("workspace schedule catalog");
             let num_vars = 20;
             let opening_batch = OpeningClaimsLayout::new(num_vars, 1).unwrap();
             let key = ScheduleLookupKey::single(opening_batch.root_final_group_layout().unwrap());

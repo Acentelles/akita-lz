@@ -49,7 +49,21 @@ The same `chunking` value is an explicit argument to
 `AkitaCommitmentScheme::<Config>::from_schedule_artifact`. `Config` still fixes
 the field types, decomposition, security policy, and challenge rules. Preset
 chunking values are conveniences for callers generating the packaged fixtures;
-they do not override the runtime argument.
+they do not override the runtime argument. These presets live in
+`akita_params::MultiChunkProfileId` (for example, `MultiChunkProfileId::W2R3.cfg()`),
+with packaged inventories selected by `family_row!` in
+`akita-planner/src/generated_families.rs`.
+
+Packaged fixture paths are keyed by family name and contain one geometry per
+name. The remaining geometry-named config types identify these fixed fixtures;
+they are not required to use runtime geometry. Applications can use the same
+base config for multiple catalogs, assigning each its own path and supplying
+its expected geometry explicitly.
+
+The fixture helpers `empty_emit_spec` and `emit_spec_for_family` take explicit
+chunking. Preplans are reused only for matching geometry. Precommitted producer
+profiles remain independently selected: a consumer's geometry does not change
+an already committed producer.
 
 The planner validates geometry and searches for schedules. Catalog admission
 checks the expected policy digest and audits every row, including chunking at

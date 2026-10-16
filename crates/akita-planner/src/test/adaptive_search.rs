@@ -298,7 +298,10 @@ fn feasible_packing_dimension_ignores_infeasible_smaller_dimensions() {
         CommitmentRingDims::uniform(256),
     ])
     .unwrap();
-    let mut policy = policy_for_domain(policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked()), &dimensions);
+    let mut policy = policy_for_domain(
+        policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked()),
+        &dimensions,
+    );
     policy.witness_chunk = akita_params::MultiChunkProfileId::W2R1.cfg();
     policy.selective_l2_response_model = crate::SelectiveL2ResponseModelId::Disabled;
     let admitted_dimensions =
@@ -780,7 +783,8 @@ fn adaptive_search_supports_direct_multi_chunk_policy() {
         Some(akita_params::MultiChunkProfileId::W4R3),
         Some(akita_params::MultiChunkProfileId::W8R3),
     ] {
-        let mut policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
+        let mut policy =
+            policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
         policy.witness_chunk = profile.map_or_else(
             akita_params::ChunkedWitnessCfg::default_non_chunked,
             |profile| profile.cfg(),
