@@ -43,6 +43,7 @@ where
 }
 
 pub(crate) fn run_multi_group_onehot<FF, const D: usize, Cfg>(
+    chunking: akita_params::ChunkedWitnessCfg,
     label: &str,
     pre_num_vars: usize,
     final_num_vars: usize,
@@ -71,7 +72,7 @@ pub(crate) fn run_multi_group_onehot<FF, const D: usize, Cfg>(
         + AkitaSerialize
         + Valid,
 {
-    let scheme = load_workspace_scheme::<Cfg>().expect("workspace schedule artifact");
+    let scheme = load_workspace_scheme::<Cfg>(chunking).expect("workspace schedule artifact");
     const PRE_GROUPS: usize = 2;
     const PRE_POLYS_PER_GROUP: usize = 1;
 
@@ -290,7 +291,7 @@ pub(crate) fn run_multi_group_onehot<FF, const D: usize, Cfg>(
     report_proof_size_against_planner(
         label,
         &proof,
-        proof_size_budgets::<Cfg>(&schedule, final_group),
+        proof_size_budgets(&schedule, final_group, scheme.schedules().policy()),
         "planned",
     );
     emit_runtime_schedule_summary(

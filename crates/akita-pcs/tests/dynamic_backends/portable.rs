@@ -33,7 +33,9 @@ fn portable_tensor_import_matches_homogeneous_proof() {
         // Generate this small batched case in memory; the shipped nv16 row has
         // no tensor successor. Independent admission and the assertions in run
         // ensure we still exercise batched, zero-offload tensor transfer.
-        let policy = akita_config::policy_of::<fp32::OneHot>();
+        let policy = akita_config::policy_of::<fp32::OneHot>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        );
         let key = akita_params::ScheduleLookupKey::single(
             akita_params::PolynomialGroupLayout::new(NUM_VARS, 2),
         );
@@ -57,7 +59,11 @@ fn portable_tensor_import_matches_homogeneous_proof() {
         )
         .expect("independently admitted tensor-transfer schedule");
         let scheme = akita_pcs::AkitaCommitmentScheme::<fp32::OneHot>::new(
-            akita_config::TrustedScheduleCatalog::new(catalog).unwrap(),
+            akita_config::TrustedScheduleCatalog::new(
+                catalog,
+                akita_params::ChunkedWitnessCfg::default_non_chunked(),
+            )
+            .unwrap(),
         );
         run::<fp32::OneHot, _>(&scheme, NUM_VARS, vec![poly.clone(), poly], expected, false);
     });
@@ -69,7 +75,10 @@ fn offloaded_route_uses_only_local_prefix_handles() {
     common::run_on_large_stack(|| {
         // The smallest shipped fp32 dense row with an offloaded setup prefix.
         let poly = DensePoly::from_field_evals(24, vec![F::from_u64(1); 1 << 24]).unwrap();
-        let scheme = common::load_workspace_scheme::<fp32::Dense>().unwrap();
+        let scheme = common::load_workspace_scheme::<fp32::Dense>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        )
+        .unwrap();
         run::<fp32::Dense, _>(&scheme, 24, vec![poly], E::from_u64(1), true);
     });
 }

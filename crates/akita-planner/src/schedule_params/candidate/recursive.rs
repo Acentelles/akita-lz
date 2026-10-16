@@ -398,7 +398,7 @@ impl RecursiveCandidateContext<'_, '_> {
                     request.payload_mode,
                     *transition,
                     source_encoding,
-                    crate::policy::witness_chunk_at_level(request.policy, request.fold_level),
+                    request.policy.witness_chunk_at_level(request.fold_level),
                 )?;
                 params.witness_chunk_ends = core.witness_chunk_ends.clone();
                 candidates.push(params);

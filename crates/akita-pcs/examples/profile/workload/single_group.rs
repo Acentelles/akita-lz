@@ -153,7 +153,7 @@ fn run_prove<FF, const D: usize, Cfg: CommitmentConfig<Field = FF>>(
             report_proof_size_against_planner(
                 label,
                 &proof,
-                proof_size_budgets::<Cfg>(plan, group_layout),
+                proof_size_budgets(plan, group_layout, scheme.schedules().policy()),
                 "planned",
             );
         }
@@ -172,7 +172,7 @@ fn run_prove<FF, const D: usize, Cfg: CommitmentConfig<Field = FF>>(
             report_proof_size_against_planner(
                 label,
                 &proof,
-                proof_size_budgets::<Cfg>(schedule, group_layout),
+                proof_size_budgets(schedule, group_layout, scheme.schedules().policy()),
                 "runtime schedule",
             );
         }

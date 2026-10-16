@@ -161,8 +161,10 @@ fn combined_recursive_prefix_registry_persists_and_serves_each_family() {
             .stack_size(64 * 1024 * 1024)
             .spawn(|| {
                 let onehot = SetupRequirements::from_catalog::<fp128::OneHot>(
-                    &akita_config::test_support::workspace_schedule_catalog::<fp128::OneHot>()
-                        .expect("recursive one-hot catalog"),
+                    &akita_config::test_support::workspace_schedule_catalog::<fp128::OneHot>(
+                        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+                    )
+                    .expect("recursive one-hot catalog"),
                     MAX_VARS,
                     MAX_POLYS,
                 )
@@ -170,7 +172,7 @@ fn combined_recursive_prefix_registry_persists_and_serves_each_family() {
                 let multichunk = SetupRequirements::from_catalog::<fp128::OneHotMultiChunk>(
                     &akita_config::test_support::workspace_schedule_catalog::<
                         fp128::OneHotMultiChunk,
-                    >()
+                    >(akita_params::MultiChunkProfileId::W8R2.cfg())
                     .expect("recursive multi-chunk catalog"),
                     MAX_VARS,
                     MAX_POLYS,

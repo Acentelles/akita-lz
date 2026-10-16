@@ -5,7 +5,7 @@ fn fold_frontiers_retain_l2_candidates() {
     use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
     use akita_params::InnerCommitSecurityRoute;
 
-    let policy = policy_of::<OneHot>();
+    let policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let opening = PlannerOpeningCandidate::evaluation_trace(
         OneHot::ring_challenge_config(64).expect("challenge config"),
     );
@@ -50,7 +50,7 @@ fn fold_frontiers_retain_l2_candidates() {
 fn guided_search_forces_a_split_outside_the_bounded_domain() {
     use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-    let policy = policy_of::<OneHot>();
+    let policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let base_request = RecursiveCandidateRequest {
         input_chunks: None,
         policy: &policy,
@@ -124,7 +124,7 @@ fn guided_recursive_l2_survives_the_profitability_filter() {
     use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
     use akita_params::InnerCommitSecurityRoute;
 
-    let policy = policy_of::<OneHot>();
+    let policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     for source_bound in [
         1_000,
         10_000,
@@ -212,7 +212,7 @@ fn combined_relation_views_match_mode_specific_searches() {
     use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
     use akita_params::RingRelationMode::{QuotientLift, ReducedEvaluation};
 
-    let policy = policy_of::<OneHot>();
+    let policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let request = RecursiveCandidateRequest {
         input_chunks: None,
         policy: &policy,
@@ -233,6 +233,7 @@ fn combined_relation_views_match_mode_specific_searches() {
     let relation_domain = RelationSearchDomain::for_topology(
         RingRelationPhase::QuotientPrefix,
         request.fold_level,
+        policy.witness_chunk_at_level(request.fold_level),
         RelationCandidateTopology::DirectEvaluationTrace,
         None,
     )
@@ -272,7 +273,7 @@ fn reduced_only_views_keep_quotient_terminal_and_exclusively_reduced_folds() {
     use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
     use akita_params::RingRelationMode::{QuotientLift, ReducedEvaluation};
 
-    let policy = policy_of::<OneHot>();
+    let policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let request = RecursiveCandidateRequest {
         input_chunks: None,
         policy: &policy,
@@ -318,7 +319,7 @@ fn reduced_only_views_keep_quotient_terminal_and_exclusively_reduced_folds() {
 fn combined_views_keep_a_noncontracting_terminal_candidate() {
     use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-    let policy = policy_of::<OneHot>();
+    let policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let opening = PlannerOpeningCandidate::evaluation_trace(
         OneHot::ring_challenge_config(64).expect("challenge config"),
     );
@@ -362,7 +363,7 @@ fn combined_views_keep_a_noncontracting_terminal_candidate() {
 fn late_consumer_keeps_setup_prefix_slices_eligible() {
     use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-    let policy = policy_of::<OneHot>();
+    let policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let challenge = OneHot::ring_challenge_config(64).expect("challenge config");
     let mut cache = SetupPrefixSearchCache::default();
     let request = RecursiveCandidateRequest {

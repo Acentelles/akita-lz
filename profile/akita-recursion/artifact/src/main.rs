@@ -43,7 +43,9 @@ use std::path::PathBuf;
 use std::time::Instant;
 use tracing_subscriber::EnvFilter;
 
-fn load_workspace_scheme<Cfg>() -> Result<AkitaCommitmentScheme<Cfg>, akita_error::AkitaError>
+fn load_workspace_scheme<Cfg>(
+    chunking: akita_params::ChunkedWitnessCfg,
+) -> Result<AkitaCommitmentScheme<Cfg>, akita_error::AkitaError>
 where
     Cfg: CommitmentConfig,
     Cfg::Field: Field + CanonicalEncoding + Unreduced + PseudoMersenne + Valid + AkitaSerialize,
@@ -60,7 +62,7 @@ where
             path.display()
         ))
     })?;
-    AkitaCommitmentScheme::from_schedule_artifact(&bytes)
+    AkitaCommitmentScheme::from_schedule_artifact(&bytes, chunking)
 }
 
 #[derive(Debug, Parser)]
@@ -336,7 +338,7 @@ macro_rules! generate_scalar_case {
 
         let case = $case;
         let num_vars = $nv;
-        let scheme = load_workspace_scheme::<ScalarCfg>()
+        let scheme = load_workspace_scheme::<ScalarCfg>(akita_params::ChunkedWitnessCfg::default_non_chunked())
             .map_err(|err| format!("{} trusted schedule catalog: {err}", case))?;
         let opening_layout = OpeningClaimsLayout::new(num_vars, 1)
             .map_err(|err| format!("{} opening layout: {err}", case))?;
@@ -555,10 +557,9 @@ fn run() -> Result<(), String> {
         ));
     }
     let onehot_k = onehot_k_for_num_vars(nv);
-    let scheme = load_workspace_scheme::<Cfg>()
-        .map_err(|err| format!("failed to load trusted recursive schedule catalog: {err}"))?;
-    let base_scheme = load_workspace_scheme::<Cfg>()
-        .map_err(|err| format!("failed to load trusted base schedule catalog: {err}"))?;
+    let scheme =
+        load_workspace_scheme::<Cfg>(akita_params::ChunkedWitnessCfg::default_non_chunked())
+            .map_err(|err| format!("failed to load trusted recursive schedule catalog: {err}"))?;
 
     let prime = fp128_prime_label();
     tracing::info!(
@@ -570,7 +571,7 @@ fn run() -> Result<(), String> {
     );
 
     let pre_group = PolynomialGroupLayout::new(PRE_NUM_VARS, 1);
-    let pre_descriptor = base_scheme
+    let pre_descriptor = scheme
         .schedules()
         .resolve_key(&ScheduleLookupKey::single(pre_group))
         .map(|row| row.profiles().final_group)

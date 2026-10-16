@@ -138,7 +138,9 @@ fn complete_candidate(
 
 #[test]
 fn actual_policy_can_select_a_noncontractive_complete_candidate() {
-    let policy = akita_config::policy_of::<akita_config::proof_optimized::fp128::Dense>();
+    let policy = akita_config::policy_of::<akita_config::proof_optimized::fp128::Dense>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    );
     let contractive = complete_candidate(101, 64, 1_000);
     let noncontractive = complete_candidate(100, 64, 12_000);
     let input_bits = 256 * policy.decomposition.field_bits() as usize;

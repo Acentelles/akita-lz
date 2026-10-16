@@ -169,7 +169,9 @@ mod tests {
 
     #[test]
     fn terminal_rejects_an_input_not_divisible_by_its_a_ring() {
-        let policy = akita_config::policy_of::<akita_config::proof_optimized::fp128::Dense>();
+        let policy = akita_config::policy_of::<akita_config::proof_optimized::fp128::Dense>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        );
         let challenge = akita_challenges::SparseChallengeConfig::production_for_ring_dim(256)
             .expect("D256 challenge");
         let params = CommittedGroupParams::params_only(
@@ -204,7 +206,7 @@ mod tests {
         use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
         use akita_params::InnerCommitSecurityRoute;
 
-        let policy = policy_of::<OneHot>();
+        let policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
         let source_moment = crate::response_model::SourceMomentEstimate::new(1_000_000);
         let request = RecursiveCandidateRequest {
             input_chunks: None,

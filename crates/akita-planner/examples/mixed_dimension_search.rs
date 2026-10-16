@@ -51,7 +51,7 @@ fn main() -> Result<(), akita_error::AkitaError> {
         .nth(1)
         .and_then(|value| value.parse().ok())
         .unwrap_or(36);
-    let policy = policy_of::<OneHot>();
+    let policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let scalar_key = ScheduleLookupKey::single(PolynomialGroupLayout::singleton(num_vars));
     let scalar = find_schedule(
         &scalar_key,

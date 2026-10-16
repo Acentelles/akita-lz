@@ -49,11 +49,14 @@ fn w8r2_profiling_key(
 
 #[test]
 fn w8r2_verifier_setup_stops_after_the_offloaded_chain() {
-    let base_catalog =
-        akita_config::test_support::workspace_schedule_catalog::<fp128::OneHotMultiChunk>()
-            .expect("base W8R2 catalog");
-    let catalog = akita_config::test_support::workspace_schedule_catalog::<W8R2Cfg>()
-        .expect("recursive W8R2 catalog");
+    let base_catalog = akita_config::test_support::workspace_schedule_catalog::<
+        fp128::OneHotMultiChunk,
+    >(akita_params::MultiChunkProfileId::W8R2.cfg())
+    .expect("base W8R2 catalog");
+    let catalog = akita_config::test_support::workspace_schedule_catalog::<W8R2Cfg>(
+        akita_params::MultiChunkProfileId::W8R2.cfg(),
+    )
+    .expect("recursive W8R2 catalog");
     let key = w8r2_profiling_key(&base_catalog);
     let root_layout = key.opening_layout().expect("root layout");
     let schedule = catalog.resolve_key(&key).expect("W8R2 schedule");
@@ -65,7 +68,9 @@ fn w8r2_verifier_setup_stops_after_the_offloaded_chain() {
         akita_config::ValidatedScheduleCatalog::try_new(
             W8R2Cfg::schedule_family_name(),
             [(schedule.profiles().clone(), schedule.schedule().clone())],
-            &akita_config::policy_of::<W8R2Cfg>(),
+            &akita_config::policy_of::<W8R2Cfg>(
+                akita_params::ChunkedWitnessCfg::default_non_chunked(),
+            ),
             W8R2Cfg::ring_challenge_config,
         )
         .expect("admitted grouped row"),
@@ -273,6 +278,7 @@ fn assert_w8r2_profile_shape(schedule: &FoldSchedule) {
 #[ignore = "production-sized profile E2E; run explicitly with --release"]
 fn mix_multi_chunk_recursive_profile_proves_and_verifies() {
     recursive_multi_group_round_trip::<fp128::OneHotMultiChunk>(
+        akita_params::MultiChunkProfileId::W8R2.cfg(),
         TRANSCRIPT_DOMAIN,
         assert_w8r2_profile_shape,
     );

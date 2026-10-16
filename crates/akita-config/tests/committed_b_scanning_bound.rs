@@ -21,8 +21,12 @@ fn differing_basis_schedule<Cfg: CommitmentConfig>(
         .join("../..")
         .join("artifacts/schedules")
         .join(format!("{}.aks", Cfg::schedule_family_name()));
-    let bytes = std::fs::read(path).expect("workspace schedule catalog");
-    let catalog = TrustedScheduleCatalog::<Cfg>::from_artifact_bytes(&bytes).unwrap();
+    let bytes = std::fs::read(path).expect("checked-in schedule artifact");
+    let catalog = TrustedScheduleCatalog::<Cfg>::from_artifact_bytes(
+        &bytes,
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    )
+    .unwrap();
     let row = catalog
         .resolve_key(&ScheduleLookupKey::single(
             PolynomialGroupLayout::singleton(14),
@@ -31,7 +35,7 @@ fn differing_basis_schedule<Cfg: CommitmentConfig>(
     let mut schedule = row.schedule().clone();
     assert!(schedule.recursive_folds.is_empty());
     assert!(!schedule.root.params.has_preceding_groups());
-    let policy = policy_of::<Cfg>();
+    let policy = policy_of::<Cfg>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let root = &mut schedule.root.params;
     assert_eq!(root.open().digits.log_basis, 3);
 
@@ -137,7 +141,7 @@ fn differing_basis_schedule<Cfg: CommitmentConfig>(
 #[test]
 fn committed_b_rejects_the_honest_alphabet_bound() {
     let (profiles, schedule) = differing_basis_schedule::<fp128::OneHot>(14, 3);
-    let policy = policy_of::<fp128::OneHot>();
+    let policy = policy_of::<fp128::OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let error = ResolvedScheduleRow::try_new(profiles.clone(), schedule.clone(), &policy)
         .expect_err("base-8 scanning requires collision bound 7");
     assert!(error
@@ -170,7 +174,7 @@ fn committed_b_scanning_bound_changes_the_required_rank() {
     let error = ValidatedScheduleCatalog::try_new(
         fp32::OneHot::schedule_family_name(),
         [(profiles, schedule)],
-        &policy_of::<fp32::OneHot>(),
+        &policy_of::<fp32::OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked()),
         fp32::OneHot::ring_challenge_config,
     )
     .expect_err("a rank-1 matrix priced for bound 3 must not certify bound 7");
@@ -184,13 +188,21 @@ fn round_trip_corrected_schedule<Cfg: CommitmentConfig>(num_vars: usize, rank: u
     let raw = ValidatedScheduleCatalog::try_new(
         Cfg::schedule_family_name(),
         [(profiles.clone(), schedule.clone())],
-        &policy_of::<Cfg>(),
+        &policy_of::<Cfg>(akita_params::ChunkedWitnessCfg::default_non_chunked()),
         Cfg::ring_challenge_config,
     )
     .expect("differing bases remain valid when B covers the scanning alphabet");
-    let catalog = TrustedScheduleCatalog::<Cfg>::new(raw).unwrap();
+    let catalog = TrustedScheduleCatalog::<Cfg>::new(
+        raw,
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    )
+    .unwrap();
     let bytes = catalog.to_artifact_bytes().unwrap();
-    let loaded = TrustedScheduleCatalog::<Cfg>::from_artifact_bytes(&bytes).unwrap();
+    let loaded = TrustedScheduleCatalog::<Cfg>::from_artifact_bytes(
+        &bytes,
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    )
+    .unwrap();
     let row = loaded.resolve_profiles(&profiles).unwrap();
     assert_eq!(row.schedule(), &schedule);
     let occurrences = row.schedule().sis_occurrences().unwrap();
@@ -216,9 +228,11 @@ fn committed_b_artifact_decoder_reaudits_the_scanning_bound() {
     // In this single-row fixture the first bound 7 is the root B matrix.
     let underpriced = artifact.replacen("\"coeff_linf_bound\":7", "\"coeff_linf_bound\":3", 1);
     assert_ne!(artifact, underpriced);
-    let error =
-        TrustedScheduleCatalog::<fp128::OneHot>::from_artifact_bytes(underpriced.as_bytes())
-            .expect_err("loading an artifact must recheck the certified alphabet");
+    let error = TrustedScheduleCatalog::<fp128::OneHot>::from_artifact_bytes(
+        underpriced.as_bytes(),
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    )
+    .expect_err("loading an artifact must recheck the certified alphabet");
     assert!(error
         .to_string()
         .contains("declared coefficient bound 3 is below required bound 7"));

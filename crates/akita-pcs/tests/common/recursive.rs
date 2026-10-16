@@ -7,6 +7,7 @@ pub(crate) const RECURSIVE_ROUND_TRIP_NV: usize = 32;
 pub(crate) const RECURSIVE_ROUND_TRIP_POLYS: usize = 4;
 
 pub(crate) fn recursive_multi_group_round_trip<BaseCfg>(
+    chunking: akita_params::ChunkedWitnessCfg,
     transcript_domain: &'static [u8],
     on_schedule: fn(&FoldSchedule),
 ) where
@@ -14,12 +15,13 @@ pub(crate) fn recursive_multi_group_round_trip<BaseCfg>(
 {
     init_rayon_pool();
     run_on_large_stack(move || {
-        let setup = load_workspace_scheme::<BaseCfg>()
+        let setup = load_workspace_scheme::<BaseCfg>(chunking)
             .expect("workspace recursive schedule catalog")
             .setup_prover(RECURSIVE_ROUND_TRIP_NV, RECURSIVE_ROUND_TRIP_POLYS)
             .expect("recursive setup");
         let stack = CpuBackend::new(setup.expanded.clone()).expect("backend");
         recursive_multi_group_round_trip_on::<BaseCfg>(
+            chunking,
             &setup,
             &stack,
             transcript_domain,
@@ -32,6 +34,7 @@ pub(crate) fn recursive_multi_group_round_trip<BaseCfg>(
 /// `stack`, which must cover `BaseCfg`'s recursive rows at
 /// `(RECURSIVE_ROUND_TRIP_NV, RECURSIVE_ROUND_TRIP_POLYS)`.
 pub(crate) fn recursive_multi_group_round_trip_on<BaseCfg>(
+    chunking: akita_params::ChunkedWitnessCfg,
     setup: &AkitaProverSetup<F>,
     stack: &CpuBackend<F, F>,
     transcript_domain: &[u8],
@@ -47,7 +50,7 @@ pub(crate) fn recursive_multi_group_round_trip_on<BaseCfg>(
     const _: () =
         assert!(PRE_GROUPS * PRE_GROUP_SIZE + FINAL_GROUP_SIZE == RECURSIVE_ROUND_TRIP_POLYS);
 
-    let scheme = load_workspace_scheme::<BaseCfg>().expect("workspace schedule catalog");
+    let scheme = load_workspace_scheme::<BaseCfg>(chunking).expect("workspace schedule catalog");
     let pre_key = PolynomialGroupLayout::new(PRE_NV, PRE_GROUP_SIZE);
     let pre_frozen = scheme
         .schedules()

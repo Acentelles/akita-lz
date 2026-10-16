@@ -170,7 +170,8 @@ it does not run this search or accept a proof-selected schedule.
 
 ## Observed counts and non-monotone cases
 
-A baseline survey of 584 inputs covered fp32/fp64/fp128, dense/one-hot sources,
+The original baseline survey, before the packing eligibility changes in
+PR #245, covered 584 inputs spanning fp32/fp64/fp128, dense/one-hot sources,
 and ten witness chunk layouts. It produced 561 admitted schedules and 23 search
 timeouts. Sixteen results came from existing catalogs. All 60 combinations had
 both zero and positive observations; 46 had a two-offload observation.
@@ -197,8 +198,8 @@ Witness partitioning changes the boundaries. For fp128 one-hot W8R2, every
 integer nv=16…48 was checked: zero at 16–28, one at 29–34, two at 35–48.
 W means witness chunk count; it is distinct from the one-hot density K=256.
 
-These are observed schedule choices, not universal thresholds or verifier
-benchmarks. fp64 dense timed out at nv40/48 and fp128 dense at nv48; a timeout
+These are historical schedule choices, not current catalog guarantees, universal
+thresholds, or verifier benchmarks. fp64 dense timed out at nv40/48 and fp128 dense at nv48; a timeout
 establishes no count or infeasibility. Unmeasured gaps and larger sizes are not
 extrapolated. Modeled proof bytes and planner wall time do not measure proof
 size or verifier latency in an end-to-end run.

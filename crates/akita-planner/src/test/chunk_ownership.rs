@@ -22,13 +22,11 @@ impl IncomingWidthFixture {
         // A small root with many live blocks makes eight large, equal witness
         // bodies. The two consumers emit equal-length witnesses, but a wider
         // consumer adds enough producer padding to overturn its local dominance.
-        let mut policy = policy_of::<OneHot>();
+        let mut policy =
+            policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
         policy.claim_ext_degree = 1;
         policy.opening_basis_range = (2, 2);
-        policy.witness_chunk = akita_params::ChunkedWitnessCfg {
-            num_chunks: 8,
-            num_activated_levels: 1,
-        };
+        policy.witness_chunk = akita_params::MultiChunkProfileId::W8R1.cfg();
         policy.selective_l2_response_model = crate::SelectiveL2ResponseModelId::Disabled;
         let dimensions = CommitmentRingDims::uniform(64);
         policy.ring_dimension_schedule = crate::RingDimensionSchedule {
@@ -41,7 +39,7 @@ impl IncomingWidthFixture {
         akita_schedules::planner_support::validate_policy(&policy).unwrap();
         let key = ScheduleLookupKey::single(PolynomialGroupLayout::singleton(16));
         let opening_layout = key.opening_layout().unwrap();
-        let opening = PlannerOpeningCandidate::coefficient_packing(0, 1, dimensions, 64)
+        let opening = PlannerOpeningCandidate::coefficient_packing(1, dimensions, 64)
             .unwrap()
             .unwrap();
         let (producer, witness_len) = crate::planner::exhaustive_root_candidates_for_reference(
@@ -453,7 +451,7 @@ fn memo_ownership_is_shared_but_compared_by_value() {
         tail_len: 5,
         tail_suffix_alignment: 1,
     };
-    let policy = policy_of::<OneHot>();
+    let policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let shared = Arc::new(shape);
     let state = SuffixState {
         level: 1,
@@ -516,7 +514,8 @@ fn memo_key_has_a_bounded_inline_size() {
 #[test]
 fn contracting_chunk_search_matches_unpruned_complete_objective() {
     for num_chunks in [2, 8] {
-        let mut policy = policy_of::<OneHot>();
+        let mut policy =
+            policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
         policy.witness_chunk = akita_params::ChunkedWitnessCfg {
             num_chunks,
             num_activated_levels: 1,
@@ -575,7 +574,8 @@ fn contracting_chunk_search_matches_unpruned_complete_objective() {
 #[test]
 fn contracting_chunk_pruning_preserves_consumer_widths_in_both_orders() {
     for num_chunks in [2, 8] {
-        let mut policy = policy_of::<OneHot>();
+        let mut policy =
+            policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
         policy.witness_chunk = akita_params::ChunkedWitnessCfg {
             num_chunks,
             num_activated_levels: 1,

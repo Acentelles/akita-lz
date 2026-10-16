@@ -202,8 +202,10 @@ mod tests {
         FoldSchedule,
         usize,
     ) {
-        let catalog = akita_config::test_support::workspace_schedule_catalog::<OneHot>()
-            .expect("workspace schedule catalog");
+        let catalog = akita_config::test_support::workspace_schedule_catalog::<OneHot>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        )
+        .expect("workspace schedule catalog");
         let row = catalog
             .resolve_key(&ScheduleLookupKey::single(PolynomialGroupLayout::new(
                 15, 1,

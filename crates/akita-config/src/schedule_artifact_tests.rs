@@ -7,8 +7,10 @@ use crate::{policy_of, CommitmentConfig, TrustedScheduleCatalog, ValidatedSchedu
 
 #[test]
 fn one_catalog_selects_zero_one_or_two_setup_offloads() {
-    let catalog = crate::test_support::workspace_schedule_catalog::<fp128::OneHot>()
-        .expect("unified one-hot catalog");
+    let catalog = crate::test_support::workspace_schedule_catalog::<fp128::OneHot>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    )
+    .expect("unified one-hot catalog");
     for (nv, expected) in [(14, 0), (30, 1), (40, 2)] {
         let key = akita_params::ScheduleLookupKey::single(
             akita_params::PolynomialGroupLayout::singleton(nv),
@@ -28,18 +30,20 @@ fn one_catalog_selects_zero_one_or_two_setup_offloads() {
 pub(crate) fn mutated_row_admission_error<Cfg: CommitmentConfig>(
     row: &akita_schedules::ResolvedScheduleRow,
     mutate: impl FnOnce(&mut FoldSchedule),
+    chunking: akita_params::ChunkedWitnessCfg,
 ) -> AkitaError {
     let profiles = row.profiles().clone();
     let mut schedule = row.schedule().clone();
     mutate(&mut schedule);
-    akita_schedules::ResolvedScheduleRow::try_new(profiles, schedule, &policy_of::<Cfg>())
+    akita_schedules::ResolvedScheduleRow::try_new(profiles, schedule, &policy_of::<Cfg>(chunking))
         .expect_err("noncanonical row must fail at admission")
 }
 
 fn row_with_setup_prefix<Cfg: CommitmentConfig>(
     predicate: impl Fn(&GroupOpenPhaseParams) -> bool,
+    chunking: akita_params::ChunkedWitnessCfg,
 ) -> akita_schedules::ResolvedScheduleRow {
-    crate::test_support::workspace_schedule_catalog::<Cfg>()
+    crate::test_support::workspace_schedule_catalog::<Cfg>(chunking)
         .expect("workspace schedule catalog")
         .rows()
         .find(|row| {
@@ -114,24 +118,31 @@ fn replace_schedule_evaluation_trace_challenges(
 
 #[test]
 fn row_admission_audits_recursive_setup_prefix_policy() {
-    let row = row_with_setup_prefix::<fp128::OneHot>(|_| true);
+    let row = row_with_setup_prefix::<fp128::OneHot>(
+        |_| true,
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    );
     let prefix_index = row
         .schedule()
         .recursive_folds
         .iter()
         .position(|fold| fold.params.setup_prefix().is_some())
         .expect("recursive setup-prefix fold");
-    let error = mutated_row_admission_error::<fp128::OneHot>(&row, |schedule| {
-        let fold = schedule
-            .recursive_folds
-            .get_mut(prefix_index)
-            .expect("recursive setup-prefix fold");
-        let mut prefix = *fold.params.setup_prefix().expect("setup-prefix group");
-        prefix.opening.num_digits_open -= 1;
-        fold.params
-            .set_setup_prefix(Some(prefix))
-            .expect("valid prefix topology");
-    });
+    let error = mutated_row_admission_error::<fp128::OneHot>(
+        &row,
+        |schedule| {
+            let fold = schedule
+                .recursive_folds
+                .get_mut(prefix_index)
+                .expect("recursive setup-prefix fold");
+            let mut prefix = *fold.params.setup_prefix().expect("setup-prefix group");
+            prefix.opening.num_digits_open -= 1;
+            fold.params
+                .set_setup_prefix(Some(prefix))
+                .expect("valid prefix topology");
+        },
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    );
     assert!(
         error.to_string().contains(&format!(
             "recursive fold {prefix_index} setup prefix: opening digit depth is not canonical"
@@ -142,9 +153,10 @@ fn row_admission_audits_recursive_setup_prefix_policy() {
 
 #[test]
 fn catalog_binding_revalidates_recursive_setup_prefix_challenge_hook() {
-    let row = row_with_setup_prefix::<fp128::OneHotMultiChunk>(|prefix| {
-        prefix.opening.opening_method == OpeningMethod::EvaluationTrace
-    });
+    let row = row_with_setup_prefix::<fp128::OneHotMultiChunk>(
+        |prefix| prefix.opening.opening_method == OpeningMethod::EvaluationTrace,
+        akita_params::MultiChunkProfileId::W8R2.cfg(),
+    );
     let (prefix_index, target_prefix) = row
         .schedule()
         .recursive_folds
@@ -173,7 +185,8 @@ fn catalog_binding_revalidates_recursive_setup_prefix_challenge_hook() {
     let profiles = row.profiles().clone();
     let mut schedule = row.schedule().clone();
     replace_schedule_evaluation_trace_challenges(&mut schedule, ring_dimension, replacement);
-    let policy = policy_of::<fp128::OneHotMultiChunk>();
+    let policy =
+        policy_of::<fp128::OneHotMultiChunk>(akita_params::MultiChunkProfileId::W8R2.cfg());
     let catalog = ValidatedScheduleCatalog::try_new(
         fp128::OneHotMultiChunk::schedule_family_name(),
         [(profiles, schedule)],
@@ -188,8 +201,11 @@ fn catalog_binding_revalidates_recursive_setup_prefix_challenge_hook() {
     )
     .expect("catalog admitted under its alternate challenge hook");
 
-    let error = TrustedScheduleCatalog::<fp128::OneHotMultiChunk>::new(catalog)
-        .expect_err("concrete config must reject the alternate prefix challenge");
+    let error = TrustedScheduleCatalog::<fp128::OneHotMultiChunk>::new(
+        catalog,
+        akita_params::MultiChunkProfileId::W8R2.cfg(),
+    )
+    .expect_err("concrete config must reject the alternate prefix challenge");
     assert!(
         error.to_string().contains(&format!(
             "recursive fold {prefix_index} setup prefix challenge config does not match the trusted runtime hook"
@@ -205,8 +221,10 @@ fn dense_artifacts_cover_benchmark_sizes_and_offload_setup() {
     use akita_params::ScheduleLookupKey;
 
     fn check<Cfg: CommitmentConfig>(sizes: &[(usize, usize)]) {
-        let catalog = crate::test_support::workspace_schedule_catalog::<Cfg>()
-            .expect("dense artifact admitted under current policy");
+        let catalog = crate::test_support::workspace_schedule_catalog::<Cfg>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        )
+        .expect("dense recursive artifact admitted under current policy");
         for &(num_vars, expected_offloads) in sizes {
             let key = ScheduleLookupKey::single(PolynomialGroupLayout::singleton(num_vars));
             let row = catalog.resolve_key(&key).expect("benchmark size present");

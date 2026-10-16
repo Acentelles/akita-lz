@@ -33,7 +33,11 @@ fn generated_recursive_onehot_profile_proves_with_setup_offload() {
     // Single-chunk base: the shared round-trip already asserts the setup-prefix
     // metadata and stage-3 setup sumcheck, so no profile-specific schedule check
     // is needed here.
-    recursive_multi_group_round_trip::<fp128::OneHot>(TRANSCRIPT_DOMAIN, |_schedule| {});
+    recursive_multi_group_round_trip::<fp128::OneHot>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        TRANSCRIPT_DOMAIN,
+        |_schedule| {},
+    );
 }
 
 #[test]
@@ -42,17 +46,21 @@ fn combined_recursive_setup_proves_both_onehot_families() {
     init_rayon_pool();
     run_on_large_stack(|| {
         let onehot = SetupRequirements::from_catalog::<fp128::OneHot>(
-            load_workspace_scheme::<fp128::OneHot>()
-                .expect("recursive one-hot catalog")
-                .schedules(),
+            load_workspace_scheme::<fp128::OneHot>(
+                akita_params::ChunkedWitnessCfg::default_non_chunked(),
+            )
+            .expect("recursive one-hot catalog")
+            .schedules(),
             RECURSIVE_ROUND_TRIP_NV,
             RECURSIVE_ROUND_TRIP_POLYS,
         )
         .expect("recursive one-hot requirements");
         let multichunk = SetupRequirements::from_catalog::<fp128::OneHotMultiChunk>(
-            load_workspace_scheme::<fp128::OneHotMultiChunk>()
-                .expect("recursive multi-chunk catalog")
-                .schedules(),
+            load_workspace_scheme::<fp128::OneHotMultiChunk>(
+                akita_params::MultiChunkProfileId::W8R2.cfg(),
+            )
+            .expect("recursive multi-chunk catalog")
+            .schedules(),
             RECURSIVE_ROUND_TRIP_NV,
             RECURSIVE_ROUND_TRIP_POLYS,
         )
@@ -69,12 +77,14 @@ fn combined_recursive_setup_proves_both_onehot_families() {
         .expect("combined setup");
         let stack = CpuBackend::new(setup.expanded.clone()).expect("backend");
         recursive_multi_group_round_trip_on::<fp128::OneHot>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
             &setup,
             &stack,
             b"recursive_setup_e2e/combined/onehot",
             |_schedule| {},
         );
         recursive_multi_group_round_trip_on::<fp128::OneHotMultiChunk>(
+            akita_params::MultiChunkProfileId::W8R2.cfg(),
             &setup,
             &stack,
             b"recursive_setup_e2e/combined/multi_chunk",

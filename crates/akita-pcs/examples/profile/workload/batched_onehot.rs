@@ -162,7 +162,7 @@ pub(crate) fn run_batched_onehot<FF, const D: usize, Cfg: CommitmentConfig<Field
         report_proof_size_against_planner(
             label,
             &proof,
-            proof_size_budgets::<Cfg>(plan, group_layout),
+            proof_size_budgets(plan, group_layout, scheme.schedules().policy()),
             "planned",
         );
         emit_runtime_schedule_summary(
@@ -178,7 +178,7 @@ pub(crate) fn run_batched_onehot<FF, const D: usize, Cfg: CommitmentConfig<Field
         report_proof_size_against_planner(
             label,
             &proof,
-            proof_size_budgets::<Cfg>(&schedule, group_layout),
+            proof_size_budgets(&schedule, group_layout, scheme.schedules().policy()),
             "runtime schedule",
         );
         emit_runtime_schedule_summary(

@@ -126,6 +126,7 @@ impl<'de> DeserializeSeed<'de> for RejectExtraScheduleRow {
 /// lookup and verifier digest lookup resolve through this same object.
 #[derive(Clone, Debug)]
 pub struct ValidatedScheduleCatalog {
+    policy: PlannerPolicy,
     family_name: String,
     policy_digest: [u8; 32],
     catalog_digest: [u8; 32],
@@ -197,6 +198,7 @@ impl ValidatedScheduleCatalog {
         let policy_digest = policy_digest(policy);
         let catalog_digest = catalog_digest(&family_name, policy_digest, &resolved);
         Ok(Self {
+            policy: *policy,
             family_name,
             policy_digest,
             catalog_digest,
@@ -310,6 +312,11 @@ impl ValidatedScheduleCatalog {
             },
         };
         encode_artifact(&artifact)
+    }
+
+    /// The complete policy against which every row was audited.
+    pub fn policy(&self) -> &PlannerPolicy {
+        &self.policy
     }
 
     /// Stable family label carried by the trusted artifact.

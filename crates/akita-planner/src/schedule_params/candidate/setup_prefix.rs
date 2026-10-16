@@ -401,7 +401,7 @@ mod tests {
     fn guided_setup_prefix_survives_pareto_pruning() {
         use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-        let policy = policy_of::<OneHot>();
+        let policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
         let n_prefix = 1usize << 14;
         let opening = PlannerOpeningCandidate::evaluation_trace(
             OneHot::ring_challenge_config(64).expect("challenge config"),
