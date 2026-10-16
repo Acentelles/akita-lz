@@ -433,7 +433,7 @@ pub(crate) fn root_level_candidates_for_prepared_producers(
             else {
                 continue;
             };
-            candidate_params.witness_chunk = crate::policy::witness_chunk_at_level(policy, 0);
+            candidate_params.witness_chunk = policy.witness_chunk_at_level(0);
             if !candidate_params.compression_sources_supported()? {
                 continue;
             }

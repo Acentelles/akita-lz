@@ -106,7 +106,7 @@ fn visit_fold_opening(
         for relation_transition in relation::transitions(
             state.relation_state,
             state.level,
-            crate::policy::witness_chunk_at_level(policy, state.level),
+            policy.witness_chunk_at_level(state.level),
         ) {
             if fold_opening.opening.is_coefficient_packing()
                 && relation_transition.mode.is_reduced_evaluation()

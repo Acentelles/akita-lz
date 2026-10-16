@@ -1,7 +1,7 @@
 //! Deliberately unsupported evaluation-trace rows for admission regressions.
 use super::{RootCoefficientPackingConfig, UnsupportedEvaluationTraceConfig};
 use akita_challenges::SparseChallengeConfig;
-use akita_config::{policy_of, CommitmentConfig};
+use akita_config::CommitmentConfig;
 use akita_error::AkitaError;
 use akita_params::{CommittedGroupBatchProfile, ScheduleLookupKey};
 
@@ -69,7 +69,7 @@ where
             // frozen commitment geometry so structure accepts this test row.
             let opening_batch = key.opening_layout()?;
             let output_witness_len = schedule.root.params.output_witness_len_for_field_bits(
-                policy_of::<Self>().decomposition.field_bits(),
+                catalog.policy().decomposition.field_bits(),
                 Self::EXT_DEGREE,
                 &opening_batch,
             )?;

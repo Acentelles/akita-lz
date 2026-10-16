@@ -631,7 +631,7 @@ impl<'a> CandidateDomain<'a> {
                         .topology
                         .relation_domain(
                             state.level,
-                            crate::policy::witness_chunk_at_level(ctx.policy, state.level),
+                            ctx.policy.witness_chunk_at_level(state.level),
                             work.opening.method(),
                             ctx.diagnostics,
                         )?
@@ -811,7 +811,7 @@ mod tests {
     fn opening_domain_requires_packing_prefix_then_keeps_both_methods_until_cutover() {
         use akita_config::{policy_of, proof_optimized::fp128::OneHot, CommitmentConfig};
 
-        let policy = policy_of::<OneHot>();
+        let policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
         let key = ScheduleLookupKey::single(PolynomialGroupLayout::singleton(14));
         let ctx = SuffixCtx {
             policy: &policy,

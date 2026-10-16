@@ -1,9 +1,10 @@
 //! Packing-fixture digit sizing, output matrices, and terminal geometry.
-use akita_config::{policy_of, CommitmentConfig};
+use akita_config::CommitmentConfig;
 use akita_error::AkitaError;
 use akita_params::sis::{
     BalancedSignedDigitFoldPolicy, FoldWitnessNorms, HonestFoldPolicy, HonestFoldSizingQuery,
 };
+use akita_schedules::PlannerPolicy;
 
 pub(super) fn rebuild_group_output_matrices(
     params: &mut akita_params::CommittedGroupParams,
@@ -131,8 +132,8 @@ pub(super) fn universal_fold_digit_depth(
 
 pub(super) fn retarget_synthetic_terminal<Cfg: CommitmentConfig>(
     schedule: &mut akita_params::FoldSchedule,
+    policy: &PlannerPolicy,
 ) -> Result<(), AkitaError> {
-    let policy = policy_of::<Cfg>();
     let predecessor_output = schedule
         .recursive_folds
         .last()

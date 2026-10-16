@@ -353,7 +353,10 @@ fn begin_stage3_without_a_next_fold_rejects_the_level() {
     use akita_params::{PolynomialGroupLayout, ScheduleLookupKey, SetupPrefixSlotId};
 
     let fixture = fixture();
-    let catalog = akita_config::test_support::workspace_schedule_catalog::<fp64::OneHot>().unwrap();
+    let catalog = akita_config::test_support::workspace_schedule_catalog::<fp64::OneHot>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    )
+    .unwrap();
     let schedule = catalog
         .resolve_key(&ScheduleLookupKey::single(PolynomialGroupLayout::new(
             35, 1,

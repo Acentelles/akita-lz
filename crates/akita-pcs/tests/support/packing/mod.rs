@@ -1,6 +1,6 @@
 //! Checked packing catalogs for root and setup-prefixed successor roundtrips.
 use akita_challenges::SparseChallengeConfig;
-use akita_config::{policy_of, CommitmentConfig};
+use akita_config::CommitmentConfig;
 use akita_error::AkitaError;
 use akita_params::ScheduleLookupKey;
 use akita_params::{
@@ -81,10 +81,9 @@ where
                     "packing Stage 3 test requires a recursive successor template".into(),
                 )
             })?;
-        let policy = policy_of::<Self>();
+        let policy = catalog.policy();
         let mut schedule = base.schedule().clone();
-        schedule.root =
-            root::build_root(&schedule.root, key, challenge_subring_dimension, &policy)?;
+        schedule.root = root::build_root(&schedule.root, key, challenge_subring_dimension, policy)?;
         schedule.recursive_folds.clear();
         let mut opening_batch = key.opening_layout()?;
         for level in 1..=prefixed_fold_count {
@@ -95,7 +94,7 @@ where
                 &opening_batch,
                 level,
                 challenge_subring_dimension,
-                &policy,
+                policy,
             )?;
             opening_batch = akita_params::suffix_opening_layout(
                 successor.input_witness_len,
@@ -106,7 +105,7 @@ where
             schedule.recursive_folds.push(successor);
         }
 
-        retarget_synthetic_terminal::<Self>(&mut schedule)?;
+        retarget_synthetic_terminal::<Self>(&mut schedule, policy)?;
 
         schedule.validate_nonterminal_opening_execution(Self::EXT_DEGREE)?;
         let root = &schedule.root.params;
@@ -114,7 +113,7 @@ where
             final_group: GroupCommitPhaseParams::try_from_params(key.final_group, root)?,
             precommitteds: Vec::new(),
         };
-        akita_config::ResolvedScheduleRow::try_new(profiles, schedule, &policy)
+        akita_config::ResolvedScheduleRow::try_new(profiles, schedule, policy)
     }
 }
 
@@ -155,10 +154,6 @@ where
 
     fn committed_source_class() -> akita_params::sis::CommittedSourceClass {
         Base::committed_source_class()
-    }
-
-    fn chunked_witness_cfg() -> akita_params::ChunkedWitnessCfg {
-        Base::chunked_witness_cfg()
     }
 
     fn recursive_setup_planning() -> bool {
@@ -207,10 +202,6 @@ where
 
     fn committed_source_class() -> akita_params::sis::CommittedSourceClass {
         Base::committed_source_class()
-    }
-
-    fn chunked_witness_cfg() -> akita_params::ChunkedWitnessCfg {
-        Base::chunked_witness_cfg()
     }
 
     fn recursive_setup_planning() -> bool {

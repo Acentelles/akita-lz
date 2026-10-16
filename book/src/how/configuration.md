@@ -30,6 +30,54 @@ dimension selected by the fold that consumes the prefix.
 - `crates/akita-config/src/proof_optimized/`.
 - [`crates/akita-planner/README.md`](../../../crates/akita-planner/README.md) for the current planner/config boundary.
 
+### Runtime witness chunking
+
+A deployment can choose how many witness chunks it uses and how many leading
+folds remain chunked without defining another configuration type. For example,
+two chunks across four leading folds use:
+
+```rust
+let chunking = akita_params::ChunkedWitnessCfg {
+    num_chunks: 2,
+    num_activated_levels: 4,
+};
+let policy = akita_config::policy_of::<Config>(chunking);
+```
+
+The same `chunking` value is an explicit argument to
+`TrustedScheduleCatalog::<Config>::from_artifact_bytes` or
+`AkitaCommitmentScheme::<Config>::from_schedule_artifact`. `Config` still fixes
+the field types, decomposition, security policy, and challenge rules. Preset
+chunking values are conveniences for callers generating the packaged fixtures;
+they do not override the runtime argument. These presets live in
+`akita_params::MultiChunkProfileId` (for example, `MultiChunkProfileId::W2R3.cfg()`),
+with packaged inventories selected by `family_row!` in
+`akita-planner/src/generated_families.rs`.
+
+Packaged fixture paths are keyed by family name and contain one geometry per
+name. The remaining geometry-named config types identify these fixed fixtures;
+they are not required to use runtime geometry. Applications can use the same
+base config for multiple catalogs, assigning each its own path and supplying
+its expected geometry explicitly.
+
+The fixture helpers `empty_emit_spec` and `emit_spec_for_family` take explicit
+chunking. Preplans are reused only for matching geometry. Precommitted producer
+profiles remain independently selected: a consumer's geometry does not change
+an already committed producer.
+
+The planner validates geometry and searches for schedules. Catalog admission
+checks the expected policy digest and audits every row, including chunking at
+each fold. A valid chunk count and depth do not guarantee that a particular
+polynomial shape admits a schedule. The catalog retains the exact policy that
+passed validation, so grouped planning can reuse it without reconstructing
+geometry from a preset.
+
+Chunking and the catalog are trusted preprocessing inputs. Proofs select an
+admitted row; they cannot change this policy or supply replacement schedules.
+One verifier binary and one `Config` type can use multiple independently owned
+catalogs with different chunking. No environment variable or process-global
+configuration is consulted by Akita verification.
+
 ### Bounded committed sources
 
 The `fp128::DenseBounded` preset is for dense polynomials whose centered
