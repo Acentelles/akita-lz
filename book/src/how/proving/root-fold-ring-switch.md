@@ -210,12 +210,12 @@ quotient from $D$ to $ks$ base-field coordinates before digit decomposition.
 It does not shrink every proof component by $\eta$; gadget depths, matrix
 ranks, compression payloads, response bounds, and later folds can change.
 
-Current generated schedules use packing at every multi-chunk nonterminal
-fold. Every group in such a fold
+Current generated schedules require packing at levels 0 and 1 and every
+multi-chunk nonterminal fold. Every group in such a fold
 must have a feasible packing assignment, and one fold cannot mix packing with
-`EvaluationTrace`. Single-chunk folds may choose either method when their
-source encoding supports it. Extension-field roots retain packing over canonical
-coefficients. The terminal uses `EvaluationTrace`; packing adds neither
+`EvaluationTrace`. Single-chunk folds at level 2 or later may choose either
+method when their source encoding supports it. All roots retain packing over
+canonical coefficients. The terminal uses `EvaluationTrace`; packing adds neither
 an EOR payload nor a packing terminal.
 
 This chapter documents the implemented relation and schedule boundary. The

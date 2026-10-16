@@ -21,8 +21,8 @@ fn synthetic_packing_row_is_derived_from_one_checked_authority() {
         final_group: PolynomialGroupLayout::singleton(20),
         precommitteds: Vec::new(),
     };
-    let first = PackingCfg::derive_catalog_row(&catalog, &key, 64).unwrap();
-    let second = PackingCfg::derive_catalog_row(&catalog, &key, 64).unwrap();
+    let first = PackingCfg::derive_catalog_row(&catalog, &key, 64, 1).unwrap();
+    let second = PackingCfg::derive_catalog_row(&catalog, &key, 64, 1).unwrap();
     assert_eq!(first.selection(), second.selection());
     assert_eq!(first.schedule(), second.schedule());
 
@@ -92,7 +92,7 @@ fn synthetic_packing_row_is_derived_from_one_checked_authority() {
     );
     schedule.validate_structure().unwrap();
 
-    PackingCfg::derive_catalog_row(&catalog, &key, 96)
+    PackingCfg::derive_catalog_row(&catalog, &key, 96, 1)
         .expect_err("a non-production challenge subring must reject");
 }
 
@@ -102,7 +102,7 @@ fn fixed_root_packing_rejects_a_stale_successor_length() {
         .expect("workspace schedule catalog");
     let opening_batch = OpeningClaimsLayout::new(20, 1).unwrap();
     let key = ScheduleLookupKey::single(opening_batch.root_final_group_layout().unwrap());
-    let row = PackingCfg::derive_catalog_row(&catalog, &key, 64).unwrap();
+    let row = PackingCfg::derive_catalog_row(&catalog, &key, 64, 1).unwrap();
     let mut schedule = row.schedule().clone();
     schedule.terminal.input_witness_len += 1;
     schedule
@@ -123,15 +123,25 @@ fn packing_setup_prefix_dispatch_rejects_an_unsupported_dimension() {
 
 #[test]
 fn fixed_root_packing_round_trips_in_both_bases() {
+    packing_round_trip(1);
+}
+
+#[test]
+fn level_two_packing_with_setup_prefix_round_trips_in_both_bases() {
+    packing_round_trip(2);
+}
+
+fn packing_round_trip(prefixed_fold_count: usize) {
     std::thread::Builder::new()
         .stack_size(512 * 1024 * 1024)
-        .spawn(|| {
+        .spawn(move || {
             let catalog = akita_config::test_support::workspace_schedule_catalog::<PackingCfg>()
                 .expect("workspace schedule catalog");
             let num_vars = 20;
             let opening_batch = OpeningClaimsLayout::new(num_vars, 1).unwrap();
             let key = ScheduleLookupKey::single(opening_batch.root_final_group_layout().unwrap());
-            let row = PackingCfg::derive_catalog_row(&catalog, &key, 64).unwrap();
+            let row =
+                PackingCfg::derive_catalog_row(&catalog, &key, 64, prefixed_fold_count).unwrap();
             let schedules = akita_config::ValidatedScheduleCatalog::try_new(
                 PackingCfg::schedule_family_name(),
                 [(row.profiles().clone(), row.schedule().clone())],
@@ -157,11 +167,27 @@ fn fixed_root_packing_round_trips_in_both_bases() {
                 2,
                 "the authenticated fixture must exercise two physical D subcolumns"
             );
-            assert_eq!(row.schedule().recursive_folds.len(), 1);
-            assert!(row.schedule().recursive_folds[0]
-                .params
-                .setup_prefix()
-                .is_some());
+            assert_eq!(row.schedule().recursive_folds.len(), prefixed_fold_count);
+            for (index, consumer) in row.schedule().recursive_folds.iter().enumerate() {
+                assert!(
+                    consumer.params.setup_prefix().is_some(),
+                    "L{} consumes a prefix",
+                    index + 1
+                );
+                assert!(matches!(
+                    consumer.params.opening_method(),
+                    OpeningMethod::SubringCoefficientPacking { .. }
+                ));
+                assert_eq!(consumer.params.witness_chunk.num_chunks, 1);
+                assert_eq!(
+                    consumer.params.ring_relation_mode,
+                    akita_params::RingRelationMode::QuotientLift
+                );
+                assert_eq!(
+                    consumer.predecessor_setup_contribution_mode(),
+                    akita_params::SetupContributionMode::Recursive
+                );
+            }
             assert!(
                 root.open().matrix.input_width()
                     < root.open().digits.num_digits
@@ -178,22 +204,29 @@ fn fixed_root_packing_round_trips_in_both_bases() {
                 akita_cpu_backend::DensePoly::from_field_evals(num_vars, &evaluations).unwrap();
 
             let mut setup = scheme.setup_prover(num_vars, 1).unwrap();
-            let setup_prefix = row.schedule().recursive_folds[0]
-                .params
-                .setup_prefix()
-                .as_ref()
-                .unwrap()
-                .slot_id()
-                .expect("setup prefix group");
+            let setup_prefixes = row
+                .schedule()
+                .recursive_folds
+                .iter()
+                .map(|fold| {
+                    fold.params
+                        .setup_prefix()
+                        .unwrap()
+                        .slot_id()
+                        .expect("setup prefix group")
+                })
+                .collect::<Vec<_>>();
             let prefix_backend =
                 CpuBackend::<PackingField, PackingExt>::new(setup.expanded.clone()).unwrap();
             let artifacts = prefix_backend
-                .export_setup_prefixes(std::slice::from_ref(&setup_prefix))
+                .export_setup_prefixes(&setup_prefixes)
                 .unwrap();
-            setup
-                .prefix_slots
-                .insert(artifacts.get(&setup_prefix).unwrap().clone())
-                .unwrap();
+            for prefix in &setup_prefixes {
+                setup
+                    .prefix_slots
+                    .insert(artifacts.get(prefix).unwrap().clone())
+                    .unwrap();
+            }
             let stack = CpuBackend::new(setup.expanded.clone()).expect("backend");
             let verifier_setup = scheme.setup_verifier(&setup).unwrap();
             let akita_cpu_backend::CommitOutput {

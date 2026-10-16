@@ -56,12 +56,12 @@ subring and embed sparsely into the A ring. The challenge subring dimension and
 the A ring dimension are independent schedule choices, subject to the
 divisibility condition below.
 
-Generated schedules use `SubringCoefficientPacking` at every multi-chunk
-fold. A three-level multi-chunk profile requires packing at levels 0, 1, and
-2. Single-chunk folds admit both packing and `EvaluationTrace` wherever their
-source encoding supports it. Extension-field roots retain packing because their
-canonical coefficient commitments do not use the tensor projection required by
-extension-field evaluation trace. Base-field roots admit either method. Every group at such a fold MUST have a complete, statically feasible
+Generated schedules require `SubringCoefficientPacking` at levels 0 and 1
+and at every multi-chunk fold. A three-level multi-chunk profile therefore
+requires packing at levels 0, 1, and 2. Single-chunk folds at level 2 or later
+admit both packing and `EvaluationTrace` wherever their source encoding supports
+it. All roots, including single-chunk base-field roots, retain packing.
+Every group at a required packing fold MUST have a complete, statically feasible
 packing assignment. Otherwise the schedule is unsupported. The planner MUST
 NOT fall back to `EvaluationTrace` at a required packing fold and MUST NOT mix the
 two method families within one fold. For extension fields, EOR is not available
@@ -1511,11 +1511,12 @@ The planner MUST keep the search bounded in the following ways.
 ### Planner and sizing
 
 - [x] Generated schedules for every field tier require `SubringCoefficientPacking`
-      at every multi-chunk nonterminal fold. Multi-chunk rows without a complete
-      compatible packing assignment are unsupported.
+      at levels 0 and 1 and every multi-chunk nonterminal fold. Rows without a
+      complete compatible packing assignment at those folds are unsupported.
 - [x] Extension field packing folds contain no EOR.
-- [x] Single-chunk folds admit both opening methods where executable; extension-field
-      roots retain packing, and the terminal uses `EvaluationTrace`.
+- [x] Single-chunk folds at level 2 or later admit both opening methods where
+      executable. All roots and level-1 folds retain packing, and the terminal
+      uses `EvaluationTrace`.
 - [x] Short schedule tests cover root to terminal and root to one recursive
       fold to terminal without inserting another fold.
 - [x] The planner searches every admitted `(d_A, s)` pair inside the two
