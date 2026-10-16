@@ -457,12 +457,15 @@ where
     }
 }
 
-/// The fp64 dense 26- and 28-variable single-polynomial rows share every other
-/// key field, but the 28-variable row switches to physical L2 one level
-/// earlier. Both fit the cap, so both must be proved.
+/// Recursive fp64 dense 23- and 25-variable rows share every other key field,
+/// but the 25-variable row switches to physical L2 one level earlier. Use
+/// these rows to check that representative selection preserves this distinction.
 #[test]
-fn norm_route_separates_fp64_dense_single_polynomial_rows() {
-    let scheme = load_workspace_scheme::<fp64::Dense>().expect("workspace schedule catalog");
+fn norm_route_separates_recursive_fp64_dense_rows() {
+    let scheme = load_workspace_scheme::<
+        akita_config::recursive_commitment::RecursiveCommitmentConfig<fp64::Dense>,
+    >()
+    .expect("workspace schedule catalog");
     let single = |num_vars: usize| {
         scheme
             .schedules()
@@ -473,12 +476,19 @@ fn norm_route_separates_fp64_dense_single_polynomial_rows() {
                     && profiles.final_group.group.num_polynomials() == 1
                     && profiles.final_group.group.num_vars() == num_vars
             })
-            .unwrap_or_else(|| panic!("fp64 dense {num_vars}-variable row"))
+            .unwrap_or_else(|| panic!("recursive fp64 dense {num_vars}-variable row"))
     };
-    let (small, large) = (single(26), single(28));
+    let (small, large) = (single(23), single(25));
     assert!(log_committed_coeffs(large) <= MAX_LOG_COMMITTED_COEFFS);
     let (small_shape, large_shape) = (schedule_shape(small), schedule_shape(large));
     assert_ne!(small_shape, large_shape);
+    let mut without_norm_routes = [small_shape.clone(), large_shape.clone()];
+    for shape in &mut without_norm_routes {
+        for level in &mut shape.levels {
+            level.norm_route = NormRoute::Linf;
+        }
+    }
+    assert_eq!(without_norm_routes[0], without_norm_routes[1]);
     let representatives = representative_rows(scheme.schedules());
     for shape in [small_shape, large_shape] {
         assert!(
