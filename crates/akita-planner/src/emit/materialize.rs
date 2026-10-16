@@ -346,4 +346,40 @@ mod tests {
             .is_err()
         );
     }
+
+    #[test]
+    fn emitter_rejects_preplanned_rows_after_runtime_geometry_changes() {
+        use akita_config::proof_optimized::fp128::OneHot;
+        use akita_params::{ChunkedWitnessCfg, MultiChunkProfileId};
+        let catalog = akita_config::test_support::workspace_schedule_catalog::<OneHot>(
+            ChunkedWitnessCfg::default_non_chunked(),
+        )
+        .unwrap();
+        let row = catalog.rows().next().unwrap();
+        let group = row.profiles().final_group.group;
+        let family = crate::generated_families::ALL_GENERATED_FAMILIES
+            .iter()
+            .find(|family| family.family_name() == OneHot::schedule_family_name())
+            .unwrap();
+        let mut spec = crate::generated_families::empty_emit_spec(family, PathBuf::new()).unwrap();
+        spec.keys = vec![group];
+        spec.preplanned = vec![(ScheduleLookupKey::single(group), row.schedule().clone())];
+        render_schedule_artifact_outputs_with_validation(
+            std::slice::from_ref(&spec),
+            MaterializationDiagnostics::default(),
+            |_, _| Ok(()),
+        )
+        .expect("the preplanned row matches its original policy");
+        spec.policy.witness_chunk = MultiChunkProfileId::W2R3.cfg();
+        let error = render_schedule_artifact_outputs_with_validation(
+            &[spec],
+            MaterializationDiagnostics::default(),
+            |_, _| Ok(()),
+        )
+        .expect_err("changed geometry must invalidate the preplanned row");
+        assert!(
+            error.contains("root final group") && error.contains("witness chunks"),
+            "{error}"
+        );
+    }
 }

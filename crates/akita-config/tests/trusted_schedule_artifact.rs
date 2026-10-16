@@ -4,6 +4,8 @@
 mod binding;
 #[path = "trusted_schedule_artifact/decoder.rs"]
 mod decoder;
+#[path = "trusted_schedule_artifact/geometry.rs"]
+mod geometry;
 #[path = "trusted_schedule_artifact/json_mutation.rs"]
 mod json_mutation;
 #[path = "trusted_schedule_artifact/semantics.rs"]

@@ -128,12 +128,12 @@ where
             scheme.schedules().policy().witness_chunk.num_chunks,
             "root fold must retain the configured chunk count"
         );
-        let relation_geometry =
-            akita_params::RelationWitnessGeometry::for_evaluation_trace_execution(
-                root_commitment,
-                &opening_layout,
-            )
-            .expect("evaluation-trace relation geometry");
+        let relation_geometry = akita_params::RelationWitnessGeometry::for_level(
+            root_commitment,
+            &opening_layout,
+            ProtocolCfg::EXT_DEGREE,
+        )
+        .expect("scheduled relation geometry");
         let witness_layout = akita_params::WitnessLayout::new(
             root_commitment,
             &opening_layout,
@@ -417,7 +417,7 @@ fn three_group_cached_and_streamed_proofs_are_identical() {
 #[cfg(feature = "profile-ci")]
 fn multi_group_multi_chunk_fold_round_trips() {
     type MultiChunkCfg = fp128::OneHotMultiChunkW2R2;
-    let scheme = workspace_scheme::<MultiChunkCfg>(akita_params::MultiChunkProfileId::W8R2.cfg())
+    let scheme = workspace_scheme::<MultiChunkCfg>(akita_params::MultiChunkProfileId::W2R2.cfg())
         .expect("workspace schedule artifact");
     let key = multi_group_key(scheme.schedules(), 14, 14, &[1], 1);
     multi_group_root_round_trip_onehot(&scheme, &key, false, usize::MAX);
