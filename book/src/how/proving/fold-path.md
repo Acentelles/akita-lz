@@ -5,8 +5,8 @@ opening method for each nonterminal fold.
 
 | Opening method | Production use | EOR |
 |----------------|----------------|-----|
-| `SubringCoefficientPacking` | Required for nonterminal folds at absolute levels 0 and 1 | omitted |
-| `EvaluationTrace` | Later nonterminal folds and the terminal path | required only when the claim field is a proper extension |
+| `SubringCoefficientPacking` | Required for multi-chunk folds and extension-field roots; optional otherwise | omitted |
+| `EvaluationTrace` | Eligible single-chunk folds and the terminal path | required only when the claim field is a proper extension |
 
 See [Coefficients and evaluation points have different roles](../../foundations/rings-and-fields.md#coefficients-and-evaluation-points-have-different-roles).
 For the packing path, read the three obligations in order: the [direct scalar

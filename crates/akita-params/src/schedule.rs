@@ -18,6 +18,17 @@ pub use profiles::{
 pub use sis_occurrences::{ScheduleSisBound, ScheduleSisOccurrence, ScheduleSisRole};
 pub use sizing::{detect_field_modulus, r_decomp_levels};
 
+/// Whether chunking or the root's canonical source encoding requires packing.
+/// Extension-field evaluation trace consumes tensor-projected coefficients,
+/// whereas reusable root commitments always bind canonical coefficients.
+pub const fn fold_requires_coefficient_packing(
+    num_chunks: usize,
+    extension_degree: usize,
+    is_root: bool,
+) -> bool {
+    num_chunks > 1 || (is_root && extension_degree > 1)
+}
+
 /// Transcript binding used for one fold's outgoing witness state.
 ///
 /// This is schedule-owned because the same intermediate proof body may either
@@ -368,13 +379,20 @@ impl FoldSchedule {
                 "root fold payload must be compressed".into(),
             ));
         }
-        if root_commitment.ring_relation_mode != crate::RingRelationMode::QuotientLift {
+        if !crate::RingRelationPhase::QuotientPrefix
+            .candidate_modes(
+                root_commitment.witness_chunk,
+                crate::RelationCandidateTopology::new(false, root_commitment.opening_method()),
+            )
+            .contains(&root_commitment.ring_relation_mode)
+        {
             return Err(AkitaError::InvalidSetup(
-                "nonterminal level 0 requires quotient-lift ring relations".into(),
+                "nonterminal level 0 ring relation mode disagrees with the reduced-evaluation suffix policy".into(),
             ));
         }
         let mut payload_phase = crate::CommitmentPayloadPhase::CompressedPrefix;
-        let mut relation_phase = crate::RingRelationPhase::QuotientPrefix;
+        let mut relation_phase =
+            crate::RingRelationPhase::QuotientPrefix.after(root_commitment.ring_relation_mode);
         for (index, step) in self.recursive_folds.iter().enumerate() {
             step.params.validate_group_topology()?;
             if !step.params.precommitted_groups().is_empty() {
@@ -387,7 +405,7 @@ impl FoldSchedule {
             let absolute_level = index + 1;
             if !relation_phase
                 .candidate_modes(
-                    absolute_level,
+                    step.params.witness_chunk,
                     crate::RelationCandidateTopology::new(
                         consumes_setup_prefix,
                         step.params.opening_method(),
@@ -503,8 +521,9 @@ impl FoldSchedule {
     /// Validate the opening methods currently admitted by nonterminal proving
     /// and verification.
     ///
-    /// Subring coefficient packing is required at absolute levels 0 and 1.
-    /// Evaluation trace is required at later nonterminal levels. Every group
+    /// Subring coefficient packing is required at every multi-chunk fold.
+    /// Single-chunk folds admit either method where their encoding supports it;
+    /// extension-field roots retain packing over canonical coefficients. Every group
     /// consumed by one fold uses the same method family. Packing requires the
     /// audited production challenge family under the L-infinity A route.
     pub fn validate_nonterminal_opening_execution(
@@ -562,7 +581,12 @@ impl FoldSchedule {
                 true,
             )),
         });
-        validate_level_opening_execution(0, extension_degree, &root_groups)?;
+        validate_level_opening_execution(
+            0,
+            root_final.witness_chunk.num_chunks,
+            extension_degree,
+            &root_groups,
+        )?;
         for (index, step) in self.recursive_folds.iter().enumerate() {
             let witness = &step.params;
             let mut groups: Vec<OpeningExecutionGroup> = Vec::new();
@@ -589,7 +613,12 @@ impl FoldSchedule {
                     false,
                 )),
             });
-            validate_level_opening_execution(index + 1, extension_degree, &groups)?;
+            validate_level_opening_execution(
+                index + 1,
+                witness.witness_chunk.num_chunks,
+                extension_degree,
+                &groups,
+            )?;
         }
         Ok(())
     }
@@ -629,6 +658,7 @@ struct OpeningExecutionGroup<'a> {
 
 fn validate_level_opening_execution(
     absolute_level: usize,
+    num_chunks: usize,
     extension_degree: usize,
     groups: &[OpeningExecutionGroup<'_>],
 ) -> Result<(), AkitaError> {
@@ -646,15 +676,11 @@ fn validate_level_opening_execution(
         first.opening_method,
         OpeningMethod::SubringCoefficientPacking { .. }
     );
-    let packing_required = absolute_level <= 1;
-    if packing_family != packing_required {
-        let required = if packing_required {
-            "subring coefficient packing"
-        } else {
-            "evaluation trace"
-        };
+    let packing_required =
+        fold_requires_coefficient_packing(num_chunks, extension_degree, absolute_level == 0);
+    if packing_required && !packing_family {
         return Err(AkitaError::InvalidSetup(format!(
-            "nonterminal level {absolute_level} requires {required}"
+            "nonterminal level {absolute_level} requires subring coefficient packing"
         )));
     }
     if groups.iter().any(|group| {
@@ -705,11 +731,6 @@ fn validate_level_opening_execution(
         else {
             continue;
         };
-        if absolute_level > 1 {
-            return Err(AkitaError::InvalidSetup(
-                "subring coefficient packing is restricted to nonterminal levels 0 and 1".into(),
-            ));
-        }
         let expected = akita_challenges::SparseChallengeConfig::production_for_ring_dim(
             challenge_subring_dimension,
         )

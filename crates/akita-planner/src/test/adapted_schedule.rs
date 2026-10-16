@@ -306,13 +306,13 @@ fn adapted_schedule_falls_back_to_the_full_search_when_the_frozen_suffix_is_infe
     let policy = policy_of::<OneHot>();
     let catalog = akita_config::test_support::workspace_schedule_catalog::<OneHot>()
         .expect("one-hot catalog");
-    let main_group = PolynomialGroupLayout::singleton(16);
+    let main_group = PolynomialGroupLayout::singleton(14);
     let main_row = catalog
         .resolve_key(&ScheduleLookupKey::single(main_group))
         .expect("scalar main row");
     let pre_profile = catalog
         .resolve_key(&ScheduleLookupKey::single(
-            PolynomialGroupLayout::singleton(14),
+            PolynomialGroupLayout::singleton(16),
         ))
         .expect("scalar precommit row")
         .profiles()

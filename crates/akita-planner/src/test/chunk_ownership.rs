@@ -42,7 +42,7 @@ impl IncomingWidthFixture {
         akita_schedules::planner_support::validate_policy(&policy).unwrap();
         let key = ScheduleLookupKey::single(PolynomialGroupLayout::singleton(16));
         let opening_layout = key.opening_layout().unwrap();
-        let opening = PlannerOpeningCandidate::coefficient_packing(0, 1, dimensions, 64)
+        let opening = PlannerOpeningCandidate::coefficient_packing(1, dimensions, 64)
             .unwrap()
             .unwrap();
         let (producer, witness_len) = crate::planner::exhaustive_root_candidates_for_reference(
@@ -78,7 +78,9 @@ impl IncomingWidthFixture {
             policy: &policy,
             input_chunks: Some(*shape),
             payload_mode: akita_params::CommitmentPayloadMode::Compressed,
-            opening,
+            opening: PlannerOpeningCandidate::evaluation_trace(
+                OneHot::ring_challenge_config(64).unwrap(),
+            ),
             dimensions,
             current_witness_len: witness_len,
             source: crate::InnerBasisSource::BalancedDigits { log_basis: 2 },

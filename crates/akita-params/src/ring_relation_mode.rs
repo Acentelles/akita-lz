@@ -115,12 +115,14 @@ impl RelationCandidateTopology {
 
 impl RingRelationPhase {
     /// Legal committed relation modes at this point in the monotone suffix.
-    pub const fn candidate_modes(
+    /// Reduced evaluation is available only to single-chunk folds after the
+    /// required coefficient-packing prefix.
+    pub fn candidate_modes(
         self,
-        absolute_level: usize,
+        witness_chunk: crate::ChunkedWitnessCfg,
         topology: RelationCandidateTopology,
     ) -> &'static [RingRelationMode] {
-        let eligible = absolute_level >= 2 && topology.is_direct_evaluation_trace();
+        let eligible = witness_chunk.num_chunks == 1 && topology.is_direct_evaluation_trace();
         match (self, eligible) {
             (Self::QuotientPrefix, true) => &[
                 RingRelationMode::QuotientLift,
@@ -144,6 +146,39 @@ impl RingRelationPhase {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn multi_chunk_folds_require_quotient_lift_even_with_evaluation_trace() {
+        for profile in crate::MultiChunkProfileId::ALL {
+            for topology in [
+                RelationCandidateTopology::DirectEvaluationTrace,
+                RelationCandidateTopology::DirectCoefficientPacking,
+            ] {
+                assert_eq!(
+                    RingRelationPhase::QuotientPrefix.candidate_modes(profile.cfg(), topology),
+                    &[RingRelationMode::QuotientLift],
+                    "{profile:?}"
+                );
+                assert!(RingRelationPhase::ReducedEvaluationSuffix
+                    .candidate_modes(profile.cfg(), topology)
+                    .is_empty());
+            }
+        }
+    }
+
+    #[test]
+    fn single_chunk_folds_allow_reduced_evaluation() {
+        assert_eq!(
+            RingRelationPhase::QuotientPrefix.candidate_modes(
+                crate::ChunkedWitnessCfg::default_non_chunked(),
+                RelationCandidateTopology::DirectEvaluationTrace,
+            ),
+            &[
+                RingRelationMode::QuotientLift,
+                RingRelationMode::ReducedEvaluation
+            ],
+        );
+    }
 
     #[test]
     fn descriptor_tags_are_stable_and_distinct() {

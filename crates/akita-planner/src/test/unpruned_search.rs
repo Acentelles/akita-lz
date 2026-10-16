@@ -182,7 +182,6 @@ pub(super) fn find_schedule(
     };
     let inner_source = root_inner_basis_source(source_contract);
     let (min_inner_basis, max_inner_basis) = inner_source.search_range(policy)?;
-    let relation_state = OracleRelationState::QuotientPrefix;
     for log_basis in min_log_basis..=max_log_basis {
         for inner_basis in min_inner_basis..=max_inner_basis {
             for root_dimensions in
@@ -193,12 +192,30 @@ pub(super) fn find_schedule(
                 if reduced_vars == 0 {
                     continue;
                 }
-                let root_openings =
+                let mut root_openings = Vec::new();
+                if !akita_params::fold_requires_coefficient_packing(
+                    policy.chunks_at_level(0),
+                    policy.claim_ext_degree,
+                    true,
+                ) && try_extension_opening_reduction_level_bytes(
+                    policy.challenge_field_bits()?,
+                    policy.claim_ext_degree,
+                    key,
+                )?
+                .is_some()
+                {
+                    root_openings.extend(
+                        ring_challenge_config(root_dimensions.d_a())
+                            .ok()
+                            .map(crate::schedule_params::PlannerOpeningCandidate::evaluation_trace),
+                    );
+                }
+                root_openings.extend(
                     crate::schedule_params::PlannerOpeningCandidate::coefficient_packing_domain(
-                        0,
                         policy.claim_ext_degree,
                         root_dimensions,
-                    )?;
+                    )?,
+                );
                 for root_opening in root_openings {
                     for (root_params, output_witness_len) in
                         crate::planner::exhaustive_root_candidates_for_reference(
@@ -254,7 +271,14 @@ pub(super) fn find_schedule(
                                 dimension_ceiling: root_dimensions,
                                 payload_phase:
                                     akita_params::CommitmentPayloadPhase::CompressedPrefix,
-                                relation_state,
+                                relation_state: if root_params
+                                    .ring_relation_mode
+                                    .is_reduced_evaluation()
+                                {
+                                    OracleRelationState::ReducedSuffix
+                                } else {
+                                    OracleRelationState::QuotientPrefix
+                                },
                             },
                             &mut memo,
                             &mut work,

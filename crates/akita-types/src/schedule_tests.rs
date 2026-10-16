@@ -1367,5 +1367,7 @@ fn schedule_row_identity_binds_main_opening_method() {
             .expect("changed main opening-method digest")
     );
     assert!(changed.validate_structure().is_ok());
-    assert!(changed.validate_nonterminal_opening_execution(1).is_err());
+    changed
+        .validate_nonterminal_opening_execution(1)
+        .expect("single-chunk root packing is executable");
 }

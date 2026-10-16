@@ -16,7 +16,7 @@ pub(crate) use coefficient_packing::{
 pub(crate) use extension_claim::{
     verify_extension_claim_suffix_prefix, verify_extension_claim_terminal_suffix,
 };
-pub(crate) use single_field::prepare_single_field_suffix_groups;
+pub(crate) use single_field::prepare_single_field_groups;
 
 /// Common prepared fold prefix consumed by root and suffix finishing logic.
 pub(crate) struct FoldPrefix<F: Field, E: Field> {

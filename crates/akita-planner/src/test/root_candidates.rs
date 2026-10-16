@@ -33,6 +33,12 @@ pub(crate) fn root_level_candidates_with_fresh_preparation(
         policy,
         dimensions,
         opening,
+        crate::schedule_params::RelationSearchDomain::for_topology(
+            akita_params::RingRelationPhase::QuotientPrefix,
+            crate::policy::witness_chunk_at_level(policy, 0),
+            akita_params::RelationCandidateTopology::new(false, opening.method()),
+            None,
+        )?,
         &prepared_producers,
         candidate_log_basis_inner,
         candidate_log_basis_open,
@@ -54,7 +60,7 @@ pub(crate) fn exhaustive_root_candidates_for_reference(
 ) -> Result<Vec<(CommittedGroupParams, usize)>, AkitaError> {
     key.validate(policy.decomposition.field_bits())?;
     dimensions.validate_role_projection()?;
-    opening.validate_for(0, policy.claim_ext_degree, dimensions)?;
+    opening.validate_for(policy.claim_ext_degree, dimensions)?;
     if !key.precommitteds.is_empty() {
         return Err(AkitaError::InvalidSetup(
             "the exhaustive root reference supports one uncommitted group".into(),
@@ -92,32 +98,38 @@ pub(crate) fn exhaustive_root_candidates_for_reference(
             {
                 continue;
             }
-            let Some(mut params) = root_final_group_level_params_candidate(
-                &candidate_ctx,
-                RootFinalGroupCandidateInput {
-                    log_basis_inner: candidate_log_basis_inner,
-                    log_basis_open: candidate_log_basis_open,
-                    position_index_bits,
-                    block_index_bits,
-                    outer_slice_count,
-                    precommitted_groups: &[],
-                    precommitted_d_width: 0,
-                },
-            )?
-            else {
-                continue;
-            };
-            params.witness_chunk = crate::policy::witness_chunk_at_level(policy, 0);
-            let Some(output_witness_len) = root_batch_next_w_len(
-                policy.decomposition.field_bits(),
-                policy.claim_ext_degree,
-                &params,
-                &opening_batch,
-            )?
-            else {
-                continue;
-            };
-            candidates.push((params, output_witness_len));
+            for &relation_mode in akita_params::RingRelationPhase::QuotientPrefix.candidate_modes(
+                crate::policy::witness_chunk_at_level(policy, 0),
+                akita_params::RelationCandidateTopology::new(false, opening.method()),
+            ) {
+                let Some(mut params) = root_final_group_level_params_candidate(
+                    &candidate_ctx,
+                    RootFinalGroupCandidateInput {
+                        relation_mode,
+                        log_basis_inner: candidate_log_basis_inner,
+                        log_basis_open: candidate_log_basis_open,
+                        position_index_bits,
+                        block_index_bits,
+                        outer_slice_count,
+                        precommitted_groups: &[],
+                        precommitted_d_width: 0,
+                    },
+                )?
+                else {
+                    continue;
+                };
+                params.witness_chunk = crate::policy::witness_chunk_at_level(policy, 0);
+                let Some(output_witness_len) = root_batch_next_w_len(
+                    policy.decomposition.field_bits(),
+                    policy.claim_ext_degree,
+                    &params,
+                    &opening_batch,
+                )?
+                else {
+                    continue;
+                };
+                candidates.push((params, output_witness_len));
+            }
         }
     }
     Ok(candidates)

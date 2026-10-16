@@ -146,9 +146,11 @@ witnesses. The choice is independent of raw versus compressed payload and of
 the `L∞` versus `L2` response-security route.
 
 The currently admitted reduced mode is deliberately narrower than its
-algebraic definition. Levels 0 and 1 use quotient lifting. From level 2 onward,
+algebraic definition. The first `num_activated_levels` multi-chunk folds require
+quotient lift. At single-chunk folds, including a base-field root and level 1,
 the planner may choose one monotone reduced-evaluation suffix, but only for
-`EvaluationTrace` openings with direct setup contribution. A reduced fold
+`EvaluationTrace` openings with direct setup contribution. Extension-field roots
+retain packing because their commitments bind canonical coefficients. A reduced fold
 cannot consume an incoming setup prefix, defer the A/B/D setup product to Stage
 3, or switch back to quotient lifting later. These are product-scope admission
 rules, not claims that the excluded combinations are mathematically
@@ -280,9 +282,9 @@ Runtime expansion never reruns the model. It only checks the frozen schedule.
 
 ### Subring coefficient packing candidates
 
-At absolute fold levels 0 and 1, the planner searches the A ring dimension and
-the challenge subring dimension together. For each pair it derives the packing
-factor from `d_A = k h s`. It rejects unsupported challenge families and
+Within the two-level adaptive dimension prefix, coefficient-packing candidates
+search the A ring dimension and the challenge subring dimension together. For
+each pair the planner derives the packing factor from `d_A = k h s`. It rejects unsupported challenge families and
 invalid D divisibility before it constructs matrices.
 
 The planner does not minimize `s`, `h`, or `d_A` directly. It keeps the same
@@ -293,10 +295,17 @@ prefer the smaller root output witness before the canonical descriptor breaks
 the final tie. This allows a larger A ring to win when its lower module rank
 reduces the complete setup or proof suffix.
 
-Nonterminal folds at levels 0 and 1 require coefficient packing. A state with
-no complete packing assignment is unsupported. Later nonterminal folds and the
-terminal use evaluation trace. The terminal seed is priced separately, so a
-zero EOR packing candidate cannot be mistaken for a terminal opening.
+Chunking requires coefficient packing at the first `num_activated_levels` folds.
+A three-level multi-chunk profile uses packing at levels 0, 1, and 2, with the
+configured suffix ring dimensions at level 2.
+A multi-chunk state with no complete packing assignment is unsupported.
+Single-chunk nonterminal folds may choose coefficient packing or evaluation
+trace wherever their source encoding supports it. Base-field roots may choose
+either method when chunking is disabled. Extension-field roots always use
+packing: their canonical commitments cannot be reinterpreted as the tensor
+projection required by extension-field evaluation trace. The terminal uses evaluation
+trace. Its seed is priced separately, so a zero EOR packing candidate cannot
+be mistaken for a terminal opening.
 
 A clear terminal L2 candidate has no recursive norm proof. The verifier checks
 the decoded response norm directly. The planner may use the certified energy

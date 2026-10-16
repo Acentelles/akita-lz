@@ -254,7 +254,7 @@ fn combined_relation_views_match_mode_specific_searches() {
     };
     let relation_domain = RelationSearchDomain::for_topology(
         RingRelationPhase::QuotientPrefix,
-        request.fold_level,
+        crate::policy::witness_chunk_at_level(&policy, request.fold_level),
         RelationCandidateTopology::DirectEvaluationTrace,
         None,
     )

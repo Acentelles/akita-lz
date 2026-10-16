@@ -60,30 +60,32 @@ The production feature is a one-way tail cutover, not a freely selectable bit
 at every level:
 
 ```text
-root L0       recursive L1       recursive L2 ... last committed fold    terminal
-QuotientLift  QuotientLift       QuotientLift ... ReducedEvaluation suffix    clear/direct
-                                      ^ planner-selected cutover
+multi-chunk prefix        single-chunk committed folds                 terminal
+QuotientLift ...          QuotientLift ... ReducedEvaluation suffix    clear/direct
+                         ^ earliest eligible cutover; possibly the root
 ```
 
-The cutover is eligible only at absolute fold level 2 or later. The selected
-fold and every later committed fold MUST consume no incoming setup prefix and
-MUST create no setup prefix for a successor. The terminal already verifies a
+The cutover is eligible only when the current fold is single-chunk, after
+any `num_activated_levels` multi-chunk folds. A single-chunk base-field root
+or level-1 fold is eligible. Extension-field roots retain packing over canonical
+coefficients. The selected fold and every later committed fold MUST consume no
+incoming setup prefix and MUST create no setup prefix for a successor. The terminal already verifies a
 clear response without carrying a recursive relation quotient, so it does not
 store this mode.
 
 This scope has four consequences.
 
-1. The root and level 1 never use reduced evaluation, even if their setup
-   contribution is direct.
+1. Multi-chunk folds never use reduced evaluation. Single-chunk folds,
+   including a base-field root and level 1, may begin the reduced-evaluation suffix.
 2. Reduced evaluation composes with evaluation trace, raw or compressed
    commitment payloads, Linf or selective L2 security, mixed role dimensions,
    witness chunking, and extension-opening reduction (EOR).
 3. It does not compose with an incoming setup prefix or Stage 3 in this
    feature. The rank-two reduced-evaluation Stage-3 construction remains
    valid future work, but is outside this tail scope.
-4. Subring coefficient packing remains confined to levels 0 and 1 by its
-   existing policy. Reduced evaluation therefore needs no packing-specific
-   implementation in this scope.
+4. Subring coefficient packing is required at every multi-chunk fold.
+   Reduced evaluation starts only in the single-chunk evaluation-trace suffix
+   and needs no packing-specific implementation.
 
 ## Decision at a glance
 
@@ -94,12 +96,12 @@ This scope has four consequences.
 | Schedule enum | `RingRelationMode::{QuotientLift, ReducedEvaluation}` |
 | Selection granularity | One mode per nonterminal fold |
 | Search shape | At most one monotone cutover per complete schedule |
-| Earliest cutover | Absolute fold level 2 |
+| Earliest cutover | First eligible single-chunk fold, possibly a base-field root |
 | Setup-prefix eligibility | No incoming prefix at the cutover or later; no later offload edge |
 | Opening method in the supported suffix | `OpeningMethod::EvaluationTrace` |
 | Ordinary quotient rows | Omitted in `ReducedEvaluation` |
 | Compression F/H quotient rows | Omitted in `ReducedEvaluation` |
-| Packing consistency quotient | Out of scope because packing is ineligible at level 2+ |
+| Packing consistency quotient | Out of scope because reduced evaluation requires evaluation trace |
 | Proof fields and challenges | Unchanged |
 | Direct setup contribution | One public setup scan with reduced-evaluation coefficient weights |
 | Stage 3 | Forbidden after the cutover in this scope |
@@ -114,7 +116,7 @@ This scope has four consequences.
 
 Add a descriptor-bound reduced-evaluation relation mode that lets the offline
 planner remove all polynomial-modulus quotient digits from a setup-direct,
-evaluation-trace suffix beginning at level 2 or later, while keeping one clean
+single-chunk evaluation-trace suffix beginning at any eligible fold, while keeping one clean
 verifier equation, one canonical witness layout, and a bounded exact planner
 search.
 
@@ -144,7 +146,8 @@ search.
 
 #### Tail eligibility
 
-- `FoldSchedule` MUST reject `ReducedEvaluation` at absolute fold levels 0 and 1.
+- `FoldSchedule` MUST reject `ReducedEvaluation` at every multi-chunk fold,
+  including the root. Single-chunk base-field roots and level-1 folds are eligible.
 - A `ReducedEvaluation` fold MUST have
   `FoldParams::incoming_setup_prefix().is_none()`.
 - Once a schedule enters `ReducedEvaluation`, every later nonterminal fold MUST
@@ -155,8 +158,9 @@ search.
 - The terminal fold MUST remain outside `RingRelationMode`. Its existing
   clear-response relation is not encoded as a fake reduced-evaluation fold.
 - The feature MUST accept only `EvaluationTrace` in a
-  reduced-evaluation fold. The current planner already makes coefficient packing
-  unavailable after level 1; runtime validation MUST repeat the restriction.
+  reduced-evaluation fold. Multi-chunk folds require coefficient packing and
+  therefore cannot enter this suffix; runtime validation MUST repeat the
+  opening-method restriction.
 - These checks MUST be schedule-validation rules, not planner conventions.
   Hand-built or malformed rows MUST be rejected before proving or verification.
 
@@ -236,7 +240,7 @@ search.
 
 ### Non-goals
 
-- Enabling reduced evaluation at the root or level 1.
+- Enabling reduced evaluation on multi-chunk folds.
 - Selecting independent quotient modes for separate row families in one fold.
 - Supporting reduced evaluation for `SubringCoefficientPacking` in this
   feature.
