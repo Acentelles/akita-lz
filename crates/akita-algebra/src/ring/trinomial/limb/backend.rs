@@ -6,7 +6,7 @@ pub(super) enum Backend {
     #[cfg(target_arch = "x86_64")]
     Avx2,
     #[cfg(target_arch = "x86_64")]
-    Avx512Vbmi,
+    Avx512VbmiBatch,
     #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
     Neon,
 }
@@ -16,7 +16,7 @@ pub(super) fn selected_backend() -> Backend {
     {
         if crate::ntt::avx::use_avx2_transform_ntt() {
             if vbmi_available() {
-                Backend::Avx512Vbmi
+                Backend::Avx512VbmiBatch
             } else {
                 Backend::Avx2
             }
@@ -65,7 +65,7 @@ pub(super) fn available_backends() -> Vec<Backend> {
     }
     #[cfg(target_arch = "x86_64")]
     if vbmi_available() {
-        backends.push(Backend::Avx512Vbmi);
+        backends.push(Backend::Avx512VbmiBatch);
     }
     #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
     backends.push(Backend::Neon);

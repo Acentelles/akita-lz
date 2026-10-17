@@ -88,6 +88,10 @@ mod gather;
 mod interleaved;
 #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
 mod neon;
+#[cfg(target_arch = "x86_64")]
+mod source_batch;
+#[cfg(test)]
+mod source_batch_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(target_arch = "x86_64")]
@@ -318,7 +322,7 @@ impl TrinomialLimbDomain {
         self.check_slots(out)?;
         #[cfg(target_arch = "x86_64")]
         match backend {
-            Backend::Avx2 | Backend::Avx512Vbmi => {
+            Backend::Avx2 | Backend::Avx512VbmiBatch => {
                 // SAFETY: Selection establishes AVX2 and validation bounds buffers.
                 unsafe { avx2::forward_centered(self, coefficients, &mut out.values) };
                 return Ok(());
@@ -359,7 +363,7 @@ impl TrinomialLimbDomain {
         self.check_slots(slots)?;
         #[cfg(target_arch = "x86_64")]
         match backend {
-            Backend::Avx2 | Backend::Avx512Vbmi => {
+            Backend::Avx2 | Backend::Avx512VbmiBatch => {
                 // SAFETY: Selection establishes AVX2.
                 unsafe { avx2::inverse_centered(self, &slots.values, out) };
                 return Ok(());
@@ -387,7 +391,7 @@ impl TrinomialLimbDomain {
             #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
             Backend::Neon => return neon::transform(self, values, inverse, skip_first),
             #[cfg(target_arch = "x86_64")]
-            Backend::Avx2 | Backend::Avx512Vbmi => {
+            Backend::Avx2 | Backend::Avx512VbmiBatch => {
                 // SAFETY: Plan selection (or explicit tests) establishes AVX2.
                 return unsafe { avx2::transform(self, values, inverse, skip_first) };
             }

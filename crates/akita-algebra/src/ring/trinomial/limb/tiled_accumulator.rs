@@ -46,7 +46,7 @@ impl TrinomialLimbAccumulator {
         #[cfg(target_arch = "x86_64")]
         {
             let backend = first.backend;
-            if matches!(backend, Backend::Avx2 | Backend::Avx512Vbmi)
+            if matches!(backend, Backend::Avx2 | Backend::Avx512VbmiBatch)
                 && row0
                     .iter()
                     .chain(row1.iter())
@@ -67,7 +67,7 @@ impl TrinomialLimbAccumulator {
                     let (pairs1, _) = row1.as_chunks_mut::<2>();
                     for (column, ([a, b], [c, d])) in pairs0.iter_mut().zip(pairs1).enumerate() {
                         let column = 2 * column;
-                        // SAFETY: Both x86 backends detect AVX2. Validation
+                        // SAFETY: All x86 variants detect AVX2. Validation
                         // bounds every slice, and count preserves the existing
                         // checkpoint bound independently for each accumulator.
                         unsafe {

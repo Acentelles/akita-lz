@@ -53,17 +53,33 @@ impl<const B: usize> Workspace<B> {
                 .iter_mut()
                 .zip(words.chunks_exact(column_words))
             {
-                for (element, slots) in (start..end).zip(transformed.iter_mut()) {
-                    let chunk = column
+                let active = transformed
+                    .get_mut(..count)
+                    .ok_or(AkitaError::InvalidProof)?;
+                let mut chunks: [&[H::Source]; ELEMENT_BATCH] = [&[]; ELEMENT_BATCH];
+                let mut sources = [[0u128; K]; ELEMENT_BATCH];
+                for ((chunk, source), element) in
+                    chunks.iter_mut().zip(&mut sources).zip(start..end)
+                {
+                    *chunk = column
                         .get(element * K..(element + 1) * K)
                         .ok_or(AkitaError::InvalidProof)?;
-                    let mut sources = [0u128; K];
-                    for (source, &word) in sources.iter_mut().zip(chunk) {
+                    for (source, &word) in source.iter_mut().zip(*chunk) {
                         *source = word.into();
                     }
+                }
+                let sources = sources.get(..count).ok_or(AkitaError::InvalidProof)?;
+                if prepared
+                    .domain
+                    .try_forward_interleaved_words_batch(sources, active)
+                    .map_err(|error| AkitaError::InvalidInput(error.to_string()))?
+                {
+                    continue;
+                }
+                for ((source, chunk), slots) in sources.iter().zip(chunks).zip(active) {
                     let handled = prepared
                         .domain
-                        .try_forward_interleaved_words(&sources, slots)
+                        .try_forward_interleaved_words(source, slots)
                         .map_err(|error| AkitaError::InvalidInput(error.to_string()))?;
                     if !handled {
                         let bits = pack_binary_element_bits::<H>(chunk)?;

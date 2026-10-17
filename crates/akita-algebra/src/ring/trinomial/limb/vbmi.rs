@@ -182,7 +182,7 @@ mod tests {
         let mut seed = 0x68d9_027b_4cae_1f35_u64;
         for prime in TrinomialLimbDomain::ADMITTED_PRIMES {
             let mut domain = TrinomialLimbDomain::new(prime).unwrap();
-            domain.backend = Backend::Avx512Vbmi;
+            domain.backend = Backend::Avx512VbmiBatch;
             assert_slots(&domain, &[0; 4]);
             assert_slots(&domain, &[u128::MAX; 4]);
             for position in 0..512 {
@@ -208,7 +208,7 @@ mod tests {
     fn limb_vbmi_fallback_leaves_output_and_tables_unchanged() {
         for backend in backend::available_backends()
             .into_iter()
-            .filter(|&backend| backend != Backend::Avx512Vbmi)
+            .filter(|&backend| backend != Backend::Avx512VbmiBatch)
         {
             for prime in TrinomialLimbDomain::ADMITTED_PRIMES {
                 let mut domain = TrinomialLimbDomain::new(prime).unwrap();
