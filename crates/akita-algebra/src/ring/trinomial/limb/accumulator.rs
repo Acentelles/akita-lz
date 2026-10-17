@@ -105,7 +105,7 @@ impl TrinomialLimbAccumulator {
         Ok(())
     }
 
-    fn advance(&mut self, terms: u16) {
+    pub(super) fn advance(&mut self, terms: u16) {
         self.terms += terms;
         if self.terms == Self::REDUCTION_TERMS {
             for sum in &mut self.sums {

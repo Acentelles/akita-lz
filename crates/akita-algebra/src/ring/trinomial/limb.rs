@@ -90,6 +90,9 @@ mod interleaved;
 mod neon;
 #[cfg(test)]
 mod tests;
+#[cfg(target_arch = "x86_64")]
+mod tile;
+mod tiled_accumulator;
 
 use arithmetic::{Arithmetic, Split, Twiddle};
 

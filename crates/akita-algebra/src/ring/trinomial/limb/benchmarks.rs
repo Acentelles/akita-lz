@@ -87,6 +87,32 @@ fn limb_backend_benchmarks() {
                 black_box(&output);
             });
         });
+        let mut rows = [
+            vec![TrinomialLimbAccumulator::new(&domain); 4],
+            vec![TrinomialLimbAccumulator::new(&domain); 4],
+        ];
+        let matrix = [&inputs[..8], &inputs[8..16]];
+        let sources = [
+            &inputs[16..24],
+            &inputs[24..32],
+            &inputs[32..40],
+            &inputs[40..48],
+        ];
+        group.bench_function(format!("tile_2x4_batch8/{backend:?}"), |b| {
+            b.iter(|| {
+                let [first, second] = &mut rows;
+                TrinomialLimbAccumulator::add_product_tile(
+                    [first, second],
+                    black_box(matrix),
+                    black_box(&sources),
+                )
+                .unwrap();
+                for accumulator in rows.iter_mut().flatten() {
+                    accumulator.finish(&mut output).unwrap();
+                    black_box(&output);
+                }
+            });
+        });
     }
     group.finish();
     criterion.final_summary();
