@@ -171,6 +171,27 @@ fn limb_benchmarks(criterion: &mut Criterion, source: &[Bits]) {
             black_box(&column.sums[0]);
         });
     });
+    for batch in [4, 8, 16] {
+        group.bench_function(
+            format!("one_row_accumulation_batch_{batch}_4096_products_and_finish"),
+            |b| {
+                b.iter(|| {
+                    for (matrix, source) in black_box(&column.matrix[..M])
+                        .chunks(batch)
+                        .zip(black_box(&column.transformed).chunks(batch))
+                    {
+                        column.accumulators[0]
+                            .add_product_batch(matrix, source)
+                            .expect("matching limb prime and batch length");
+                    }
+                    column.accumulators[0]
+                        .finish(&mut column.sums[0])
+                        .expect("matching limb prime");
+                    black_box(&column.sums[0]);
+                });
+            },
+        );
+    }
     // Keep inverse input nonzero when a Criterion filter excludes accumulation.
     for (matrix, source) in column.matrix[..M].iter().zip(&column.transformed) {
         column.accumulators[0]
