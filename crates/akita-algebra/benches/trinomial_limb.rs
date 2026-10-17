@@ -155,6 +155,33 @@ fn limb_benchmarks(criterion: &mut Criterion, source: &[Bits]) {
             black_box(&column.transformed);
         });
     });
+    // Exercise direct four-word sources through normal runtime selection.
+    // Unsupported backends have no direct-word benchmark to time.
+    let words: Vec<[u128; 4]> = (0..M).map(|_| rng.gen()).collect();
+    if column
+        .domain
+        .try_forward_interleaved_words_batch(&words[..1], &mut column.transformed[..1])
+        .expect("matching source count and prime")
+    {
+        group.throughput(Throughput::Elements((M * 512) as u64));
+        for batch in [1, 8] {
+            group.bench_function(format!("direct_words_batch_{batch}_4096_elements"), |b| {
+                b.iter(|| {
+                    for (words, outputs) in black_box(&words)
+                        .chunks(batch)
+                        .zip(column.transformed.chunks_mut(batch))
+                    {
+                        assert!(column
+                            .domain
+                            .try_forward_interleaved_words_batch(words, outputs)
+                            .expect("matching source count and prime"));
+                    }
+                    black_box(&column.transformed);
+                });
+            });
+        }
+        group.throughput(Throughput::Elements(BITS));
+    }
     group.bench_function("one_row_accumulation_4096_products_and_finish", |b| {
         b.iter(|| {
             for (matrix, source) in black_box(&column.matrix[..M])

@@ -67,23 +67,11 @@
 //! checked shadows exercise every retained forward/inverse level, table phase,
 //! and accumulator checkpoint using extremal signs for every admitted prime.
 
-use super::TrinomialError;
-use std::sync::OnceLock;
-
 mod accumulator;
 pub(super) mod arithmetic;
 #[cfg(target_arch = "x86_64")]
 mod avx2;
 mod backend;
-#[cfg(all(test, target_arch = "x86_64"))]
-mod benchmarks;
-#[cfg(target_arch = "x86_64")]
-mod vbmi;
-#[cfg(target_arch = "x86_64")]
-mod x86;
-#[cfg(test)]
-use backend::available_backends;
-use backend::{selected_backend, Backend};
 mod gather;
 mod interleaved;
 #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
@@ -91,14 +79,21 @@ mod neon;
 #[cfg(target_arch = "x86_64")]
 mod source_batch;
 #[cfg(test)]
-mod source_batch_tests;
-#[cfg(test)]
 mod tests;
 #[cfg(target_arch = "x86_64")]
 mod tile;
 mod tiled_accumulator;
+#[cfg(target_arch = "x86_64")]
+mod vbmi;
+#[cfg(target_arch = "x86_64")]
+mod x86;
 
+use super::TrinomialError;
 use arithmetic::{Arithmetic, Split, Twiddle};
+#[cfg(test)]
+use backend::available_backends;
+use backend::{selected_backend, Backend};
+use std::sync::OnceLock;
 
 const DEGREE: usize = 648;
 const LANES: usize = 8;

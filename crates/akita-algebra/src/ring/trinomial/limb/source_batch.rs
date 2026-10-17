@@ -73,15 +73,6 @@ mod tests {
     use super::*;
     use crate::ring::trinomial::limb::Backend;
 
-    fn available() -> bool {
-        std::is_x86_feature_detected!("avx2")
-            && std::is_x86_feature_detected!("avx512f")
-            && std::is_x86_feature_detected!("avx512vl")
-            && std::is_x86_feature_detected!("avx512bw")
-            && std::is_x86_feature_detected!("avx512vbmi")
-            && std::is_x86_feature_detected!("avx512bitalg")
-    }
-
     fn packed(words: &[u128; 4]) -> [u64; 11] {
         let mut output = [0; 11];
         for (component, &word) in words.iter().enumerate() {
@@ -124,7 +115,7 @@ mod tests {
 
     #[test]
     fn limb_source_batches_match_scalar_all_primes_basis_extrema_and_random() {
-        if !available() {
+        if !super::super::backend::vbmi_available() {
             return;
         }
         let mut seed = 0x43af_90de_85b2_7189;

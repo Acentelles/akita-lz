@@ -36,36 +36,10 @@ impl TrinomialLimbDomain {
             .map_or(0, |tables| std::mem::size_of_val(tables.as_ref()))
     }
 
-    /// Transform four unsigned 128-bit source words when the selected backend
-    /// can generate their indices directly, returning whether it handled them.
-    ///
-    /// Source bit `s` of word `c` is coefficient `4*s+c`, with sign `(-1)^s`.
-    /// The remaining 136 coefficient bits are zero. On a backend without this
-    /// specialization, return `false` without changing output or initializing
-    /// tables; callers can use their existing packing path. A mismatched output
-    /// prime is rejected before changing output, regardless of the backend.
-    pub fn try_forward_interleaved_words(
-        &self,
-        words: &[u128; 4],
-        out: &mut TrinomialLimbSlots,
-    ) -> Result<bool, TrinomialError> {
-        self.check_slots(out)?;
-        #[cfg(target_arch = "x86_64")]
-        if self.backend == Backend::Avx512VbmiBatch {
-            let tables = self.interleaved_tables();
-            // SAFETY: Domain selection detects AVX2 and AVX-512F/VL/BW/
-            // VBMI/BITALG. The source array is complete and output is validated.
-            unsafe { super::vbmi::forward_interleaved(self, words, tables, &mut out.values) };
-            return Ok(true);
-        }
-        let _ = words;
-        Ok(false)
-    }
-
     /// Transform a batch of four-word sources when source batching is selected.
     ///
-    /// Each source has the coefficient/sign mapping of
-    /// `try_forward_interleaved_words`. Source and output counts must agree.
+    /// Source bit `s` of word `c` is coefficient `4*s+c`, with sign `(-1)^s`.
+    /// The remaining 136 coefficient bits are zero. Source and output counts must agree.
     /// Validate all output primes before mutation or table initialization.
     /// Return `false` with every output unchanged on an unsupported backend.
     pub fn try_forward_interleaved_words_batch(

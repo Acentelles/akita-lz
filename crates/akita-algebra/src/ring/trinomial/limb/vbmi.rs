@@ -168,7 +168,10 @@ mod tests {
             .unwrap();
         let mut actual = domain.zero_slots();
         assert!(domain
-            .try_forward_interleaved_words(words, &mut actual)
+            .try_forward_interleaved_words_batch(
+                std::slice::from_ref(words),
+                std::slice::from_mut(&mut actual)
+            )
             .unwrap());
         assert_eq!(actual.values, expected.values);
         assert_eq!(actual.prime, expected.prime);
@@ -217,7 +220,10 @@ mod tests {
                 output.values.fill(17);
                 let original = output.clone();
                 assert!(!domain
-                    .try_forward_interleaved_words(&[u128::MAX; 4], &mut output)
+                    .try_forward_interleaved_words_batch(
+                        &[[u128::MAX; 4]],
+                        std::slice::from_mut(&mut output)
+                    )
                     .unwrap());
                 assert_eq!(output.values, original.values);
                 assert_eq!(output.prime, original.prime);
@@ -240,7 +246,10 @@ mod tests {
                 output.values.fill(17);
                 let original = output.clone();
                 assert!(domain
-                    .try_forward_interleaved_words(&[u128::MAX; 4], &mut output)
+                    .try_forward_interleaved_words_batch(
+                        &[[u128::MAX; 4]],
+                        std::slice::from_mut(&mut output)
+                    )
                     .is_err());
                 assert_eq!(output.values, original.values);
                 assert_eq!(output.prime, original.prime);

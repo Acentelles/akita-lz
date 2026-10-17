@@ -76,18 +76,12 @@ impl<const B: usize> Workspace<B> {
                 {
                     continue;
                 }
-                for ((source, chunk), slots) in sources.iter().zip(chunks).zip(active) {
-                    let handled = prepared
+                for (chunk, slots) in chunks.into_iter().zip(active) {
+                    let bits = pack_binary_element_bits::<H>(chunk)?;
+                    prepared
                         .domain
-                        .try_forward_interleaved_words(source, slots)
+                        .forward_interleaved_bits(&bits, slots)
                         .map_err(|error| AkitaError::InvalidInput(error.to_string()))?;
-                    if !handled {
-                        let bits = pack_binary_element_bits::<H>(chunk)?;
-                        prepared
-                            .domain
-                            .forward_interleaved_bits(&bits, slots)
-                            .map_err(|error| AkitaError::InvalidInput(error.to_string()))?;
-                    }
                 }
             }
             let source_columns = self.transformed.each_ref().map(Vec::as_slice);
