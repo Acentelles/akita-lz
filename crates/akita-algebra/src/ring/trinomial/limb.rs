@@ -8,7 +8,8 @@
 //! all eight phases without unpacking a signed coefficient array.
 //!
 //! NEON runs only on `cfg(all(target_arch = "aarch64", target_feature = "neon"))`.
-//! x86_64 uses AVX2 when detected at runtime; other targets use the portable backend.
+//! x86_64 detects AVX2 and AVX-512/VBMI source-index acceleration at runtime;
+//! other targets use the portable backend.
 //! `AKITA_SCALAR_NTT=1` selects the portable backend on either architecture.
 //! It is read once, at the first cached NTT backend selection in the process.
 //! Domains constructed later do not re-read it, so set it before first use.
@@ -74,6 +75,10 @@ pub(super) mod arithmetic;
 #[cfg(target_arch = "x86_64")]
 mod avx2;
 mod backend;
+#[cfg(all(test, target_arch = "x86_64"))]
+mod benchmarks;
+#[cfg(target_arch = "x86_64")]
+mod vbmi;
 #[cfg(target_arch = "x86_64")]
 mod x86;
 #[cfg(test)]
@@ -310,7 +315,7 @@ impl TrinomialLimbDomain {
         self.check_slots(out)?;
         #[cfg(target_arch = "x86_64")]
         match backend {
-            Backend::Avx2 => {
+            Backend::Avx2 | Backend::Avx512Vbmi => {
                 // SAFETY: Selection establishes AVX2 and validation bounds buffers.
                 unsafe { avx2::forward_centered(self, coefficients, &mut out.values) };
                 return Ok(());
@@ -351,7 +356,7 @@ impl TrinomialLimbDomain {
         self.check_slots(slots)?;
         #[cfg(target_arch = "x86_64")]
         match backend {
-            Backend::Avx2 => {
+            Backend::Avx2 | Backend::Avx512Vbmi => {
                 // SAFETY: Selection establishes AVX2.
                 unsafe { avx2::inverse_centered(self, &slots.values, out) };
                 return Ok(());
@@ -379,7 +384,7 @@ impl TrinomialLimbDomain {
             #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
             Backend::Neon => return neon::transform(self, values, inverse, skip_first),
             #[cfg(target_arch = "x86_64")]
-            Backend::Avx2 => {
+            Backend::Avx2 | Backend::Avx512Vbmi => {
                 // SAFETY: Plan selection (or explicit tests) establishes AVX2.
                 return unsafe { avx2::transform(self, values, inverse, skip_first) };
             }

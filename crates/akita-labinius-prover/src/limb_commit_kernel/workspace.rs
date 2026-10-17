@@ -57,11 +57,21 @@ impl<const B: usize> Workspace<B> {
                     let chunk = column
                         .get(element * K..(element + 1) * K)
                         .ok_or(AkitaError::InvalidProof)?;
-                    let bits = pack_binary_element_bits::<H>(chunk)?;
-                    prepared
+                    let mut sources = [0u128; K];
+                    for (source, &word) in sources.iter_mut().zip(chunk) {
+                        *source = word.into();
+                    }
+                    let handled = prepared
                         .domain
-                        .forward_interleaved_bits(&bits, slots)
+                        .try_forward_interleaved_words(&sources, slots)
                         .map_err(|error| AkitaError::InvalidInput(error.to_string()))?;
+                    if !handled {
+                        let bits = pack_binary_element_bits::<H>(chunk)?;
+                        prepared
+                            .domain
+                            .forward_interleaved_bits(&bits, slots)
+                            .map_err(|error| AkitaError::InvalidInput(error.to_string()))?;
+                    }
                 }
             }
             for (accumulators, row) in self

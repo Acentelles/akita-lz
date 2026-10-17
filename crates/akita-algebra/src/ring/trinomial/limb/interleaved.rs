@@ -36,15 +36,34 @@ impl TrinomialLimbDomain {
             .map_or(0, |tables| std::mem::size_of_val(tables.as_ref()))
     }
 
-    pub(super) fn forward_interleaved_bits_backend(
+    /// Transform four unsigned 128-bit source words when the selected backend
+    /// can generate their indices directly, returning whether it handled them.
+    ///
+    /// Source bit `s` of word `c` is coefficient `4*s+c`, with sign `(-1)^s`.
+    /// The remaining 136 coefficient bits are zero. On a backend without this
+    /// specialization, return `false` without changing output or initializing
+    /// tables; callers can use their existing packing path. A mismatched output
+    /// prime is rejected before changing output, regardless of the backend.
+    pub fn try_forward_interleaved_words(
         &self,
-        bits: &[u64],
+        words: &[u128; 4],
         out: &mut TrinomialLimbSlots,
-        backend: Backend,
-    ) -> Result<(), TrinomialError> {
-        let bits = Self::check_bits(bits)?;
+    ) -> Result<bool, TrinomialError> {
         self.check_slots(out)?;
-        let tables = self.interleaved_first_level.get_or_init(|| {
+        #[cfg(target_arch = "x86_64")]
+        if self.backend == Backend::Avx512Vbmi {
+            let tables = self.interleaved_tables();
+            // SAFETY: Domain selection detects AVX2 and AVX-512F/VL/BW/
+            // VBMI/BITALG. The source array is complete and output is validated.
+            unsafe { super::vbmi::forward_interleaved(self, words, tables, &mut out.values) };
+            return Ok(true);
+        }
+        let _ = words;
+        Ok(false)
+    }
+
+    fn interleaved_tables(&self) -> &[[[i32; 3 * LANES]; 256]] {
+        self.interleaved_first_level.get_or_init(|| {
             // Four sign phases for each of the three first-level sources.
             // A phase offset of four negates every entry. Allocate in blocks
             // of 24 KiB rather than constructing a 288 KiB stack temporary.
@@ -88,10 +107,21 @@ impl TrinomialLimbDomain {
                 }
             }
             tables
-        });
+        })
+    }
+
+    pub(super) fn forward_interleaved_bits_backend(
+        &self,
+        bits: &[u64],
+        out: &mut TrinomialLimbSlots,
+        backend: Backend,
+    ) -> Result<(), TrinomialError> {
+        let bits = Self::check_bits(bits)?;
+        self.check_slots(out)?;
+        let tables = self.interleaved_tables();
         #[cfg(target_arch = "x86_64")]
         match backend {
-            Backend::Avx2 => {
+            Backend::Avx2 | Backend::Avx512Vbmi => {
                 // SAFETY: Selection establishes AVX2; validation precedes this call.
                 unsafe { super::avx2::forward_interleaved(self, bits, tables, &mut out.values) };
                 return Ok(());

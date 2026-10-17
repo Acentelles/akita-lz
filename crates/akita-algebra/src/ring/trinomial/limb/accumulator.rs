@@ -66,7 +66,7 @@ impl TrinomialLimbAccumulator {
                 #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
                 Backend::Neon => neon::accumulate_batch(&mut self.sums, left, right),
                 #[cfg(target_arch = "x86_64")]
-                Backend::Avx2 => {
+                Backend::Avx2 | Backend::Avx512Vbmi => {
                     // SAFETY: Selection establishes AVX2; count ends at or
                     // before the next 128-term checkpoint, bounding every sum.
                     unsafe { avx2::accumulate_batch(&mut self.sums, left, right) };
@@ -95,7 +95,7 @@ impl TrinomialLimbAccumulator {
             #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
             Backend::Neon => neon::accumulate(&mut self.sums, &lhs.values, &rhs.values),
             #[cfg(target_arch = "x86_64")]
-            Backend::Avx2 => {
+            Backend::Avx2 | Backend::Avx512Vbmi => {
                 // SAFETY: Selection establishes AVX2; advance bounds the sum.
                 unsafe { avx2::accumulate(&mut self.sums, &lhs.values, &rhs.values) };
             }
