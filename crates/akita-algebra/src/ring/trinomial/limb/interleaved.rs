@@ -1,6 +1,6 @@
 //! Table transform for interleaved binary words with alternating word-bit signs.
 
-use super::{gather, use_neon, TrinomialError, TrinomialLimbDomain, TrinomialLimbSlots};
+use super::{gather, Backend, TrinomialError, TrinomialLimbDomain, TrinomialLimbSlots};
 use super::{DEGREE, LANES, PIECE};
 
 #[cfg(test)]
@@ -23,7 +23,7 @@ impl TrinomialLimbDomain {
         bits: &[u64],
         out: &mut TrinomialLimbSlots,
     ) -> Result<(), TrinomialError> {
-        self.forward_interleaved_bits_backend(bits, out, use_neon())
+        self.forward_interleaved_bits_backend(bits, out, self.backend)
     }
 
     /// Heap bytes occupied by the bit transform lookup tables.
@@ -40,12 +40,10 @@ impl TrinomialLimbDomain {
         &self,
         bits: &[u64],
         out: &mut TrinomialLimbSlots,
-        neon: bool,
+        backend: Backend,
     ) -> Result<(), TrinomialError> {
-        Self::check_bits(bits)?;
+        let bits = Self::check_bits(bits)?;
         self.check_slots(out)?;
-        let mut indices = [0; PIECE];
-        gather::indices(bits, &mut indices);
         let tables = self.interleaved_first_level.get_or_init(|| {
             // Four sign phases for each of the three first-level sources.
             // A phase offset of four negates every entry. Allocate in blocks
@@ -91,15 +89,26 @@ impl TrinomialLimbDomain {
             }
             tables
         });
+        #[cfg(target_arch = "x86_64")]
+        match backend {
+            Backend::Avx2 => {
+                // SAFETY: Selection establishes AVX2; validation precedes this call.
+                unsafe { super::avx2::forward_interleaved(self, bits, tables, &mut out.values) };
+                return Ok(());
+            }
+            Backend::Scalar => {}
+        }
+        let mut indices = [0; PIECE];
+        gather::indices(bits, &mut indices);
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        if neon {
+        if backend == Backend::Neon {
             table_neon(tables, &indices, &mut out.values);
         } else {
             table_scalar(tables, &indices, &mut out.values);
         }
         #[cfg(not(all(target_arch = "aarch64", target_feature = "neon")))]
         table_scalar(tables, &indices, &mut out.values);
-        self.transform(&mut out.values, false, neon, true);
+        self.transform(&mut out.values, false, backend, true);
         Ok(())
     }
 }
@@ -171,6 +180,49 @@ fn table_neon(
                         vaddq_s32(vaddq_s32(a, b), c),
                     );
                 }
+            }
+        }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+#[inline(always)]
+pub(super) unsafe fn table_avx2(
+    tables: &[[[i32; 3 * LANES]; 256]],
+    indices: &[u8; PIECE],
+    values: &mut [i32; DEGREE],
+) {
+    use std::arch::x86_64::*;
+    // SAFETY: Caller detects AVX2. Each load covers eight lanes within a
+    // 24-lane table entry; stores cover disjoint complete output rows.
+    // Centered entries give partial bounds 2h and 3h<=B1, just as table_scalar.
+    unsafe {
+        for t in 0..27 {
+            let rows: [_; 3] = std::array::from_fn(|source| {
+                let phase = (t + source * 27) & 7;
+                (
+                    tables[(phase & 3) * 3 + source][usize::from(indices[t + source * 27])]
+                        .as_ptr(),
+                    _mm256_set1_epi32(if phase & 4 == 0 { 1 } else { -1 }),
+                )
+            });
+            // Source zero enters the first butterfly with b=c=0, so all
+            // three centered branch entries are identical. Reuse its signed
+            // first vector; each branch still adds (source0+source1)+source2.
+            let first = _mm256_sign_epi32(_mm256_loadu_si256(rows[0].0.cast()), rows[0].1);
+            for branch in 0..3 {
+                let second = _mm256_sign_epi32(
+                    _mm256_loadu_si256(rows[1].0.add(branch * LANES).cast()),
+                    rows[1].1,
+                );
+                let third = _mm256_sign_epi32(
+                    _mm256_loadu_si256(rows[2].0.add(branch * LANES).cast()),
+                    rows[2].1,
+                );
+                _mm256_storeu_si256(
+                    values.as_mut_ptr().add((t + branch * 27) * LANES).cast(),
+                    _mm256_add_epi32(_mm256_add_epi32(first, second), third),
+                );
             }
         }
     }

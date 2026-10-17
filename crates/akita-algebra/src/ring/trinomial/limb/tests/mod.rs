@@ -2,6 +2,8 @@ use super::*;
 
 mod accumulator;
 mod bounds;
+mod normalization;
+mod reduction;
 mod transform;
 mod validation;
 
