@@ -44,6 +44,8 @@ pub(crate) enum Fault {
     SourceStage1,
     DestinationOpening,
     Finish,
+    /// Panics inside a Stage-1 round kernel instead of returning an error.
+    PanicStage1Round,
 }
 
 pub(crate) struct PrivateCpu {
@@ -315,6 +317,9 @@ impl OpaqueStage1Kernel<F, E> for PrivateCpu {
         round: usize,
         previous_claim: E,
     ) -> Result<Stage1RoundPolynomial<E>, AkitaError> {
+        if self.fault.get() == Fault::PanicStage1Round {
+            panic!("injected Stage-1 kernel panic");
+        }
         self.inner
             .stage1_round_polynomial(session_handle, step, round, previous_claim)
     }

@@ -295,6 +295,14 @@ fn run(check_failures: bool) -> Result<(), AkitaError> {
                 );
             }
         }
+        // A kernel panic surfaces as a typed error at the prove entry point.
+        private.fault.set(Fault::PanicStage1Round);
+        let error = prove(false).unwrap_err();
+        assert_eq!(
+            error,
+            AkitaError::Internal("prover panicked: injected Stage-1 kernel panic".into())
+        );
+        private.fault.set(Fault::None);
     }
     Ok(())
 }

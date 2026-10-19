@@ -12,7 +12,7 @@ struct Stage1EqSumcheck<
     backend: &'a B,
     session: &'a mut B::Stage1SessionHandle,
     step: crate::backend::Stage1Step,
-    equality_point: &'a [E],
+    rounds: usize,
     degree: usize,
     next_round: usize,
     field: std::marker::PhantomData<F>,
@@ -22,10 +22,7 @@ impl<F: Field + CanonicalEncoding, E: Field, B: crate::backend::OpaqueStage1Kern
     akita_sumcheck::EqFactoredSumcheckKernel<E> for Stage1EqSumcheck<'_, F, E, B>
 {
     fn num_rounds(&self) -> usize {
-        self.equality_point.len()
-    }
-    fn current_tau(&self) -> E {
-        self.equality_point[self.next_round]
+        self.rounds
     }
     fn round_polynomial(
         &mut self,
@@ -64,7 +61,7 @@ impl<F: Field + CanonicalEncoding, E: Field, B: crate::backend::OpaqueStage1Kern
         Ok(())
     }
     fn finish(&mut self) -> Result<(), AkitaError> {
-        if self.next_round != self.equality_point.len() {
+        if self.next_round != self.rounds {
             return Err(AkitaError::Internal(
                 "stage 1 equality-factored sumcheck finished before all rounds were bound".into(),
             ));
@@ -210,7 +207,7 @@ where
             backend: ctx.backend(),
             session: &mut session_handle,
             step,
-            equality_point: &equality_coordinates,
+            rounds,
             degree: shape.sumcheck_proof.1,
             next_round: 0,
             field: std::marker::PhantomData,
@@ -231,7 +228,7 @@ where
             stage,
         );
         let challenges = prove_single::<F, E, AkitaError, _>(
-            &mut akita_sumcheck::FusedEqFactoredRounds(&mut kernel),
+            &mut akita_sumcheck::FusedEqFactoredRounds::new(&mut kernel, &instance)?,
             &instance,
             &mut channel,
         )?
@@ -390,7 +387,7 @@ where
             backend: ctx.backend(),
             session: &mut session_handle,
             step,
-            equality_point: &equality_coordinates,
+            rounds,
             degree,
             next_round: 0,
             field: std::marker::PhantomData,
@@ -411,7 +408,7 @@ where
             stage,
         );
         let reduction = prove_single::<F, E, AkitaError, _>(
-            &mut akita_sumcheck::FusedEqFactoredRounds(&mut kernel),
+            &mut akita_sumcheck::FusedEqFactoredRounds::new(&mut kernel, &instance)?,
             &instance,
             &mut channel,
         )?;

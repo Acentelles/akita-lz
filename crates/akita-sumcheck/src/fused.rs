@@ -5,7 +5,7 @@ use crate::{EqFactoredSumcheckKernel, SumcheckKernel};
 use akita_error::AkitaError;
 use jolt_field::Field;
 use jolt_poly::UnivariatePoly;
-use jolt_sumcheck::ProveRounds;
+use jolt_sumcheck::{ProveRounds, SingleFormat, SingleInstance};
 
 /// Drives a [`SumcheckKernel`] through the fused round API: `prove_round`
 /// binds the previous round's challenge, then computes the round polynomial;
@@ -14,8 +14,31 @@ pub struct FusedRounds<'a, K: ?Sized>(pub &'a mut K);
 
 /// The [`FusedRounds`] adapter for an [`EqFactoredSumcheckKernel`]. Each
 /// round returns the full inner polynomial `q`, its constant term recovered
-/// from the running claim and the kernel's current `τ`.
-pub struct FusedEqFactoredRounds<'a, K: ?Sized>(pub &'a mut K);
+/// from the running claim and `τ_round` of the instance's equality point, the
+/// same coordinates the driver checks the round against.
+pub struct FusedEqFactoredRounds<'a, E, K: ?Sized> {
+    kernel: &'a mut K,
+    equality_point: &'a [E],
+}
+
+impl<'a, E: Field, K: EqFactoredSumcheckKernel<E> + ?Sized> FusedEqFactoredRounds<'a, E, K> {
+    /// Adapts `kernel` to prove `instance`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AkitaError::Internal`] unless `instance` is eq-factored.
+    pub fn new(kernel: &'a mut K, instance: &'a SingleInstance<E>) -> Result<Self, AkitaError> {
+        let SingleFormat::EqFactored { equality_point } = &instance.format else {
+            return Err(AkitaError::Internal(
+                "eq-factored kernel paired with a compressed sumcheck instance".into(),
+            ));
+        };
+        Ok(Self {
+            kernel,
+            equality_point: equality_point.as_slice(),
+        })
+    }
+}
 
 fn previous_round(round: usize) -> Result<usize, AkitaError> {
     round.checked_sub(1).ok_or_else(|| {
@@ -54,10 +77,10 @@ impl<E: Field, K: SumcheckKernel<E> + ?Sized> ProveRounds<E, AkitaError> for Fus
 }
 
 impl<E: Field, K: EqFactoredSumcheckKernel<E> + ?Sized> ProveRounds<E, AkitaError>
-    for FusedEqFactoredRounds<'_, K>
+    for FusedEqFactoredRounds<'_, E, K>
 {
     fn num_rounds(&self) -> usize {
-        self.0.num_rounds()
+        self.kernel.num_rounds()
     }
 
     fn prove_round(
@@ -67,10 +90,14 @@ impl<E: Field, K: EqFactoredSumcheckKernel<E> + ?Sized> ProveRounds<E, AkitaErro
         previous_claim: E,
     ) -> Result<UnivariatePoly<E>, AkitaError> {
         if let Some(challenge) = bind {
-            self.0.bind_challenge(previous_round(round)?, challenge)?;
+            self.kernel
+                .bind_challenge(previous_round(round)?, challenge)?;
         }
-        let q = self.0.round_polynomial(round, previous_claim)?;
-        let constant = q.constant_from_claim(previous_claim, self.0.current_tau());
+        let tau = *self.equality_point.get(round).ok_or_else(|| {
+            AkitaError::Internal("eq-factored round exceeds the equality point".into())
+        })?;
+        let q = self.kernel.round_polynomial(round, previous_claim)?;
+        let constant = q.constant_from_claim(previous_claim, tau);
         let mut coefficients = Vec::with_capacity(q.degree() + 1);
         coefficients.push(constant);
         coefficients.extend_from_slice(q.coefficients());
@@ -78,9 +105,9 @@ impl<E: Field, K: EqFactoredSumcheckKernel<E> + ?Sized> ProveRounds<E, AkitaErro
     }
 
     fn finish_rounds(&mut self, bind: E) -> Result<(), AkitaError> {
-        self.0
-            .bind_challenge(last_round(self.0.num_rounds())?, bind)?;
-        self.0.finish()
+        self.kernel
+            .bind_challenge(last_round(self.kernel.num_rounds())?, bind)?;
+        self.kernel.finish()
     }
 }
 
@@ -191,11 +218,22 @@ mod tests {
 
     struct DenseKernel {
         evaluations: Vec<F>,
+        rounds: usize,
+    }
+
+    impl DenseKernel {
+        fn new(evaluations: Vec<F>) -> Self {
+            let rounds = evaluations.len().trailing_zeros() as usize;
+            Self {
+                evaluations,
+                rounds,
+            }
+        }
     }
 
     impl SumcheckKernel<F> for DenseKernel {
         fn num_rounds(&self) -> usize {
-            self.evaluations.len().trailing_zeros() as usize
+            self.rounds
         }
 
         fn round_polynomial(
@@ -220,10 +258,6 @@ mod tests {
                     zero + challenge * (self.evaluations[2 * index + 1] - zero);
             }
             self.evaluations.truncate(half);
-            Ok(())
-        }
-
-        fn finish(&mut self) -> Result<(), AkitaError> {
             Ok(())
         }
     }
@@ -301,10 +335,6 @@ mod tests {
             1
         }
 
-        fn current_tau(&self) -> F {
-            self.tau
-        }
-
         fn round_polynomial(
             &mut self,
             _round: usize,
@@ -318,10 +348,6 @@ mod tests {
         fn bind_challenge(&mut self, _round: usize, _challenge: F) -> Result<(), AkitaError> {
             Ok(())
         }
-
-        fn finish(&mut self) -> Result<(), AkitaError> {
-            Ok(())
-        }
     }
 
     /// The bilinear `a + b x + c y + d x y` behind `eq(τ, (x, y))`.
@@ -329,7 +355,6 @@ mod tests {
         equality: [F; 2],
         coefficients: [F; 4],
         first_challenge: Option<F>,
-        round: usize,
     }
 
     impl TwoRoundEq {
@@ -338,7 +363,6 @@ mod tests {
                 equality,
                 coefficients,
                 first_challenge: None,
-                round: 0,
             }
         }
 
@@ -355,10 +379,6 @@ mod tests {
     impl EqFactoredSumcheckKernel<F> for TwoRoundEq {
         fn num_rounds(&self) -> usize {
             2
-        }
-
-        fn current_tau(&self) -> F {
-            self.equality[self.round]
         }
 
         fn round_polynomial(
@@ -379,12 +399,55 @@ mod tests {
             if round == 0 {
                 self.first_challenge = Some(challenge);
             }
-            self.round += 1;
             Ok(())
         }
+    }
 
-        fn finish(&mut self) -> Result<(), AkitaError> {
-            Ok(())
+    /// Fails its bind of round `fail_at - 1`, as a stale backend session would.
+    struct FailingKernel {
+        inner: DenseKernel,
+        fail_at: usize,
+    }
+
+    impl SumcheckKernel<F> for FailingKernel {
+        fn num_rounds(&self) -> usize {
+            self.inner.num_rounds()
+        }
+
+        fn round_polynomial(
+            &mut self,
+            round: usize,
+            claim: F,
+        ) -> Result<UnivariatePoly<F>, AkitaError> {
+            self.inner.round_polynomial(round, claim)
+        }
+
+        fn bind_challenge(&mut self, round: usize, challenge: F) -> Result<(), AkitaError> {
+            if round + 1 == self.fail_at {
+                return Err(AkitaError::InvalidInput("stale kernel session".into()));
+            }
+            self.inner.bind_challenge(round, challenge)
+        }
+    }
+
+    #[test]
+    fn kernel_error_reaches_the_caller_unchanged() {
+        let (evaluations, claim) = fixture();
+        for fail_at in 1..=4 {
+            let mut prover = TestProver::new(b"native-sumcheck/kernel-error", None);
+            let mut kernel = FailingKernel {
+                inner: DenseKernel::new(evaluations.clone()),
+                fail_at,
+            };
+            assert_eq!(
+                prove(
+                    &mut FusedRounds(&mut kernel),
+                    &compressed(claim, 4, 7),
+                    &mut prover
+                ),
+                Err(AkitaError::InvalidInput("stale kernel session".into())),
+                "failure in bind {fail_at}"
+            );
         }
     }
 
@@ -394,7 +457,7 @@ mod tests {
         let mut prover = TestProver::new(b"native-sumcheck/fixture", None);
         assert!(matches!(
             prove(
-                &mut FusedRounds(&mut DenseKernel { evaluations }),
+                &mut FusedRounds(&mut DenseKernel::new(evaluations)),
                 &compressed(claim + F::one(), 4, 7),
                 &mut prover,
             ),
@@ -408,9 +471,7 @@ mod tests {
         let instance = compressed(claim, 4, 7);
         let mut prover = TestProver::new(b"native-sumcheck/fixture", None);
         let proved = prove(
-            &mut FusedRounds(&mut DenseKernel {
-                evaluations: evaluations.clone(),
-            }),
+            &mut FusedRounds(&mut DenseKernel::new(evaluations.clone())),
             &instance,
             &mut prover,
         )
@@ -443,7 +504,7 @@ mod tests {
         let instance = eq_factored(kernel.claim(), &[kernel.tau], kernel.degree(), 12);
         let mut prover = TestProver::new(b"native-eq-sumcheck/fixture", None);
         let proved = prove(
-            &mut FusedEqFactoredRounds(&mut kernel),
+            &mut FusedEqFactoredRounds::new(&mut kernel, &instance).unwrap(),
             &instance,
             &mut prover,
         )
@@ -492,7 +553,7 @@ mod tests {
         let instance = eq_factored(kernel.input_claim(), &equality, 1, 23);
         let mut prover = TestProver::new(b"native-eq-late/fixture", Some(point.to_vec()));
         prove(
-            &mut FusedEqFactoredRounds(&mut kernel),
+            &mut FusedEqFactoredRounds::new(&mut kernel, &instance).unwrap(),
             &instance,
             &mut prover,
         )
@@ -532,7 +593,7 @@ mod tests {
         let (evaluations, claim) = fixture();
         let mut prover = TestProver::new(b"native-cutover/standard", None);
         let standard = prove(
-            &mut FusedRounds(&mut DenseKernel { evaluations }),
+            &mut FusedRounds(&mut DenseKernel::new(evaluations)),
             &compressed(claim, 4, 3),
             &mut prover,
         )
@@ -553,7 +614,7 @@ mod tests {
         let instance = eq_factored(normalized.input_claim(), &equality, 1, 5);
         let mut prover = TestProver::new(b"native-cutover/normalized", None);
         let normalized = prove(
-            &mut FusedEqFactoredRounds(&mut normalized),
+            &mut FusedEqFactoredRounds::new(&mut normalized, &instance).unwrap(),
             &instance,
             &mut prover,
         )

@@ -2,17 +2,18 @@ use super::*;
 use jolt_poly::UnivariatePoly;
 
 impl<E: Field + Ring + Unreduced + Fold> RelationRangeImageProver<E> {
-    fn finish_ingested_round(&mut self) {
+    fn finish_ingested_round(&mut self) -> Result<(), AkitaError> {
         if self.state.rounds_completed < self.state.num_vars {
             if self.state.cached_round_message.is_none() {
                 self.state.cached_round_message = Some(
                     self.state
-                        .compute_current_round_message_from_state(&mut self.phase),
+                        .compute_current_round_message_from_state(&mut self.phase)?,
                 );
             }
         } else {
             self.state.cached_round_message = None;
         }
+        Ok(())
     }
 }
 
@@ -20,7 +21,7 @@ impl<E: Field + Ring + Unreduced + Fold> RelationRoundState<E> {
     fn compute_current_round_message_from_state(
         &mut self,
         phase: &mut Phase<E>,
-    ) -> RoundMessage<E> {
+    ) -> Result<RoundMessage<E>, AkitaError> {
         enum RoundComputation<'a, E: Field> {
             Message(RoundMessage<E>, UnivariatePoly<E>),
             Terms(NormRoundTerms<'a, E>, RoundMessage<E>),
@@ -30,7 +31,7 @@ impl<E: Field + Ring + Unreduced + Fold> RelationRoundState<E> {
             Phase::CompactPrefix {
                 weights, engine, ..
             } => {
-                let (message, norm) = self.compact_prefix_round_message(engine, weights);
+                let (message, norm) = self.compact_prefix_round_message(engine, weights)?;
                 RoundComputation::Message(message, norm)
             }
             Phase::Coefficient {
@@ -95,7 +96,7 @@ impl<E: Field + Ring + Unreduced + Fold> RelationRoundState<E> {
             }
         };
         self.prev_norm_poly = Some(norm_poly);
-        message
+        Ok(message)
     }
 }
 
@@ -250,27 +251,29 @@ impl<E: Field + Ring + Unreduced + Fold> RelationRoundState<E> {
     }
 }
 
-impl<E: Field + Ring + Unreduced + Fold> SumcheckInstanceProver<E> for RelationRangeImageProver<E> {
+impl<E: Field + Ring + Unreduced + Fold> RelationRangeImageProver<E> {
+    pub(crate) fn input_claim(&self) -> E {
+        self.state.input_claim
+    }
+}
+
+impl<E: Field + Ring + Unreduced + Fold> SumcheckKernel<E> for RelationRangeImageProver<E> {
     fn num_rounds(&self) -> usize {
         self.state.num_vars
     }
 
-    fn degree_bound(&self) -> usize {
-        3
-    }
-
-    fn input_claim(&self) -> E {
-        self.state.input_claim
-    }
-
-    fn compute_round_univariate(&mut self, _round: usize, previous_claim: E) -> UnivariatePoly<E> {
+    fn round_polynomial(
+        &mut self,
+        _round: usize,
+        previous_claim: E,
+    ) -> Result<UnivariatePoly<E>, AkitaError> {
         let mut message = if let Some(message) = self.state.cached_round_message.take() {
             message
         } else {
             self.state
-                .compute_current_round_message_from_state(&mut self.phase)
+                .compute_current_round_message_from_state(&mut self.phase)?
         };
-        if let Some(additional) = self.additional_round_message() {
+        if let Some(additional) = self.additional_round_message()? {
             message.add_assign(additional);
         }
         let polynomial = message.into_polynomial(previous_claim);
@@ -282,10 +285,10 @@ impl<E: Field + Ring + Unreduced + Fold> SumcheckInstanceProver<E> for RelationR
                 "dense round constant disagrees with its folded oracle"
             );
         }
-        polynomial
+        Ok(polynomial)
     }
 
-    fn ingest_challenge(&mut self, _round: usize, r: E) {
+    fn bind_challenge(&mut self, _round: usize, r: E) -> Result<(), AkitaError> {
         let _span = tracing::info_span!("RelationRangeImageProver::fold_round").entered();
         if let Some(additional) = &mut self.state.additional_relation_terms {
             additional.bind(r);
@@ -322,9 +325,9 @@ impl<E: Field + Ring + Unreduced + Fold> SumcheckInstanceProver<E> for RelationR
             }
         };
         self.state.rounds_completed += 1;
-        self.state.advance_phase(&mut self.phase);
+        self.state.advance_phase(&mut self.phase)?;
         drop(_span);
-        self.finish_ingested_round();
+        self.finish_ingested_round()
     }
 }
 
@@ -350,16 +353,18 @@ mod tests {
             .unwrap();
             let mut claim = prover.input_claim();
             for round in 0..prover.num_rounds() {
-                let polynomial = prover.compute_round_univariate(round, claim);
+                let polynomial = prover.round_polynomial(round, claim).unwrap();
                 let challenge = E::from_u64(3);
                 claim = polynomial.evaluate(challenge);
-                prover.ingest_challenge(round, challenge);
+                prover.bind_challenge(round, challenge).unwrap();
             }
             assert!(catch_unwind(AssertUnwindSafe(|| {
                 if compute {
-                    let _ = prover.compute_round_univariate(prover.num_rounds(), claim);
+                    let _ = prover.round_polynomial(prover.num_rounds(), claim).unwrap();
                 } else {
-                    prover.ingest_challenge(prover.num_rounds(), E::one());
+                    prover
+                        .bind_challenge(prover.num_rounds(), E::one())
+                        .unwrap();
                 }
             }))
             .is_err());

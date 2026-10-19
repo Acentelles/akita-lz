@@ -52,35 +52,37 @@ impl<E: Field + Ring + Unreduced> LowBasisRangeCheckProver<E> {
     }
 }
 
-impl<E: Field + Ring + Unreduced + Fold> EqFactoredSumcheckInstanceProver<E>
+impl<E: Field + Ring + Unreduced + Fold> LowBasisRangeCheckProver<E> {
+    pub(crate) fn degree_bound(&self) -> usize {
+        self.basis / 2
+    }
+
+    pub(crate) fn current_tau(&self) -> E {
+        self.split_eq.current_tau()
+    }
+}
+
+impl<E: Field + Ring + Unreduced + Fold> EqFactoredSumcheckKernel<E>
     for LowBasisRangeCheckProver<E>
 {
     fn num_rounds(&self) -> usize {
         self.num_vars
     }
 
-    fn degree_bound(&self) -> usize {
-        self.basis / 2
-    }
-
-    fn input_claim(&self) -> E {
-        E::zero()
-    }
-
-    fn current_tau(&self) -> E {
-        self.split_eq.current_tau()
-    }
-
-    fn compute_round_eq_factored(&mut self, round: usize, _claim: E) -> OmittedConstantPoly<E> {
+    fn round_polynomial(
+        &mut self,
+        round: usize,
+        _claim: E,
+    ) -> Result<OmittedConstantPoly<E>, AkitaError> {
         debug_assert_eq!(round, self.rounds_completed);
-        if let Some(poly) = self.cached_round_poly.take() {
+        Ok(if let Some(poly) = self.cached_round_poly.take() {
             poly
         } else {
             self.compute_current_round_eq_poly_from_state()
-        }
+        })
     }
 
-    fn ingest_challenge(&mut self, round: usize, r: E) {
+    fn bind_challenge(&mut self, round: usize, r: E) -> Result<(), AkitaError> {
         debug_assert_eq!(round, self.rounds_completed);
         let _span = tracing::info_span!(
             "digit_range_direct_leaf_fold",
@@ -117,6 +119,7 @@ impl<E: Field + Ring + Unreduced + Fold> EqFactoredSumcheckInstanceProver<E>
         } else {
             self.cached_round_poly = None;
         }
+        Ok(())
     }
 }
 

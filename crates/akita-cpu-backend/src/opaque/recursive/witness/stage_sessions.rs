@@ -183,7 +183,7 @@ where
     E: Field + jolt_field::Unreduced + jolt_field::Fold,
 {
     fn num_rounds(&self) -> usize {
-        akita_sumcheck::SumcheckInstanceProver::num_rounds(&self.prover)
+        akita_sumcheck::SumcheckKernel::num_rounds(&self.prover)
     }
 
     fn num_terms(&self) -> usize {
@@ -204,11 +204,11 @@ where
                 "extension-opening session round order or claim mismatch".into(),
             ));
         }
-        let polynomial = akita_sumcheck::SumcheckInstanceProver::compute_round_univariate(
+        let polynomial = akita_sumcheck::SumcheckKernel::round_polynomial(
             &mut self.prover,
             round,
             previous_claim,
-        );
+        )?;
         if polynomial.degree() > akita_params::EXTENSION_OPENING_REDUCTION_DEGREE
             || polynomial.evaluate(E::zero()) + polynomial.evaluate(E::one()) != previous_claim
         {
@@ -230,11 +230,7 @@ where
             AkitaError::InvalidInput("extension-opening session challenge arrived early".into())
         })?;
         self.claim = polynomial.evaluate(challenge);
-        akita_sumcheck::SumcheckInstanceProver::ingest_challenge(
-            &mut self.prover,
-            round,
-            challenge,
-        );
+        akita_sumcheck::SumcheckKernel::bind_challenge(&mut self.prover, round, challenge)?;
         self.next_round += 1;
         Ok(())
     }
@@ -245,7 +241,7 @@ where
                 "extension-opening session finished before all rounds".into(),
             ));
         }
-        akita_sumcheck::SumcheckInstanceProver::finalize(&mut self.prover);
+        akita_sumcheck::SumcheckKernel::finish(&mut self.prover)?;
         self.prover.final_terms().ok_or_else(|| {
             AkitaError::Internal("extension-opening session has no final claims".into())
         })
@@ -257,7 +253,7 @@ where
     E: Field + Ring + jolt_field::Unreduced + jolt_field::Fold + 'static,
 {
     pub(crate) fn num_rounds(&self) -> usize {
-        akita_sumcheck::SumcheckInstanceProver::num_rounds(&self.prover)
+        akita_sumcheck::SumcheckKernel::num_rounds(&self.prover)
     }
 
     pub(crate) fn input_claim(&self) -> E {
@@ -278,11 +274,11 @@ where
                 "relation session round order or claim mismatch".into(),
             ));
         }
-        let polynomial = akita_sumcheck::SumcheckInstanceProver::compute_round_univariate(
+        let polynomial = akita_sumcheck::SumcheckKernel::round_polynomial(
             &mut self.prover,
             round,
             previous_claim,
-        );
+        )?;
         if polynomial.degree() > 3 {
             return Err(AkitaError::Internal(
                 "relation session returned an invalid round polynomial".into(),
@@ -302,11 +298,7 @@ where
             AkitaError::InvalidInput("relation session challenge arrived early".into())
         })?;
         self.claim = polynomial.evaluate(challenge);
-        akita_sumcheck::SumcheckInstanceProver::ingest_challenge(
-            &mut self.prover,
-            round,
-            challenge,
-        );
+        akita_sumcheck::SumcheckKernel::bind_challenge(&mut self.prover, round, challenge)?;
         self.next_round += 1;
         Ok(())
     }
@@ -319,7 +311,7 @@ where
                 "relation session finished before all rounds".into(),
             ));
         }
-        akita_sumcheck::SumcheckInstanceProver::finalize(&mut self.prover);
+        akita_sumcheck::SumcheckKernel::finish(&mut self.prover)?;
         if self.claim != self.prover.expected_final_claim()? {
             return Err(AkitaError::InvalidInput(
                 "relation session final claim disagrees with its folded oracle".into(),
@@ -438,7 +430,7 @@ where
             linear_terms,
             additional,
         )?;
-        let claim = akita_sumcheck::SumcheckInstanceProver::input_claim(&prover);
+        let claim = prover.input_claim();
         Ok(Self {
             binding: witness.binding.for_operation(0),
             lease: None,

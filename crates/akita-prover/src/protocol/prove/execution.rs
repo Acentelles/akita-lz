@@ -238,6 +238,10 @@ where
 /// instance descriptor as a public message, and every Akita message lands in
 /// the caller's argument string. The caller owns the transcript's protocol id,
 /// session binding, and `finish`.
+///
+/// A panic anywhere in the prover, including a backend kernel, is caught and
+/// returned as [`AkitaError::Internal`]; this relies on `panic = "unwind"`,
+/// the default for every Akita build profile.
 #[allow(clippy::too_many_arguments)]
 pub fn batched_prove<'a, Cfg, H, S>(
     expanded: &AkitaSetupDescriptor,
@@ -263,106 +267,121 @@ where
     H: CommitmentHandleMetadata + 'static,
     S: Sponge,
 {
-    let (resolved, claims, grinding_plan, descriptor_bytes) =
-        root::resolve_root::<Cfg, H>(expanded, schedules, opening, basis)?;
-    if registry.active.replace(true) {
-        return Err(AkitaError::InvalidInput(
-            "backend registry already has an active proof".into(),
-        ));
-    }
-    let _guard = RegistryProofGuard(registry);
-    let mut owners = Vec::with_capacity(resolved.schedule().num_fold_levels());
-    let mut selected = vec![false; registry.slots.len()];
-    for level in 0..resolved.schedule().num_fold_levels() {
-        let requirements =
-            FoldExecutionRequirements::new(resolved.schedule(), claims.opening_layout(), level)?;
-        let current = owners.last().copied();
-        let owner = policy.choose_backend(current, &requirements)?;
-        registry.slot(owner)?;
-        if let Some(previous) = current.filter(|previous| *previous != owner) {
-            registry.bridge(previous, owner)?;
+    // A panic left in a kernel or backend becomes a typed error instead of
+    // aborting the caller. The transcript is then unusable, as after any error.
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+        let (resolved, claims, grinding_plan, descriptor_bytes) =
+            root::resolve_root::<Cfg, H>(expanded, schedules, opening, basis)?;
+        if registry.active.replace(true) {
+            return Err(AkitaError::InvalidInput(
+                "backend registry already has an active proof".into(),
+            ));
         }
-        selected[owner.slot] = true;
-        owners.push(owner);
-    }
-    let root_id = *owners
-        .first()
-        .ok_or_else(|| AkitaError::Internal("proof schedule has no fold levels".into()))?;
-    let root_executor = registry.slot(root_id)?;
-    let identity = NEXT_PROOF
-        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
-        .map_err(|_| AkitaError::Internal("proof identity exhausted".into()))?;
-    let request = ProofRequest {
-        setup: expanded,
-        schedules,
-        schedule: resolved.schedule(),
-        layout: claims.opening_layout(),
-        identity,
-    };
-    for (executor, selected) in registry.slots.iter().zip(&selected) {
-        if *selected {
-            executor.prepare_executor(&request)?;
+        let _guard = RegistryProofGuard(registry);
+        let mut owners = Vec::with_capacity(resolved.schedule().num_fold_levels());
+        let mut selected = vec![false; registry.slots.len()];
+        for level in 0..resolved.schedule().num_fold_levels() {
+            let requirements = FoldExecutionRequirements::new(
+                resolved.schedule(),
+                claims.opening_layout(),
+                level,
+            )?;
+            let current = owners.last().copied();
+            let owner = policy.choose_backend(current, &requirements)?;
+            registry.slot(owner)?;
+            if let Some(previous) = current.filter(|previous| *previous != owner) {
+                registry.bridge(previous, owner)?;
+            }
+            selected[owner.slot] = true;
+            owners.push(owner);
         }
-    }
-    for (level, owner) in owners.iter().enumerate() {
-        registry.slot(*owner)?.begin_fold(&request, level)?;
-    }
-    let mut handoff = FoldHandoff {
-        registry,
-        request: &request,
-        current: root_id,
-        next: *owners
-            .get(1)
-            .ok_or_else(|| AkitaError::Internal("proof schedule has no successor fold".into()))?,
-        adopted: None,
-    };
-    transcript.site(
-        akita_params::ProtocolSiteId {
-            family: akita_params::transcript_site::SITE_FAMILY_ROOT_STATEMENT,
-            ..akita_params::ProtocolSiteId::default()
+        let root_id = *owners
+            .first()
+            .ok_or_else(|| AkitaError::Internal("proof schedule has no fold levels".into()))?;
+        let root_executor = registry.slot(root_id)?;
+        let identity = NEXT_PROOF
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+            .map_err(|_| AkitaError::Internal("proof identity exhausted".into()))?;
+        let request = ProofRequest {
+            setup: expanded,
+            schedules,
+            schedule: resolved.schedule(),
+            layout: claims.opening_layout(),
+            identity,
+        };
+        for (executor, selected) in registry.slots.iter().zip(&selected) {
+            if *selected {
+                executor.prepare_executor(&request)?;
+            }
         }
-        .into(),
-    );
-    transcript.public_bytes(&descriptor_bytes);
-    let mut grinding = ProverGrinding::new(transcript, &grinding_plan);
-    let (mut public, mut resident) = root_executor.root(
-        &mut handoff,
-        &mut grinding,
-        claims.opening_claims(),
-        &claims.groups,
-        basis,
-    )?;
-    for index in 0..request.schedule.recursive_folds.len() {
-        let owner = resident.owner;
-        handoff.current = owner;
-        handoff.next = *owners
-            .get(index + 2)
-            .ok_or_else(|| AkitaError::Internal("resolved route has no successor fold".into()))?;
-        (public, resident) = registry.slot(owner)?.recursive(
+        for (level, owner) in owners.iter().enumerate() {
+            registry.slot(*owner)?.begin_fold(&request, level)?;
+        }
+        let mut handoff = FoldHandoff {
+            registry,
+            request: &request,
+            current: root_id,
+            next: *owners.get(1).ok_or_else(|| {
+                AkitaError::Internal("proof schedule has no successor fold".into())
+            })?,
+            adopted: None,
+        };
+        transcript.site(
+            akita_params::ProtocolSiteId {
+                family: akita_params::transcript_site::SITE_FAMILY_ROOT_STATEMENT,
+                ..akita_params::ProtocolSiteId::default()
+            }
+            .into(),
+        );
+        transcript.public_bytes(&descriptor_bytes);
+        let mut grinding = ProverGrinding::new(transcript, &grinding_plan);
+        let (mut public, mut resident) = root_executor.root(
             &mut handoff,
             &mut grinding,
-            public,
-            resident,
-            index,
+            claims.opening_claims(),
+            &claims.groups,
+            basis,
         )?;
-    }
-    let owner = resident.owner;
-    let levels = public.level + 1;
-    registry
-        .slot(owner)?
-        .terminal(owner, &request, &mut grinding, public, resident)?;
-    if levels != request.schedule.num_fold_levels() {
-        return Err(AkitaError::Internal(
-            "proved fold count differs from schedule".into(),
-        ));
-    }
-    grinding.finish()?;
-    for (slot, selected) in registry.slots.iter().zip(selected) {
-        if selected {
-            slot.finish()?;
+        for index in 0..request.schedule.recursive_folds.len() {
+            let owner = resident.owner;
+            handoff.current = owner;
+            handoff.next = *owners.get(index + 2).ok_or_else(|| {
+                AkitaError::Internal("resolved route has no successor fold".into())
+            })?;
+            (public, resident) = registry.slot(owner)?.recursive(
+                &mut handoff,
+                &mut grinding,
+                public,
+                resident,
+                index,
+            )?;
         }
-    }
-    Ok(())
+        let owner = resident.owner;
+        let levels = public.level + 1;
+        registry
+            .slot(owner)?
+            .terminal(owner, &request, &mut grinding, public, resident)?;
+        if levels != request.schedule.num_fold_levels() {
+            return Err(AkitaError::Internal(
+                "proved fold count differs from schedule".into(),
+            ));
+        }
+        grinding.finish()?;
+        for (slot, selected) in registry.slots.iter().zip(selected) {
+            if selected {
+                slot.finish()?;
+            }
+        }
+        Ok(())
+    }))
+    .unwrap_or_else(|payload| {
+        let message = payload
+            .downcast_ref::<&str>()
+            .map(|message| (*message).to_owned())
+            .or_else(|| payload.downcast_ref::<String>().cloned())
+            .unwrap_or_else(|| "non-string panic payload".into());
+        Err(AkitaError::Internal(format!("prover panicked: {message}")))
+    })
 }
 
 #[cfg(test)]

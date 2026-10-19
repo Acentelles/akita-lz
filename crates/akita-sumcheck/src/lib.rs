@@ -17,7 +17,4 @@ pub use accum::reduce_signed_accum;
 pub use compact_fold::CompactPairFoldLut;
 pub use fused::{FusedEqFactoredRounds, FusedRounds};
 pub use shape::SumcheckShape;
-pub use traits::{
-    EqFactoredSumcheckInstanceProver, EqFactoredSumcheckKernel, SumcheckInstanceProver,
-    SumcheckKernel,
-};
+pub use traits::{EqFactoredSumcheckKernel, SumcheckKernel};
