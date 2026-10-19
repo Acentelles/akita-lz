@@ -87,10 +87,14 @@ fn fp32_combined_setup_proves_recursive_and_onehot_families() {
 
     init_rayon_pool();
     run_on_large_stack(|| {
-        let recursive_scheme =
-            load_workspace_scheme::<RecursiveCfg>().expect("workspace recursive catalog");
-        let onehot_scheme =
-            load_workspace_scheme::<fp32::OneHot>().expect("workspace one-hot catalog");
+        let recursive_scheme = load_workspace_scheme::<RecursiveCfg>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        )
+        .expect("workspace recursive catalog");
+        let onehot_scheme = load_workspace_scheme::<fp32::OneHot>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        )
+        .expect("workspace one-hot catalog");
 
         let recursive_requirements = SetupRequirements::from_catalog::<RecursiveCfg>(
             recursive_scheme.schedules(),

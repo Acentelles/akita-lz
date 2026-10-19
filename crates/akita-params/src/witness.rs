@@ -366,6 +366,23 @@ impl WitnessQuotientRowLayout {
         Self { geometry, range }
     }
 
+    /// Physical witness address of one quotient digit's coordinate.
+    pub fn coefficient_index(
+        &self,
+        quotient_digit: usize,
+        coordinate_plane: usize,
+        modulus_coefficient: usize,
+    ) -> Result<usize, AkitaError> {
+        let physical_coefficient = self
+            .geometry
+            .physical_coefficient_index(coordinate_plane, modulus_coefficient)?;
+        let local = quotient_digit
+            .checked_mul(self.geometry.physical_coefficient_width())
+            .and_then(|base| base.checked_add(physical_coefficient))
+            .ok_or_else(|| AkitaError::InvalidSetup("witness R index overflow".into()))?;
+        checked_range_index(&self.range, local, "witness R")
+    }
+
     #[must_use]
     pub const fn geometry(&self) -> RelationRowGeometry {
         self.geometry
@@ -961,14 +978,7 @@ impl WitnessLayout {
                 "witness R semantic index out of range".into(),
             ));
         }
-        let physical_coefficient = row
-            .geometry
-            .physical_coefficient_index(coordinate_plane, modulus_coefficient)?;
-        let local = quotient_digit
-            .checked_mul(row.geometry.physical_coefficient_width())
-            .and_then(|base| base.checked_add(physical_coefficient))
-            .ok_or_else(|| AkitaError::InvalidSetup("witness R index overflow".into()))?;
-        checked_range_index(&row.range, local, "witness R")
+        row.coefficient_index(quotient_digit, coordinate_plane, modulus_coefficient)
     }
 }
 
@@ -1138,7 +1148,7 @@ fn checked_owned_block(unit: &WitnessUnitLayout, global_block: usize) -> Result<
 pub const MAX_WITNESS_CHUNKS: usize = 64;
 
 /// Indexed multi-chunk preset on the shipped `num_chunks × num_activated_levels`
-/// grid (`num_chunks ∈ {2, 4, 8}`, `num_activated_levels ∈ {1, 2}`).
+/// grid (`num_chunks ∈ {2, 4, 8}`, `num_activated_levels ∈ {1, 2, 3}`).
 ///
 /// `num_chunks` must be a power of two; non-power-of-two chunk counts are rejected
 /// by [`ChunkedWitnessCfg::validate`] and are not part of this grid.
@@ -1157,11 +1167,17 @@ pub enum MultiChunkProfileId {
     W8R1 = 4,
     /// `num_chunks = 8`, `num_activated_levels = 2` (D64 production default).
     W8R2 = 5,
+    /// `num_chunks = 2`, `num_activated_levels = 3`.
+    W2R3 = 6,
+    /// `num_chunks = 4`, `num_activated_levels = 3`.
+    W4R3 = 7,
+    /// `num_chunks = 8`, `num_activated_levels = 3`.
+    W8R3 = 8,
 }
 
 impl MultiChunkProfileId {
     /// Number of profiles in [`Self::ALL`].
-    pub const COUNT: usize = 6;
+    pub const COUNT: usize = 9;
 
     /// Every supported profile, in stable index order.
     pub const ALL: [Self; Self::COUNT] = [
@@ -1171,6 +1187,9 @@ impl MultiChunkProfileId {
         Self::W4R2,
         Self::W8R1,
         Self::W8R2,
+        Self::W2R3,
+        Self::W4R3,
+        Self::W8R3,
     ];
 
     /// Shipped D64 multi-chunk preset (`8` chunks, `2` leading fold levels).
@@ -1183,9 +1202,9 @@ impl MultiChunkProfileId {
 
     pub const fn num_chunks(self) -> usize {
         match self {
-            Self::W2R1 | Self::W2R2 => 2,
-            Self::W4R1 | Self::W4R2 => 4,
-            Self::W8R1 | Self::W8R2 => 8,
+            Self::W2R1 | Self::W2R2 | Self::W2R3 => 2,
+            Self::W4R1 | Self::W4R2 | Self::W4R3 => 4,
+            Self::W8R1 | Self::W8R2 | Self::W8R3 => 8,
         }
     }
 
@@ -1193,6 +1212,7 @@ impl MultiChunkProfileId {
         match self {
             Self::W2R1 | Self::W4R1 | Self::W8R1 => 1,
             Self::W2R2 | Self::W4R2 | Self::W8R2 => 2,
+            Self::W2R3 | Self::W4R3 | Self::W8R3 => 3,
         }
     }
 

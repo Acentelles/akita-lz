@@ -213,24 +213,6 @@ where
             "Stage 2 geometry differs from its relation".into(),
         ));
     }
-    let points = request
-        .groups
-        .iter()
-        .enumerate()
-        .filter_map(|(index, group)| match group.kind() {
-            OpeningFamily::SubringCoefficientPacking(point) => Some((index, point)),
-            OpeningFamily::EvaluationTrace(_) => None,
-        })
-        .collect::<Vec<_>>();
-    let opening_points = if points.is_empty() {
-        OpeningFamily::EvaluationTrace(())
-    } else if points.len() == request.groups.len() {
-        OpeningFamily::SubringCoefficientPacking(points.as_slice())
-    } else {
-        return Err(AkitaError::Internal(
-            "stage 2 packing opening point count differs from its groups".into(),
-        ));
-    };
     let ordinary = match parameters.ring_relation_mode {
         akita_params::RingRelationMode::QuotientLift => {
             let weights = build_relation_lane_weights(RelationLaneWeightInputs {
@@ -243,7 +225,6 @@ where
                 opening_source_len: request.opening_source_len,
                 opening_ring_dim: request.opening_ring_dimension,
                 relation_plan: request.relation_plan,
-                opening_points,
                 packing_semantics: match plan.linear_terms() {
                     akita_prover::backend::Stage2OpeningDescription::CoefficientPacking(batch) => {
                         Some(batch)
@@ -254,7 +235,11 @@ where
             RelationWeightDescription::QuotientFactored(weights.into_factorization()?)
         }
         akita_params::RingRelationMode::ReducedEvaluation => {
-            if !points.is_empty() {
+            if request
+                .groups
+                .iter()
+                .any(|group| matches!(group.kind(), OpeningFamily::SubringCoefficientPacking(_)))
+            {
                 return Err(AkitaError::Internal(
                     "reduced relation mode contains packing opening points".into(),
                 ));
