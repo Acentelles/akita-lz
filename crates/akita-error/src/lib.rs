@@ -80,9 +80,7 @@ impl From<jolt_transcript::TranscriptError> for AkitaError {
 ///
 /// Transcript failures reject the proof as [`jolt_transcript::TranscriptError`]
 /// does. A failed prover self-check is a caller input error. A malformed public
-/// shape (zero degree, unrepresentable size, round-count or equality-point
-/// mismatch, an eq-factored instance without rounds) is a setup error. Every
-/// other variant is a failed internal invariant.
+/// shape is a setup error. Every other variant is a failed internal invariant.
 impl<F: jolt_field::Field> From<jolt_sumcheck::SumcheckError<F>> for AkitaError {
     fn from(error: jolt_sumcheck::SumcheckError<F>) -> Self {
         use jolt_sumcheck::SumcheckError;
@@ -94,6 +92,29 @@ impl<F: jolt_field::Field> From<jolt_sumcheck::SumcheckError<F>> for AkitaError 
             | SumcheckError::EqFactoredZeroRounds
             | SumcheckError::EqualityPointLengthMismatch { .. }
             | SumcheckError::RoundCountMismatch { .. } => Self::InvalidSetup(error.to_string()),
+            SumcheckError::DegreeBoundExceeded { .. }
+            | SumcheckError::ZeroBatchDegree { .. }
+            | SumcheckError::BatchMemberRoundsOutOfRange { .. }
+            | SumcheckError::BatchPaddingExponentOutOfRange { .. }
+            | SumcheckError::BatchMemberWindowOverflow { .. }
+            | SumcheckError::DegreeOverflow { .. }
+            | SumcheckError::RoundSumCoefficientCountMismatch { .. }
+            | SumcheckError::InvalidIntegerDomain { .. }
+            | SumcheckError::EmptyRoundCoefficients
+            | SumcheckError::MissingEvaluationSource { .. }
+            | SumcheckError::ZeroCommitmentCapacity
+            | SumcheckError::RoundExceedsCommitmentCapacity { .. }
+            | SumcheckError::BatchMemberCountMismatch { .. }
+            | SumcheckError::BatchMemberRoundsMismatch { .. }
+            | SumcheckError::BatchMemberWindowOutOfRange { .. }
+            | SumcheckError::MissingRoundMessage { .. }
+            | SumcheckError::RoundMemberIndexOutOfRange { .. }
+            | SumcheckError::BatchedPointRangeOverflow { .. }
+            | SumcheckError::BatchedPointOutOfRange { .. }
+            | SumcheckError::IntegerDomainNotDistinct { .. }
+            | SumcheckError::WrongNumberOfChallenges { .. } => Self::Internal(error.to_string()),
+            // `SumcheckError` is `#[non_exhaustive]`. A variant added upstream
+            // must be classified above when Akita bumps jolt-sumcheck.
             _ => Self::Internal(error.to_string()),
         }
     }
