@@ -16,7 +16,7 @@
 use akita_error::AkitaError;
 use jolt_field::checked;
 
-use crate::Field;
+use jolt_field::Field;
 use std::marker::PhantomData;
 use std::mem;
 use std::panic::Location;
@@ -470,7 +470,7 @@ impl<E: Field> SplitEqEvals<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Field;
+    use jolt_field::Field;
     use jolt_field::{Fp64, One, Ring, Zero};
     use rand::rngs::StdRng;
     use rand::SeedableRng;

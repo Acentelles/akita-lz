@@ -298,8 +298,8 @@ coset-major order.
 This flow reuses one `SmoothDomain` and one workspace across all cosets. It
 returns only the `k(B-1)` evaluations on the additional cosets; the original
 subgroup evaluations are not repeated. The smooth FFT and Reed--Solomon
-extension are exported arithmetic utilities currently exercised by unit tests
-and `crates/akita-pcs/benches/fft_smooth.rs`. The production prover and verifier
+extension are exported arithmetic utilities exercised by `jolt-algebra`'s unit
+tests. The production prover and verifier
 do not call this encoding path.
 
 **Code:** `jolt-algebra/src/fft.rs`.

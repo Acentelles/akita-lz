@@ -2,10 +2,10 @@
 
 #[cfg(feature = "parallel")]
 use super::eq_poly::EqPolynomial;
-use crate::Field;
 use akita_error::AkitaError;
 #[allow(unused_imports)]
 use jolt_field::solinas::parallel::*;
+use jolt_field::Field;
 use jolt_field::Fold;
 
 /// Evaluate a multilinear polynomial (given by boolean-hypercube evaluations in

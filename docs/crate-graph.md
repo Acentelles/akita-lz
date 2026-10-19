@@ -13,8 +13,8 @@ orchestration lives in `akita-pcs`.
 
 | Crate | Role |
 |-------|------|
-| `akita-error` | Shared protocol error and reusable checked integer formulas |
-| `jolt-field` (external) | Shared field traits, prime and extension fields, packed and unreduced kernels, parallel helpers |
+| `akita-error` | Shared protocol error |
+| `jolt-field` (external; re-exports `jolt-algebra`) | Shared field traits, prime and extension fields, packed and unreduced kernels, cyclotomic ring, NTT/CRT, smooth FFT, checked integer formulas, parallel helpers |
 | `akita-serialization` | Serialization, validation, compression traits |
 | `akita-algebra` | Multilinear, equality, split-equality, and offset-equality polynomial utilities |
 | `jolt-transcript` (external) | Fiat-Shamir proof channel (NARG prover/verifier transcripts, sponges, grinding) |

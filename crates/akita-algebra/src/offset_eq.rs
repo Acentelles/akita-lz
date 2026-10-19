@@ -8,8 +8,8 @@
 use akita_error::AkitaError;
 use jolt_field::checked;
 
-use crate::Field;
 use jolt_field::solinas::parallel::*;
+use jolt_field::Field;
 
 mod tensor_pair;
 pub use tensor_pair::{

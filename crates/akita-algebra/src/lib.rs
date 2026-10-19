@@ -17,8 +17,11 @@ pub mod split_eq;
 
 // Flat re-exports for convenience.
 pub use eq_poly::{EqPolynomial, SplitEqEvals};
-pub use jolt_field::{
-    cfg_chunks, cfg_chunks_mut, cfg_fold_reduce, cfg_into_iter, cfg_iter, cfg_iter_mut, cfg_join,
-};
-pub use jolt_field::{AdditiveGroup, CanonicalEncoding, Field, One, PseudoMersenne, Ring, Zero};
 pub use split_eq::GruenSplitEq;
+
+/// Compatibility re-export for jolt-akita; removed once jolt-akita ports (RP3)
+/// and Akita re-pins.
+pub use jolt_field::ring;
+/// Compatibility re-export for jolt-akita; removed once jolt-akita ports (RP3)
+/// and Akita re-pins.
+pub use jolt_field::CyclotomicRing;

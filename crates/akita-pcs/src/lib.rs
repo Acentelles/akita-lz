@@ -16,7 +16,7 @@
 //! ## Structure
 //!
 //! ### Core Modules
-//! - `akita-error` - Shared protocol errors and checked integer formulas
+//! - `akita-error` - Shared protocol errors
 //! - `jolt-field` - Shared field traits, concrete fields, and packing
 //! - `akita-serialization` - Serialization abstractions
 //! - `akita-algebra` - Multilinear and equality polynomial helpers
@@ -45,8 +45,6 @@ mod test_support;
 
 pub use akita_config::SetupRequirements;
 pub use akita_error::AkitaError;
-pub use jolt_field::fft;
-pub use jolt_field::fft::SmoothFftField;
 // Specialized field surfaces mirror jolt-field's curated exports.
 #[doc(hidden)]
 pub use akita_cpu_backend::custom_source;
