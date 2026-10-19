@@ -224,9 +224,9 @@ jobs:
   test-transcript-semantics:
     name: Transcript semantics (${{ matrix.sponge.name }})
     runs-on: ubuntu-latest
-    # Release builds of several logging test binaries dominate this job; it
-    # stays well under the schedule-drift job on the critical path.
-    timeout-minutes: 40
+    # Cold release builds span several logging-transcript test binaries and
+    # can exceed 40 minutes before the final protocol suites finish compiling.
+    timeout-minutes: 60
     # The semantic and mutation suites run on each sponge a caller may run
     # Akita on: the standalone AkitaSponge (Blake2b) and Keccak.
     strategy:

@@ -62,7 +62,9 @@ fn dynamic_backend_failures_cleanup_and_retry() {
 }
 
 fn run(check_failures: bool) -> Result<(), AkitaError> {
-    let scheme = common::load_workspace_scheme::<Cfg>()?;
+    let scheme = common::load_workspace_scheme::<Cfg>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    )?;
     let chunk_size = unit_onehot_source_chunk_size::<Cfg>()?;
     let chunks_per_poly = (1usize << NUM_VARS) / chunk_size;
     let point: Vec<F> = (0..NUM_VARS)

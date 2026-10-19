@@ -61,6 +61,7 @@ pub(crate) fn profile_setup_contribution_mode() -> SetupContributionMode {
 }
 
 pub(crate) fn run_recursive_multi_group_onehot<FF, const D: usize, Cfg>(
+    chunking: akita_params::ChunkedWitnessCfg,
     label: &str,
     pre_num_vars: usize,
     final_num_vars: usize,
@@ -90,7 +91,8 @@ pub(crate) fn run_recursive_multi_group_onehot<FF, const D: usize, Cfg>(
         + Valid,
 {
     let setup_contribution_mode = profile_setup_contribution_mode();
-    let base_scheme = load_workspace_scheme::<Cfg>().expect("base workspace schedule artifact");
+    let base_scheme =
+        load_workspace_scheme::<Cfg>(chunking).expect("base workspace schedule artifact");
     match setup_contribution_mode {
         SetupContributionMode::Direct => {
             run_recursive_multi_group_onehot_with_proof_cfg::<FF, D, Cfg, Cfg>(
@@ -104,7 +106,7 @@ pub(crate) fn run_recursive_multi_group_onehot<FF, const D: usize, Cfg>(
             )
         }
         SetupContributionMode::Recursive => {
-            let proof_scheme = load_workspace_scheme::<RecursiveCommitmentConfig<Cfg>>()
+            let proof_scheme = load_workspace_scheme::<RecursiveCommitmentConfig<Cfg>>(chunking)
                 .expect("recursive workspace schedule artifact");
             run_recursive_multi_group_onehot_with_proof_cfg::<
                 FF,
@@ -389,7 +391,7 @@ fn run_recursive_multi_group_onehot_with_proof_cfg<FF, const D: usize, Cfg, Proo
     report_proof_size_against_planner(
         label,
         &proof,
-        proof_size_budgets::<ProofCfg>(&schedule, final_group),
+        proof_size_budgets(&schedule, final_group, proof_scheme.schedules().policy()),
         "planned",
         setup_contribution_mode,
     );
