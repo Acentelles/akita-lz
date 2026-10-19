@@ -58,7 +58,7 @@ or prover implementation.
 | external `jolt-field` and `akita-algebra` | Field, ring, transform, and polynomial arithmetic |
 | `akita-serialization` | Canonical encoding and checked decoding |
 | `akita-challenges`, `akita-types::transcript`, and external `jolt-transcript` | Instance binding and challenge derivation |
-| `akita-sumcheck` | Shared sumcheck proof types and drivers |
+| `akita-sumcheck` | Sumcheck kernel traits and adapters to `jolt-sumcheck`'s driver |
 | `akita-types` | Public proof, setup, schedule, commitment, and claim shapes |
 | `akita-planner` | Offline schedule search and cost evaluation |
 | `akita-schedules` | External schedule artifact decoding, admission, and lookup |

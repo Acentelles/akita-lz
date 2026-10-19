@@ -267,9 +267,9 @@ rule in `batched_sumcheck.rs`.
 | Evaluate a multilinear table | `akita-algebra/src/poly.rs` |
 | Build equality-polynomial tables | `akita-algebra/src/eq_poly.rs` |
 | Represent and compress round polynomials | `jolt-poly/src/univariate.rs` and `jolt-poly/src/compressed_univariate.rs` |
-| Define prover and verifier instance contracts | `akita-sumcheck/src/traits.rs` |
-| Encode proofs and verify ordinary rounds | `akita-sumcheck/src/types.rs` |
-| Batch claims and right-align shorter instances | `akita-sumcheck/src/batched_sumcheck.rs` |
+| Define the fallible prover kernel contract | `akita-sumcheck/src/traits.rs` |
+| Adapt kernels to the shared driver's fused rounds | `akita-sumcheck/src/fused.rs` |
+| Prove and replay ordinary rounds | `jolt-sumcheck/src/single.rs` (`prove_single`, `verify_single`) |
 
 For a review, check these facts together:
 

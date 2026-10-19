@@ -19,7 +19,7 @@ orchestration lives in `akita-pcs`.
 | `akita-algebra` | Modules, NTTs, cyclotomic rings, polynomials |
 | `jolt-transcript` (external) | Fiat-Shamir proof channel (NARG prover/verifier transcripts, sponges, grinding) |
 | `akita-challenges` | Challenge sampling helpers |
-| `akita-sumcheck` | Sumcheck proofs, drivers, folding, batching |
+| `akita-sumcheck` | Sumcheck kernel traits, driver adapters, folding |
 | `akita-params` | Parameter geometry, sizing, SIS tables, schedules, compression plans, witness layout, dispatch, and grinding plans |
 | `akita-types` | Proof, setup, and claim wire values, shared protocol math, and native transcript replay |
 | `akita-sis-estimator` | Offline scalar SIS attack-cost estimation and artifact certification |
@@ -42,6 +42,7 @@ graph TD
   Algebra["akita-algebra"]
   Transcript["jolt-transcript (external)"]
   Challenges["akita-challenges"]
+  JoltSumcheck["jolt-sumcheck (external)"]
   Sumcheck["akita-sumcheck"]
   Params["akita-params"]
   Types["akita-types"]
@@ -66,14 +67,17 @@ graph TD
   Sumcheck --> Error
   Sumcheck --> Algebra
   Sumcheck --> Field
-  Sumcheck --> Ser
-  Sumcheck --> Transcript
+  Sumcheck --> JoltSumcheck
+  JoltSumcheck --> Transcript
+  Error --> JoltSumcheck
+  Types --> JoltSumcheck
+  Verifier --> JoltSumcheck
+  Prover --> JoltSumcheck
   Params --> Error
   Params --> Algebra
   Params --> Challenges
   Params --> Field
   Params --> Ser
-  Params --> Sumcheck
   Params --> Transcript
   Types --> Params
   Types --> Error
@@ -81,7 +85,6 @@ graph TD
   Types --> Challenges
   Types --> Field
   Types --> Ser
-  Types --> Sumcheck
   Types --> Transcript
   SisEstimator --> Params
   Planner --> Error
@@ -106,7 +109,6 @@ graph TD
   Verifier --> Config
   Verifier --> Field
   Verifier --> Ser
-  Verifier --> Sumcheck
   Verifier --> Transcript
   Verifier --> Types
   Prover --> Params

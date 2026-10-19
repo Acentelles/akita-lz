@@ -17,7 +17,7 @@ orchestration lives in `akita-pcs`.
 | `akita-algebra` | Modules, vectors, NTTs, cyclotomic rings, sparse challenges, polynomials |
 | `jolt-transcript` (external) | Fiat-Shamir proof channel: prover/verifier transcripts, sponges, grinding, event log |
 | `akita-challenges` | Fiat-Shamir challenge sampling helpers |
-| `akita-sumcheck` | Sumcheck proofs, drivers, compact folding, batching, accumulation |
+| `akita-sumcheck` | Fallible sumcheck kernel traits, adapters to `jolt-sumcheck`'s single-instance driver, compact folding, accumulation |
 | `akita-params` | Parameter geometry, sizing, SIS tables, schedules, compression plans, witness layout, dispatch, and grinding plans |
 | `akita-types` | Proof, setup, and claim wire values, shared protocol math, and native transcript replay |
 | `akita-planner` | `Cfg`-free offline schedule search and artifact emission |

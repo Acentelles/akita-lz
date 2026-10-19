@@ -172,9 +172,10 @@ matching verifier equation.
 | --- | --- |
 | Equality polynomial definition and tables | `akita-algebra/src/eq_poly.rs` |
 | Split equality state and suffix caches | `akita-algebra/src/split_eq.rs` |
-| Factored prover interface | `akita-sumcheck/src/traits.rs` |
-| Factored round message and proof encoding | `akita-sumcheck/src/types.rs` |
-| Direct prover/verifier functions and normalized claim update | `akita-sumcheck/src/single.rs` |
+| Factored kernel interface | `akita-sumcheck/src/traits.rs` |
+| Factored round message and normalized claim update | `jolt-poly/src/omitted_constant.rs` |
+| Kernel adapter that recovers `q_0` from the instance's `tau` | `akita-sumcheck/src/fused.rs` |
+| Prover and verifier driver | `jolt-sumcheck/src/single.rs` (`prove_single`, `verify_single`) |
 
 For a review, check these facts together:
 
