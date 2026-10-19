@@ -2,6 +2,8 @@
 #![allow(missing_docs)]
 
 mod common;
+#[path = "backend_ownership/signed_block_poly.rs"]
+mod signed_block_poly;
 
 use akita_config::proof_optimized::fp128;
 use akita_cpu_backend::{CommitmentHandle, CpuBackend, DensePoly, GroupContext};
@@ -43,7 +45,10 @@ fn claims(
 #[test]
 fn false_root_evaluation_claim_returns_invalid_input() {
     common::run_on_large_stack(|| {
-        let scheme = common::load_workspace_scheme::<Cfg>().unwrap();
+        let scheme = common::load_workspace_scheme::<Cfg>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        )
+        .unwrap();
         let setup = scheme.setup_prover(NV, 1).unwrap();
         let backend = CpuBackend::new(setup.expanded.clone()).unwrap();
         let source = backend
@@ -74,7 +79,10 @@ fn false_root_evaluation_claim_returns_invalid_input() {
 
 #[test]
 fn claim_handle_count_mismatch_returns_invalid_input() {
-    let scheme = common::load_workspace_scheme::<Cfg>().unwrap();
+    let scheme = common::load_workspace_scheme::<Cfg>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    )
+    .unwrap();
     let key = akita_params::ScheduleLookupKey::single(PolynomialGroupLayout::new(NV, 1));
     let row = scheme.schedules().resolve_key(&key).unwrap();
     let commitment = CommittedGroup::new(
@@ -101,7 +109,10 @@ fn claim_handle_count_mismatch_returns_invalid_input() {
 #[test]
 fn shared_commitment_supports_concurrent_deterministic_proofs_after_rejected_requests() {
     common::run_on_large_stack(|| {
-        let scheme = common::load_workspace_scheme::<Cfg>().unwrap();
+        let scheme = common::load_workspace_scheme::<Cfg>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        )
+        .unwrap();
         let setup = scheme.setup_prover(NV, 1).unwrap();
         let backend = Arc::new(CpuBackend::new(setup.expanded.clone()).unwrap());
         let source = backend
@@ -228,7 +239,10 @@ fn shared_commitment_supports_concurrent_deterministic_proofs_after_rejected_req
 #[test]
 fn admission_rejects_wrong_context_and_scope_cleanup_preserves_other_proofs() {
     common::run_on_large_stack(|| {
-        let scheme = common::load_workspace_scheme::<Cfg>().unwrap();
+        let scheme = common::load_workspace_scheme::<Cfg>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        )
+        .unwrap();
         let setup = scheme.setup_prover(NV, 1).unwrap();
         let backend = CpuBackend::new(setup.expanded.clone()).unwrap();
         let source = backend
@@ -254,7 +268,7 @@ fn admission_rejects_wrong_context_and_scope_cleanup_preserves_other_proofs() {
             .validate_structure()
             .expect("the altered public plan is structurally valid");
         assert!(matches!(
-            <CpuBackend<F, F> as ProofAdmission<F, F>>::begin_proof(
+            <CpuBackend<F, F> as ProofAdmission<F, F>>::prepare_executor(
                 &backend,
                 setup.expanded.descriptor(),
                 scheme.schedules(),
@@ -263,7 +277,7 @@ fn admission_rejects_wrong_context_and_scope_cleanup_preserves_other_proofs() {
             ),
             Err(akita_pcs::AkitaError::UnsupportedSchedule(_)),
         ));
-        let a = <CpuBackend<F, F> as ProofAdmission<F, F>>::begin_proof(
+        let a = <CpuBackend<F, F> as ProofAdmission<F, F>>::prepare_executor(
             &backend,
             setup.expanded.descriptor(),
             scheme.schedules(),
@@ -271,7 +285,7 @@ fn admission_rejects_wrong_context_and_scope_cleanup_preserves_other_proofs() {
             &layout,
         )
         .unwrap();
-        let b = <CpuBackend<F, F> as ProofAdmission<F, F>>::begin_proof(
+        let b = <CpuBackend<F, F> as ProofAdmission<F, F>>::prepare_executor(
             &backend,
             setup.expanded.descriptor(),
             scheme.schedules(),
@@ -357,14 +371,16 @@ fn admission_rejects_wrong_context_and_scope_cleanup_preserves_other_proofs() {
         );
         let mut changed_setup = setup.expanded.descriptor().clone();
         changed_setup.setup_seed = [9; 32].into();
-        assert!(<CpuBackend<F, F> as ProofAdmission<F, F>>::begin_proof(
-            &backend,
-            &changed_setup,
-            scheme.schedules(),
-            schedule,
-            &layout
-        )
-        .is_err());
+        assert!(
+            <CpuBackend<F, F> as ProofAdmission<F, F>>::prepare_executor(
+                &backend,
+                &changed_setup,
+                scheme.schedules(),
+                schedule,
+                &layout
+            )
+            .is_err()
+        );
     });
 }
 
@@ -374,19 +390,23 @@ fn admission_uses_the_extension_field_owned_by_the_configuration() {
         type SmallCfg = akita_config::proof_optimized::fp32::OneHot;
         type SmallF = akita_config::proof_optimized::fp32::Field;
         type SmallE = <SmallCfg as akita_config::CommitmentConfig>::ExtField;
-        let scheme = common::load_workspace_scheme::<SmallCfg>().unwrap();
+        let scheme = common::load_workspace_scheme::<SmallCfg>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        )
+        .unwrap();
         let setup = scheme.setup_prover(NV, 1).unwrap();
         let backend = CpuBackend::new(setup.expanded.clone()).unwrap();
         let key = akita_params::ScheduleLookupKey::single(PolynomialGroupLayout::new(NV, 1));
         let row = scheme.schedules().resolve_key(&key).unwrap();
-        let session = <CpuBackend<SmallF, SmallE> as ProofAdmission<SmallF, SmallE>>::begin_proof(
-            &backend,
-            setup.expanded.descriptor(),
-            scheme.schedules(),
-            row.schedule(),
-            &key.opening_layout().unwrap(),
-        )
-        .unwrap();
+        let session =
+            <CpuBackend<SmallF, SmallE> as ProofAdmission<SmallF, SmallE>>::prepare_executor(
+                &backend,
+                setup.expanded.descriptor(),
+                scheme.schedules(),
+                row.schedule(),
+                &key.opening_layout().unwrap(),
+            )
+            .unwrap();
         <CpuBackend<SmallF, SmallE> as ProofScopeConsumer>::finish_scope(&backend, &session)
             .unwrap();
     });

@@ -83,8 +83,8 @@ pub(crate) fn prove_matching_byte_model<Cfg: CommitmentConfig>(
         precommitteds: resolved.profiles().precommitteds.clone(),
     };
     let schedule = resolved.schedule();
-    let policy = akita_config::policy_of::<Cfg>();
-    let bound = akita_schedules::expanded_schedule_proof_bound(&key, schedule, &policy)
+    let policy = schedules.policy();
+    let bound = akita_schedules::expanded_schedule_proof_bound(&key, schedule, policy)
         .expect("native proof bound");
     let z_payload_cap = schedule.terminal.response_shape.layout.z_payload_bytes();
     let nonce_max = akita_params::derive_transcript_grinding_plan_from_public_shape(

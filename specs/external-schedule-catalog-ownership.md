@@ -193,7 +193,7 @@ later execution during preprocessing restoration or in a guest.
 - [x] `TrustedScheduleCatalog<Cfg>` binds that index to one exact config, and is
   the sole production capability accepted by setup, prover, and verifier APIs.
 - [x] `AkitaCommitmentScheme::new(TrustedScheduleCatalog<Cfg>)` and
-  `AkitaCommitmentScheme::from_schedule_artifact(&[u8])` are the production
+  `AkitaCommitmentScheme::from_schedule_artifact(&[u8], ChunkedWitnessCfg)` are the production
   construction paths. Scheme clones share the config-bound catalog through
   owned `Arc` state.
 - [x] `AkitaCommitmentScheme::schedules()` exposes a borrow of the exact catalog
@@ -283,6 +283,12 @@ Setup tests prove that only eligible catalog rows contribute to matrix capacity
 and that grouped precommit matrices and recursive prefix slots are not omitted.
 PCS end-to-end tests receive explicit catalogs and retain current dense, one-hot,
 small-field, bounded-source, multi-chunk, grouped, and recursive coverage.
+The multi-chunk family registry also includes fp128 W2R3, W4R3, and W8R3
+one-hot companions, dense W8R3, and recursive setup companions for all three
+one-hot chunk widths. Their artifacts and
+catalog snapshot pin three leading multi-chunk folds and a single-chunk suffix;
+config admission tests reject changing the third fold's chunk count without
+recomputing its geometry.
 
 Serialization tests separately protect the 32-byte statement selection and the
 headerless proof body. Downstream envelope round trips do not count as proof-wire
@@ -375,28 +381,42 @@ impl ValidatedScheduleCatalog {
     fn resolve_key(...) -> Result<&ResolvedScheduleRow, AkitaError>;
     fn resolve_profiles(...) -> Result<&ResolvedScheduleRow, AkitaError>;
     fn catalog_digest(&self) -> [u8; 32];
+    fn policy(&self) -> &PlannerPolicy;
 }
 
 impl<Cfg: CommitmentConfig> TrustedScheduleCatalog<Cfg> {
-    fn new(catalog: ValidatedScheduleCatalog) -> Result<Self, AkitaError>;
-    fn from_artifact_bytes(bytes: &[u8]) -> Result<Self, AkitaError>;
+    fn new(
+        catalog: ValidatedScheduleCatalog,
+        chunking: ChunkedWitnessCfg,
+    ) -> Result<Self, AkitaError>;
+    fn from_artifact_bytes(
+        bytes: &[u8],
+        chunking: ChunkedWitnessCfg,
+    ) -> Result<Self, AkitaError>;
     fn catalog(&self) -> &ValidatedScheduleCatalog;
 }
 
 impl<Cfg: CommitmentConfig> AkitaCommitmentScheme<Cfg> {
     fn new(catalog: TrustedScheduleCatalog<Cfg>) -> Self;
-    fn from_schedule_artifact(bytes: &[u8]) -> Result<Self, AkitaError>;
+    fn from_schedule_artifact(
+        bytes: &[u8],
+        chunking: ChunkedWitnessCfg,
+    ) -> Result<Self, AkitaError>;
     fn schedules(&self) -> &TrustedScheduleCatalog<Cfg>;
 }
 ```
 
 The config-bound construction path validates `schedule_family_name()` and
-`policy_of::<Cfg>()` once. `AkitaCommitmentScheme::new` takes an already-bound
-capability, so construction is infallible. The capability stores the catalog in
+`policy_of::<Cfg>(chunking)` once. The application MUST supply expected chunking
+from trusted configuration or preprocessing; proof input MUST NOT select it.
+The catalog retains the admitted policy, which consumers borrow through
+`catalog.policy()` instead of reconstructing preset geometry.
+`AkitaCommitmentScheme::new` takes an already-bound capability, so construction
+is infallible. The capability stores the catalog in
 `Arc`; cloning a scheme does not clone or revalidate row bodies.
-Applications that persist preprocessing serialize canonical artifact bytes or an
-explicit storage reference, then reconstruct the working catalog once during
-restoration.
+Applications that persist preprocessing retain the expected chunking alongside
+canonical artifact bytes or an explicit storage reference, then reconstruct the
+working catalog once during restoration.
 
 Low-level setup, commitment, prover, and verifier functions accept
 `&TrustedScheduleCatalog<Cfg>` directly when they need row resolution. They do not

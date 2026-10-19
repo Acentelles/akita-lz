@@ -1,11 +1,10 @@
 use akita_config::{proof_optimized::fp128, TrustedScheduleCatalog};
 
-mod common;
-use common::checked_in_catalog;
+use super::support::checked_in_catalog;
 
 #[test]
 fn verifier_catalog_view_preserves_identity_and_restricts_available_rows() {
-    let full = checked_in_catalog::<fp128::Dense>();
+    let full = checked_in_catalog::<fp128::Dense>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let mut rows = full.rows();
     let selected = rows.next().unwrap();
     let omitted = rows.next().unwrap().selection();
@@ -46,7 +45,7 @@ fn verifier_catalog_view_preserves_identity_and_restricts_available_rows() {
 
 #[test]
 fn verifier_catalog_view_checks_membership_order_and_framing() {
-    let full = checked_in_catalog::<fp128::Dense>();
+    let full = checked_in_catalog::<fp128::Dense>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let selected = full.rows().next().unwrap().selection();
     let bytes = full.to_verifier_view(&[selected]).unwrap();
     let offset = bytes
@@ -121,7 +120,7 @@ fn verifier_catalog_view_checks_membership_order_and_framing() {
 
 #[test]
 fn verifier_catalog_view_carries_several_rows_once() {
-    let full = checked_in_catalog::<fp128::Dense>();
+    let full = checked_in_catalog::<fp128::Dense>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     let mut rows = full.rows();
     let first = rows.next().unwrap().selection();
     let second = rows.next().unwrap().selection();
