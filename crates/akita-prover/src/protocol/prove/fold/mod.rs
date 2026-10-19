@@ -703,11 +703,7 @@ where
         .copied()
         .eq(level_layout.stage1_stages())
         || stage1_norm != level_layout.stage1_norm()
-        || level_layout.stage2_sumcheck()
-            != akita_sumcheck::SumcheckShape::new(
-                relation_geometry.relation_point_variable_count(),
-                3,
-            )?
+        || level_layout.stage2_rounds() != relation_geometry.relation_point_variable_count()
     {
         return Err(AkitaError::Internal(
             "native level grammar disagrees with fold plan".into(),

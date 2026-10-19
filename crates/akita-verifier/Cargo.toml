@@ -25,7 +25,6 @@ jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "
 jolt-poly = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false }
 jolt-sumcheck = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false }
 akita-serialization = { version = "0.1.0", path = "../akita-serialization" }
-akita-sumcheck = { version = "0.1.0", path = "../akita-sumcheck", default-features = false }
 jolt-transcript = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false, features = [
   "transcript-blake2b",
 ] }
@@ -41,7 +40,6 @@ parallel = [
   "akita-algebra/parallel",
   "akita-challenges/parallel",
   "jolt-field/parallel",
-  "akita-sumcheck/parallel",
   "akita-types/parallel",
   "akita-params/parallel",
 ]
@@ -56,6 +54,7 @@ akita-config = { version = "0.1.0", path = "../akita-config", default-features =
 akita-types = { version = "0.1.0", path = "../akita-types", default-features = false, features = [
   "test-support",
 ] }
+akita-sumcheck = { version = "0.1.0", path = "../akita-sumcheck", default-features = false }
 criterion = "0.8"
 
 [[bench]]

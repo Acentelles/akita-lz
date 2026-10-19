@@ -284,7 +284,7 @@ fn append_nonterminal(
         level,
         stage: 0,
         rounds,
-        degree: 3,
+        degree: crate::STAGE2_SUMCHECK_DEGREE,
     })?;
     if let FoldSuccessor::Recursive(successor) = successor {
         if let Some(prefix) = successor.setup_prefix() {

@@ -108,7 +108,6 @@ dependencies = [
  "akita-challenges",
  "akita-error",
  "akita-serialization",
- "akita-sumcheck",
  "blake2",
  "jolt-field",
  "jolt-transcript",

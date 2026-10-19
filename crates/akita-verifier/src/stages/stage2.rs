@@ -357,7 +357,7 @@ pub(crate) fn replay_stage2<F, E, H: Sponge>(
     stage1: &Stage1Replay<'_, E>,
     relation_claim: E,
     opening_semantics: &Stage2OpeningSemantics<'_, E>,
-    shape: akita_sumcheck::SumcheckShape,
+    rounds: usize,
 ) -> Result<Stage2RoundReplay<E>, AkitaError>
 where
     F: Field + CanonicalEncoding,
@@ -376,8 +376,8 @@ where
     let replay = verify_single::<F, E, AkitaError, _>(
         &SingleInstance {
             input_claim,
-            rounds: shape.num_rounds(),
-            degree: shape.degree_bound(),
+            rounds,
+            degree: akita_params::STAGE2_SUMCHECK_DEGREE,
             format: SingleFormat::Compressed,
             invocation: 0,
         },

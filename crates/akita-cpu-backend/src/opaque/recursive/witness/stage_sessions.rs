@@ -279,7 +279,7 @@ where
             round,
             previous_claim,
         )?;
-        if polynomial.degree() > 3 {
+        if polynomial.degree() > akita_params::STAGE2_SUMCHECK_DEGREE {
             return Err(AkitaError::Internal(
                 "relation session returned an invalid round polynomial".into(),
             ));

@@ -585,7 +585,7 @@ where
     let instance = SingleInstance {
         input_claim: claim,
         rounds: num_rounds,
-        degree: 3,
+        degree: akita_params::STAGE2_SUMCHECK_DEGREE,
         format: SingleFormat::Compressed,
         invocation: 0,
     };
