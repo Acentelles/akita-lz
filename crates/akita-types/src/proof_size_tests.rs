@@ -10,7 +10,6 @@ mod tests {
     use akita_challenges::SparseChallengeConfig;
     use akita_error::AkitaError;
     use akita_serialization::{AkitaSerialize, Compress};
-    use akita_sumcheck::{EqFactoredSumcheckProof, SumcheckProof};
     use jolt_field::{
         CanonicalEncoding, Ext2, ExtField, Field, FpExt4, Prime128OffsetA7F7, Prime32Offset99,
         Prime64Offset59, Zero,
@@ -117,23 +116,19 @@ mod tests {
         (witness, shape)
     }
 
-    fn dummy_sumcheck<F: Field>(rounds: usize, degree: usize) -> SumcheckProof<F> {
-        SumcheckProof {
-            round_polys: (0..rounds)
-                .map(|_| CompressedPoly::new(vec![F::zero(); degree]))
-                .collect(),
-        }
+    fn dummy_sumcheck<F: Field>(rounds: usize, degree: usize) -> Vec<CompressedPoly<F>> {
+        (0..rounds)
+            .map(|_| CompressedPoly::new(vec![F::zero(); degree]))
+            .collect()
     }
 
     fn dummy_eq_factored_sumcheck<F: Field>(
         rounds: usize,
         degree: usize,
-    ) -> EqFactoredSumcheckProof<F> {
-        EqFactoredSumcheckProof {
-            round_polys: (0..rounds)
-                .map(|_| OmittedConstantPoly::new(vec![F::zero(); degree]))
-                .collect(),
-        }
+    ) -> Vec<OmittedConstantPoly<F>> {
+        (0..rounds)
+            .map(|_| OmittedConstantPoly::new(vec![F::zero(); degree]))
+            .collect()
     }
 
     fn dummy_stage1_proof<F: Field>(
@@ -189,11 +184,9 @@ mod tests {
         SetupSumcheckProof {
             claim: F::zero(),
             setup_prefix_eval: F::zero(),
-            sumcheck: akita_sumcheck::SumcheckProof {
-                round_polys: (0..rounds)
-                    .map(|_| CompressedPoly::new(vec![F::zero(); SETUP_SUMCHECK_DEGREE]))
-                    .collect(),
-            },
+            sumcheck: (0..rounds)
+                .map(|_| CompressedPoly::new(vec![F::zero(); SETUP_SUMCHECK_DEGREE]))
+                .collect(),
         }
     }
 
@@ -706,7 +699,7 @@ mod tests {
                 let proof = dummy_stage3_proof::<F>(d, setup_ring_len);
                 let serialized = proof.claim.serialized_size(Compress::No)
                     + proof.setup_prefix_eval.serialized_size(Compress::No)
-                    + proof.sumcheck.serialized_size(Compress::No);
+                    + crate::proof::headerless_size(&proof.sumcheck, Compress::No);
                 assert_eq!(
                     stage3_setup_product_bytes(CHALLENGE_BITS, d, setup_ring_len),
                     serialized,

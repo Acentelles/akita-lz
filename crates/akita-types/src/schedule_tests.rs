@@ -42,7 +42,6 @@ use akita_params::{
 };
 use akita_serialization::{AkitaSerialize, Compress};
 
-use akita_sumcheck::{EqFactoredSumcheckProof, SumcheckProof};
 use jolt_field::{CanonicalEncoding, Field, Prime128OffsetA7F7, Zero};
 
 #[path = "schedule_tests/descriptor.rs"]
@@ -636,23 +635,19 @@ fn terminal_response_fixture(
     (witness, shape)
 }
 
-fn dummy_sumcheck<F: Field>(rounds: usize, degree: usize) -> SumcheckProof<F> {
-    SumcheckProof {
-        round_polys: (0..rounds)
-            .map(|_| CompressedPoly::new(vec![F::zero(); degree]))
-            .collect(),
-    }
+fn dummy_sumcheck<F: Field>(rounds: usize, degree: usize) -> Vec<CompressedPoly<F>> {
+    (0..rounds)
+        .map(|_| CompressedPoly::new(vec![F::zero(); degree]))
+        .collect()
 }
 
 fn dummy_eq_factored_sumcheck<F: Field>(
     rounds: usize,
     degree: usize,
-) -> EqFactoredSumcheckProof<F> {
-    EqFactoredSumcheckProof {
-        round_polys: (0..rounds)
-            .map(|_| OmittedConstantPoly::new(vec![F::zero(); degree]))
-            .collect(),
-    }
+) -> Vec<OmittedConstantPoly<F>> {
+    (0..rounds)
+        .map(|_| OmittedConstantPoly::new(vec![F::zero(); degree]))
+        .collect()
 }
 
 fn dummy_stage1_proof<F: Field>(rounds: usize, b: usize) -> AkitaStage1Proof<F> {
@@ -925,7 +920,7 @@ fn planned_extension_reduction_bytes_match_headerless_payload() {
         ),
         final_claims: vec![F::zero(); num_claims],
     };
-    let sumcheck_bytes = reduction.sumcheck.serialized_size(Compress::No);
+    let sumcheck_bytes = crate::proof::headerless_size(&reduction.sumcheck, Compress::No);
 
     assert_eq!(
         extension_opening_reduction_level_bytes(

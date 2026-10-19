@@ -31,6 +31,8 @@ mod tail_segments;
 mod tests;
 #[cfg(test)]
 mod wire;
+#[cfg(test)]
+pub(crate) use wire::headerless_size;
 mod witness_emission;
 
 /// Maximum coefficients accepted from a self-describing commitment artifact.
@@ -109,7 +111,6 @@ use akita_params::EXTENSION_OPENING_REDUCTION_DEGREE;
 use akita_serialization::{AkitaDeserialize, AkitaSerialize};
 use akita_serialization::{Compress, SerializationError};
 use akita_serialization::{Valid, Validate};
-use akita_sumcheck::uniform_sumcheck_shape;
 #[cfg(test)]
 use jolt_field::CanonicalEncoding;
 use jolt_field::Field;

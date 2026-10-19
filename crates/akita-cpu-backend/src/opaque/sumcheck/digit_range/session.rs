@@ -396,14 +396,13 @@ impl<E: Field + Ring + Fold + Unreduced> DigitRangeSession<E> {
             AkitaError::InvalidInput("Stage 1 challenge arrived before its polynomial".into())
         })?;
         self.claim = match &pending.polynomial {
-            Stage1RoundPolynomial::EqFactored(poly) => akita_sumcheck::advance_eq_factored_claim(
+            Stage1RoundPolynomial::EqFactored(poly) => poly.evaluate_from_claim(
                 self.claim,
                 pending.tau.ok_or_else(|| {
                     AkitaError::Internal(
                         "stage 1 eq-factored round has no equality challenge".into(),
                     )
                 })?,
-                poly,
                 challenge,
             ),
             Stage1RoundPolynomial::Standard(poly) => poly.evaluate(challenge),

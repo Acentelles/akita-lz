@@ -5,8 +5,8 @@ use akita_challenges::FoldDrawRecord;
 use akita_error::AkitaError;
 use akita_params::transcript_site::{ProtocolSiteId, SITE_FAMILY_SUMCHECK};
 use akita_params::{GrindingPlan, GrindingQueryKind, GrindingSite};
-use akita_sumcheck::{SumcheckProverChannel, SumcheckRole, SumcheckVerifierChannel};
 use jolt_field::{CanonicalEncoding, ExtField, Field};
+use jolt_sumcheck::{ProverRoundContext, SumcheckSite, VerifierRoundContext};
 use jolt_transcript::{
     Channel, Fork, ProverTranscript, SiteId, Sponge, TranscriptError, VerifierTranscript,
     FORK_SEED_LEN,
@@ -565,28 +565,26 @@ impl<'a, 'proof, H: Sponge> VerifierGrinding<'a, 'proof, H> {
     }
 }
 
-/// Site of one grinding-backed standard-sumcheck atom, shared by both roles.
+/// Site of one grinding-backed sumcheck atom, shared by both roles.
 fn grinding_sumcheck_site(
     protocol: akita_params::SumcheckProtocol,
     level: u32,
     stage: u32,
-    invocation: u32,
-    round: u32,
-    role: SumcheckRole,
+    site: SumcheckSite,
 ) -> SiteId {
     ProtocolSiteId {
         family: SITE_FAMILY_SUMCHECK,
         invocation: protocol.tag(),
         level,
         stage,
-        round,
-        group: invocation,
-        detail: role as u32,
+        round: site.round,
+        group: site.invocation,
+        detail: site.role as u32,
     }
     .into()
 }
 
-/// Standard-sumcheck channel borrowing a prover grinding context.
+/// Sumcheck round context borrowing a prover grinding context.
 pub struct GrindingSumcheckProver<'context, 'a, F, E, H: Sponge> {
     grinding: &'context mut ProverGrinding<'a, H>,
     protocol: akita_params::SumcheckProtocol,
@@ -614,31 +612,30 @@ impl<'context, 'a, F, E, H: Sponge> GrindingSumcheckProver<'context, 'a, F, E, H
     }
 }
 
-impl<F, E, H> SumcheckProverChannel<E> for GrindingSumcheckProver<'_, '_, F, E, H>
+impl<F, E, H> ProverRoundContext<E> for GrindingSumcheckProver<'_, '_, F, E, H>
 where
     F: Field + CanonicalEncoding,
     E: ExtField<F>,
     H: Sponge,
 {
     type Sponge = H;
+    type Error = AkitaError;
 
-    fn state_mut(&mut self) -> &mut ProverTranscript<H> {
+    fn transcript_mut(&mut self) -> &mut ProverTranscript<H> {
         self.grinding.state_mut()
     }
 
-    fn sumcheck_site(&self, invocation: u32, round: u32, role: SumcheckRole) -> SiteId {
-        grinding_sumcheck_site(
+    fn site(&self, site: SumcheckSite) -> Option<SiteId> {
+        Some(grinding_sumcheck_site(
             self.protocol,
             self.level,
             self.stage,
-            invocation,
-            round,
-            role,
-        )
+            site,
+        ))
     }
 
-    fn round_challenge(&mut self, invocation: u32, round: u32) -> Result<E, AkitaError> {
-        if invocation != 0 {
+    fn challenge(&mut self, site: SumcheckSite) -> Result<E, AkitaError> {
+        if site.invocation != 0 {
             return Err(AkitaError::InvalidInput(
                 "grinding sumcheck prover invocation is not zero".into(),
             ));
@@ -648,12 +645,12 @@ where
                 protocol: self.protocol,
                 level: self.level,
                 stage: self.stage,
-                round,
+                round: site.round,
             })
     }
 }
 
-/// Standard-sumcheck channel borrowing a verifier grinding context.
+/// Sumcheck round context borrowing a verifier grinding context.
 pub struct GrindingSumcheckVerifier<'context, 'a, 'proof, F, E, H: Sponge> {
     grinding: &'context mut VerifierGrinding<'a, 'proof, H>,
     protocol: akita_params::SumcheckProtocol,
@@ -683,7 +680,7 @@ impl<'context, 'a, 'proof, F, E, H: Sponge>
     }
 }
 
-impl<'proof, F, E, H> SumcheckVerifierChannel<'proof, E>
+impl<'proof, F, E, H> VerifierRoundContext<'proof, E>
     for GrindingSumcheckVerifier<'_, '_, 'proof, F, E, H>
 where
     F: Field + CanonicalEncoding,
@@ -691,24 +688,23 @@ where
     H: Sponge,
 {
     type Sponge = H;
+    type Error = AkitaError;
 
-    fn state_mut(&mut self) -> &mut VerifierTranscript<'proof, H> {
+    fn transcript_mut(&mut self) -> &mut VerifierTranscript<'proof, H> {
         self.grinding.state_mut()
     }
 
-    fn sumcheck_site(&self, invocation: u32, round: u32, role: SumcheckRole) -> SiteId {
-        grinding_sumcheck_site(
+    fn site(&self, site: SumcheckSite) -> Option<SiteId> {
+        Some(grinding_sumcheck_site(
             self.protocol,
             self.level,
             self.stage,
-            invocation,
-            round,
-            role,
-        )
+            site,
+        ))
     }
 
-    fn round_challenge(&mut self, invocation: u32, round: u32) -> Result<E, AkitaError> {
-        if invocation != 0 {
+    fn challenge(&mut self, site: SumcheckSite) -> Result<E, AkitaError> {
+        if site.invocation != 0 {
             return Err(AkitaError::InvalidInput(
                 "grinding sumcheck verifier invocation is not zero".into(),
             ));
@@ -718,7 +714,7 @@ where
                 protocol: self.protocol,
                 level: self.level,
                 stage: self.stage,
-                round,
+                round: site.round,
             })
     }
 }

@@ -112,11 +112,11 @@ No inverse or accumulated claim scale appears, and the formula remains valid
 when $\tau_j=0$ or when an earlier equality evaluation vanishes. The final
 verifier check compares $T_n$ directly with the expected folded oracle value.
 
-The public function `advance_eq_factored_claim` in
-`akita-sumcheck/src/single.rs` implements these equations directly. The direct
-`prove_eq_factored_sumcheck` and `verify_eq_factored_sumcheck` functions both
-call it, so transcript replay and proof generation cannot drift onto different
-update rules.
+Jolt's `OmittedConstantPoly::evaluate_from_claim` implements these equations
+directly. Akita runs both roles through `jolt-sumcheck`'s single-instance
+driver (`prove_single` and `verify_single` with the eq-factored format), which
+calls it on each side, so transcript replay and proof generation cannot drift
+onto different update rules.
 
 ## Avoiding a full equality table
 

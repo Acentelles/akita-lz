@@ -4,7 +4,6 @@ use crate::wire_limits::{checked_shape_len, checked_shape_sequence_len};
 use crate::InnerCommitSecurityRoute;
 use akita_error::{checked, AkitaError};
 use akita_serialization::{SerializationError, Valid};
-use akita_sumcheck::{EqFactoredSumcheckProofShape, SumcheckProofShape};
 use jolt_field::{Field, Ring};
 
 /// Checked flat Boolean domain for the compact digit witness.
@@ -83,7 +82,7 @@ impl FlatBooleanDomain {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Stage1StageShape {
     /// Eq-factored sumcheck shape `(num_rounds, q_degree)`.
-    pub sumcheck_proof: EqFactoredSumcheckProofShape,
+    pub sumcheck_proof: (usize, usize),
     /// Number of child claims serialized after the stage proof.
     pub child_claims: usize,
 }
@@ -95,8 +94,8 @@ pub struct PhysicalL2NormProofWireShape {
     pub subclaims: usize,
     /// Number of final response/limb virtual evaluations.
     pub virtual_evaluations: usize,
-    /// General final-leaf sumcheck shape.
-    pub sumcheck: SumcheckProofShape,
+    /// Compact coefficient count of each final-leaf sumcheck round.
+    pub sumcheck: Vec<usize>,
 }
 
 impl Valid for Stage1StageShape {

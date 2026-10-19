@@ -14,6 +14,7 @@ use akita_types::{
     FpExtEncoding, PreparedOpeningPoint,
 };
 use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field, Ring};
+use jolt_sumcheck::{verify_single, SingleFormat, SingleInstance};
 use jolt_transcript::{Channel, Sponge};
 
 pub(crate) struct PreparedProtocolPoint<F: Field, E: Field> {
@@ -113,14 +114,15 @@ where
             self.level,
             0,
         );
-        let replay = akita_sumcheck::verify_sumcheck_rounds::<F, E, _>(
+        let replay = verify_single::<F, E, AkitaError, _>(
+            &SingleInstance {
+                input_claim,
+                rounds: num_rounds,
+                degree: akita_params::EXTENSION_OPENING_REDUCTION_DEGREE,
+                format: SingleFormat::Compressed,
+                invocation: akita_types::EOR_SUMCHECK_INVOCATION,
+            },
             &mut channel,
-            akita_types::EOR_SUMCHECK_INVOCATION,
-            input_claim,
-            akita_sumcheck::SumcheckShape::new(
-                num_rounds,
-                akita_params::EXTENSION_OPENING_REDUCTION_DEGREE,
-            )?,
         )?;
         Ok((replay.output_claim, replay.challenges))
     }
@@ -458,10 +460,11 @@ mod tests {
     use super::*;
 
     use akita_params::{PolynomialGroupLayout, EXTENSION_OPENING_REDUCTION_DEGREE};
-    use akita_sumcheck::SumcheckInstanceProver;
+    use akita_sumcheck::SumcheckKernel;
     use akita_types::{AkitaSponge, PROOF_STREAM_PROTOCOL};
     use jolt_field::{FpExt4, Prime32Offset99, Zero};
     use jolt_poly::UnivariatePoly;
+    use jolt_sumcheck::prove_single;
     use jolt_transcript::{ProverTranscript, VerifierTranscript};
 
     type F = Prime32Offset99;
@@ -471,24 +474,30 @@ mod tests {
         rounds: usize,
     }
 
-    impl SumcheckInstanceProver<E> for ZeroEorProver {
+    impl SumcheckKernel<E> for ZeroEorProver {
         fn num_rounds(&self) -> usize {
             self.rounds
         }
 
-        fn degree_bound(&self) -> usize {
-            EXTENSION_OPENING_REDUCTION_DEGREE
+        fn round_polynomial(
+            &mut self,
+            _round: usize,
+            _claim: E,
+        ) -> Result<UnivariatePoly<E>, AkitaError> {
+            Ok(UnivariatePoly::new(vec![
+                E::zero();
+                EXTENSION_OPENING_REDUCTION_DEGREE
+                    + 1
+            ]))
         }
 
-        fn input_claim(&self) -> E {
-            E::zero()
+        fn bind_challenge(&mut self, _round: usize, _challenge: E) -> Result<(), AkitaError> {
+            Ok(())
         }
 
-        fn compute_round_univariate(&mut self, _round: usize, _claim: E) -> UnivariatePoly<E> {
-            UnivariatePoly::new(vec![E::zero(); EXTENSION_OPENING_REDUCTION_DEGREE + 1])
+        fn finish(&mut self) -> Result<(), AkitaError> {
+            Ok(())
         }
-
-        fn ingest_challenge(&mut self, _round: usize, _challenge: E) {}
     }
 
     fn extension_point(num_vars: usize, offset: u64) -> Vec<E> {
@@ -563,14 +572,16 @@ mod tests {
             level,
             0,
         );
-        let shape =
-            akita_sumcheck::SumcheckShape::new(sumcheck.num_rounds(), sumcheck.degree_bound())
-                .unwrap();
-        akita_sumcheck::prove_sumcheck::<F, E, _, _>(
-            &mut akita_sumcheck::InfallibleSumcheck(&mut sumcheck),
+        prove_single::<F, E, AkitaError, _>(
+            &mut akita_sumcheck::FusedRounds(&mut sumcheck),
+            &SingleInstance {
+                input_claim: E::zero(),
+                rounds,
+                degree: EXTENSION_OPENING_REDUCTION_DEGREE,
+                format: SingleFormat::Compressed,
+                invocation: akita_types::EOR_SUMCHECK_INVOCATION,
+            },
             &mut channel,
-            shape,
-            akita_types::EOR_SUMCHECK_INVOCATION,
         )
         .unwrap();
         akita_types::eor_final_claims::<F, E, _>(

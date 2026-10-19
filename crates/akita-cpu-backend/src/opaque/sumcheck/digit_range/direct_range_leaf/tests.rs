@@ -2,14 +2,8 @@ use super::*;
 use akita_sumcheck::multilinear_eval;
 use akita_types::DigitRangeEqualityPoint;
 use jolt_field::Prime128Offset275;
-use jolt_poly::OmittedConstantPoly;
 
 type F = Prime128Offset275;
-
-fn advance_eq_factored_claim(claim: F, tau: F, poly: &OmittedConstantPoly<F>, challenge: F) -> F {
-    let constant = claim - tau * poly.nonconstant_term_sum_at_one();
-    constant + poly.evaluate_nonconstant_terms(challenge)
-}
 
 fn packed(witness: &[i8]) -> PackedSignedDigits {
     PackedSignedDigits::from_i8_digits_auto(witness.to_vec())
@@ -252,16 +246,14 @@ fn stage1_prefix_aware_rounds_match_explicit_zero_padding() {
 
                 let challenge = F::from_u64((round as u64) + 29);
                 challenges.push(challenge);
-                prefix_claim = advance_eq_factored_claim(
+                prefix_claim = prefix_poly.evaluate_from_claim(
                     prefix_claim,
                     prefix_prover.current_tau(),
-                    &prefix_poly,
                     challenge,
                 );
-                padded_claim = advance_eq_factored_claim(
+                padded_claim = padded_poly.evaluate_from_claim(
                     padded_claim,
                     padded_prover.current_tau(),
-                    &padded_poly,
                     challenge,
                 );
                 prefix_prover.ingest_challenge(round, challenge);
@@ -343,16 +335,14 @@ fn stage1_prefix_x_rounds_allow_ring_bits_at_least_col_bits() {
 
             let challenge = F::from_u64((round as u64) + 163);
             challenges.push(challenge);
-            prefix_claim = advance_eq_factored_claim(
+            prefix_claim = prefix_poly.evaluate_from_claim(
                 prefix_claim,
                 prefix_prover.current_tau(),
-                &prefix_poly,
                 challenge,
             );
-            padded_claim = advance_eq_factored_claim(
+            padded_claim = padded_poly.evaluate_from_claim(
                 padded_claim,
                 padded_prover.current_tau(),
-                &padded_poly,
                 challenge,
             );
             prefix_prover.ingest_challenge(round, challenge);

@@ -1,7 +1,6 @@
 use super::*;
 use akita_params::wire_limits::{checked_shape_len, checked_shape_sequence_len};
 use akita_params::OpeningClaimsLayout;
-use akita_sumcheck::SumcheckProofShape;
 
 /// Public shape of the native extension-opening-reduction messages.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -11,7 +10,7 @@ pub struct ExtensionOpeningReductionShape {
     /// Number of individual terminal claims serialized after the sumcheck.
     pub final_claims: usize,
     /// One compact coefficient count per round of the batched reduction.
-    pub sumcheck: SumcheckProofShape,
+    pub sumcheck: Vec<usize>,
 }
 
 impl ExtensionOpeningReductionShape {
@@ -20,7 +19,7 @@ impl ExtensionOpeningReductionShape {
         Self {
             partials,
             final_claims: num_claims,
-            sumcheck: uniform_sumcheck_shape(num_rounds, EXTENSION_OPENING_REDUCTION_DEGREE),
+            sumcheck: vec![EXTENSION_OPENING_REDUCTION_DEGREE; num_rounds],
         }
     }
 }

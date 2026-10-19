@@ -4,10 +4,10 @@ use akita_algebra::eq_poly::EqPolynomial;
 use akita_error::AkitaError;
 use akita_params::{PhysicalL2NormProofShape, SisModulusProfileId};
 use akita_serialization::AkitaSerialize;
-use akita_sumcheck::SumcheckInstanceVerifier;
 use akita_types::GrindingReplay;
 use akita_types::{reconstruct_l2_sq_from_gram, FpExtEncoding, PhysicalResponsePlan};
 use jolt_field::{CanonicalEncoding, ExtField, Field, Ring};
+use jolt_sumcheck::{verify_single, SingleFormat, SingleInstance};
 use jolt_transcript::Sponge;
 
 pub(crate) struct PhysicalL2VerifierReplay<E: Field> {
@@ -30,23 +30,11 @@ struct PhysicalL2NormVerifier<'a, E: Field> {
     range_leaf_coefficients: &'a [E],
     range_image_evaluation: E,
     subclaim_weights: Vec<E>,
-    input_claim: E,
     norm_merge: E,
 }
 
-impl<E: Field + Ring> SumcheckInstanceVerifier<E> for PhysicalL2NormVerifier<'_, E> {
-    fn num_rounds(&self) -> usize {
-        self.plan.domain().num_vars()
-    }
-
-    fn degree_bound(&self) -> usize {
-        self.range_leaf_coefficients.len()
-    }
-
-    fn input_claim(&self) -> E {
-        self.input_claim
-    }
-
+impl<E: Field + Ring> PhysicalL2NormVerifier<'_, E> {
+    /// The fused sumcheck's oracle value at `point`.
     fn expected_output_claim(&self, point: &[E]) -> Result<E, AkitaError> {
         let range_equality = EqPolynomial::mle(self.range_equality_point, point)?;
         let range_leaf = self
@@ -260,14 +248,15 @@ where
         level,
         0,
     );
-    let replay = akita_sumcheck::verify_sumcheck_rounds::<F, E, _>(
+    let replay = verify_single::<F, E, AkitaError, _>(
+        &SingleInstance {
+            input_claim,
+            rounds: plan.domain().num_vars(),
+            degree: range.leaf_coefficients.len(),
+            format: SingleFormat::Compressed,
+            invocation: 0,
+        },
         &mut channel,
-        0,
-        input_claim,
-        akita_sumcheck::SumcheckShape::new(
-            plan.domain().num_vars(),
-            range.leaf_coefficients.len(),
-        )?,
     )?;
     let mut virtual_evaluations = akita_types::extension_slots::<E>(virtual_count)?;
     akita_types::l2_virtual_evaluations::<F, E, _>(grinding, level, &mut virtual_evaluations)?;
@@ -288,7 +277,6 @@ where
         range_leaf_coefficients: range.leaf_coefficients,
         range_image_evaluation,
         subclaim_weights,
-        input_claim,
         norm_merge,
     };
     if replay.output_claim != verifier.expected_output_claim(&replay.challenges)? {

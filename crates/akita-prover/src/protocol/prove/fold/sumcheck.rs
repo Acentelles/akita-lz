@@ -1,6 +1,7 @@
 use super::*;
 use akita_types::GrindingReplay;
-use jolt_poly::UnivariatePoly;
+use jolt_poly::{Point, UnivariatePoly};
+use jolt_sumcheck::{prove_single, SingleFormat, SingleInstance, SingleReduction};
 
 struct Stage1EqSumcheck<
     'a,
@@ -12,7 +13,6 @@ struct Stage1EqSumcheck<
     session: &'a mut B::Stage1SessionHandle,
     step: crate::backend::Stage1Step,
     equality_point: &'a [E],
-    claim: E,
     degree: usize,
     next_round: usize,
     field: std::marker::PhantomData<F>,
@@ -23,12 +23,6 @@ impl<F: Field + CanonicalEncoding, E: Field, B: crate::backend::OpaqueStage1Kern
 {
     fn num_rounds(&self) -> usize {
         self.equality_point.len()
-    }
-    fn degree_bound(&self) -> usize {
-        self.degree
-    }
-    fn input_claim(&self) -> E {
-        self.claim
     }
     fn current_tau(&self) -> E {
         self.equality_point[self.next_round]
@@ -88,7 +82,6 @@ struct Stage1StandardSumcheck<
     backend: &'a B,
     session: &'a mut B::Stage1SessionHandle,
     step: crate::backend::Stage1Step,
-    claim: E,
     rounds: usize,
     degree: usize,
     next_round: usize,
@@ -100,12 +93,6 @@ impl<F: Field + CanonicalEncoding, E: Field, B: crate::backend::OpaqueStage1Kern
 {
     fn num_rounds(&self) -> usize {
         self.rounds
-    }
-    fn degree_bound(&self) -> usize {
-        self.degree
-    }
-    fn input_claim(&self) -> E {
-        self.claim
     }
     fn round_polynomial(
         &mut self,
@@ -224,10 +211,18 @@ where
             session: &mut session_handle,
             step,
             equality_point: &equality_coordinates,
-            claim,
             degree: shape.sumcheck_proof.1,
             next_round: 0,
             field: std::marker::PhantomData,
+        };
+        let instance = SingleInstance {
+            input_claim: claim,
+            rounds,
+            degree: shape.sumcheck_proof.1,
+            format: SingleFormat::EqFactored {
+                equality_point: Point::low_to_high(equality_coordinates.clone()),
+            },
+            invocation: 0,
         };
         let mut channel = akita_types::GrindingSumcheckProver::<F, E, _>::new(
             grinding,
@@ -235,12 +230,12 @@ where
             level,
             stage,
         );
-        let (challenges, _output_claim) = akita_sumcheck::prove_eq_factored_sumcheck::<F, E, _, _>(
-            &mut kernel,
+        let challenges = prove_single::<F, E, AkitaError, _>(
+            &mut akita_sumcheck::FusedEqFactoredRounds(&mut kernel),
+            &instance,
             &mut channel,
-            akita_sumcheck::SumcheckShape::new(rounds, shape.sumcheck_proof.1)?,
-            0,
-        )?;
+        )?
+        .challenges;
         let crate::backend::Stage1PublicTransition::ProductChildClaims(mut child_claims) =
             crate::backend::OpaqueStage1Kernel::stage1_public_transition(
                 ctx.backend(),
@@ -333,15 +328,22 @@ where
             merge,
         )?;
         claim += merge * norm_claim;
+        let degree = plan.digit_range_plan().leaf_degree() + 1;
         let mut kernel = Stage1StandardSumcheck {
             backend: ctx.backend(),
             session: &mut session_handle,
             step,
-            claim,
             rounds,
-            degree: plan.digit_range_plan().leaf_degree() + 1,
+            degree,
             next_round: 0,
             field: std::marker::PhantomData,
+        };
+        let instance = SingleInstance {
+            input_claim: claim,
+            rounds,
+            degree,
+            format: SingleFormat::Compressed,
+            invocation: 0,
         };
         let mut channel = akita_types::GrindingSumcheckProver::<F, E, _>::new(
             grinding,
@@ -349,14 +351,13 @@ where
             level,
             0,
         );
-        let (point, output_claim) = akita_sumcheck::prove_sumcheck::<F, E, _, _>(
-            &mut kernel,
+        let reduction = prove_single::<F, E, AkitaError, _>(
+            &mut akita_sumcheck::FusedRounds(&mut kernel),
+            &instance,
             &mut channel,
-            akita_sumcheck::SumcheckShape::new(rounds, plan.digit_range_plan().leaf_degree() + 1)?,
-            0,
         )?;
-        claim = output_claim;
-        final_point = point;
+        claim = reduction.output_claim;
+        final_point = reduction.challenges;
         let crate::backend::Stage1PublicTransition::Final {
             range_image_evaluation,
             mut virtual_evaluations,
@@ -384,15 +385,24 @@ where
         let step = crate::backend::Stage1Step::RangeLeaf;
         let stage = u32::try_from(product_count)
             .map_err(|_| AkitaError::Internal("stage 1 leaf stage index exceeds u32".into()))?;
+        let degree = plan.digit_range_plan().leaf_degree();
         let mut kernel = Stage1EqSumcheck {
             backend: ctx.backend(),
             session: &mut session_handle,
             step,
             equality_point: &equality_coordinates,
-            claim,
-            degree: plan.digit_range_plan().leaf_degree(),
+            degree,
             next_round: 0,
             field: std::marker::PhantomData,
+        };
+        let instance = SingleInstance {
+            input_claim: claim,
+            rounds,
+            degree,
+            format: SingleFormat::EqFactored {
+                equality_point: Point::low_to_high(equality_coordinates.clone()),
+            },
+            invocation: 0,
         };
         let mut channel = akita_types::GrindingSumcheckProver::<F, E, _>::new(
             grinding,
@@ -400,14 +410,13 @@ where
             level,
             stage,
         );
-        let (point, output_claim) = akita_sumcheck::prove_eq_factored_sumcheck::<F, E, _, _>(
-            &mut kernel,
+        let reduction = prove_single::<F, E, AkitaError, _>(
+            &mut akita_sumcheck::FusedEqFactoredRounds(&mut kernel),
+            &instance,
             &mut channel,
-            akita_sumcheck::SumcheckShape::new(rounds, plan.digit_range_plan().leaf_degree())?,
-            0,
         )?;
-        claim = output_claim;
-        final_point = point;
+        claim = reduction.output_claim;
+        final_point = reduction.challenges;
         let crate::backend::Stage1PublicTransition::Final {
             range_image_evaluation,
             virtual_evaluations,
@@ -573,9 +582,15 @@ where
     let mut kernel = Stage2Sumcheck::<F, E, B> {
         backend: ctx.backend(),
         session: &mut session_handle,
-        claim,
         rounds: num_rounds,
         field: std::marker::PhantomData,
+    };
+    let instance = SingleInstance {
+        input_claim: claim,
+        rounds: num_rounds,
+        degree: 3,
+        format: SingleFormat::Compressed,
+        invocation: 0,
     };
     let mut channel = akita_types::GrindingSumcheckProver::<F, E, _>::new(
         grinding,
@@ -583,11 +598,13 @@ where
         level,
         0,
     );
-    let (sumcheck_challenges, claim) = akita_sumcheck::prove_sumcheck::<F, E, _, _>(
-        &mut kernel,
+    let SingleReduction {
+        challenges: sumcheck_challenges,
+        output_claim: claim,
+    } = prove_single::<F, E, AkitaError, _>(
+        &mut akita_sumcheck::FusedRounds(&mut kernel),
+        &instance,
         &mut channel,
-        akita_sumcheck::SumcheckShape::new(num_rounds, 3)?,
-        0,
     )?;
     let final_output =
         crate::backend::OpaqueStage2Kernel::finish_stage2(ctx.backend(), session_handle)?;
@@ -680,13 +697,20 @@ where
                 })?;
             akita_types::stage3_public_slot(grinding, level, &encoded_slot);
             akita_types::stage3_claim::<F, E, _>(grinding, level, setup_product_claim)?;
+            let rounds = prefix_len.trailing_zeros() as usize;
             let mut kernel = Stage3Sumcheck {
                 backend,
                 session: &mut session,
-                claim: setup_product_claim,
-                rounds: prefix_len.trailing_zeros() as usize,
+                rounds,
                 next_round: 0,
                 field: std::marker::PhantomData,
+            };
+            let instance = SingleInstance {
+                input_claim: setup_product_claim,
+                rounds,
+                degree: akita_params::SETUP_SUMCHECK_DEGREE,
+                format: SingleFormat::Compressed,
+                invocation: 0,
             };
             let mut channel = akita_types::GrindingSumcheckProver::<F, E, _>::new(
                 grinding,
@@ -694,15 +718,12 @@ where
                 level,
                 0,
             );
-            let (setup_prefix_point, _) = akita_sumcheck::prove_sumcheck::<F, E, _, _>(
-                &mut kernel,
+            let setup_prefix_point = prove_single::<F, E, AkitaError, _>(
+                &mut akita_sumcheck::FusedRounds(&mut kernel),
+                &instance,
                 &mut channel,
-                akita_sumcheck::SumcheckShape::new(
-                    prefix_len.trailing_zeros() as usize,
-                    akita_params::SETUP_SUMCHECK_DEGREE,
-                )?,
-                0,
-            )?;
+            )?
+            .challenges;
             let setup_prefix_eval = backend.finish_stage3(session)?;
             akita_types::stage3_prefix_eval::<F, E, _>(grinding, level, setup_prefix_eval)?;
             Ok(Some(Stage3ProveOutput {
@@ -717,7 +738,6 @@ where
 struct Stage3Sumcheck<'a, F: Field, E: Field, B: crate::backend::OpaqueStage3Kernel<F, E>> {
     backend: &'a B,
     session: &'a mut B::Stage3SessionHandle,
-    claim: E,
     rounds: usize,
     next_round: usize,
     field: std::marker::PhantomData<F>,
@@ -728,12 +748,6 @@ impl<F: Field, E: Field, B: crate::backend::OpaqueStage3Kernel<F, E>>
 {
     fn num_rounds(&self) -> usize {
         self.rounds
-    }
-    fn degree_bound(&self) -> usize {
-        akita_params::SETUP_SUMCHECK_DEGREE
-    }
-    fn input_claim(&self) -> E {
-        self.claim
     }
     fn round_polynomial(
         &mut self,
@@ -767,7 +781,6 @@ struct Stage2Sumcheck<
 > {
     backend: &'a B,
     session: &'a mut B::Stage2SessionHandle,
-    claim: E,
     rounds: usize,
     field: std::marker::PhantomData<F>,
 }
@@ -776,12 +789,6 @@ impl<F: Field + CanonicalEncoding, E: Field, B: crate::backend::OpaqueStage2Kern
 {
     fn num_rounds(&self) -> usize {
         self.rounds
-    }
-    fn degree_bound(&self) -> usize {
-        3
-    }
-    fn input_claim(&self) -> E {
-        self.claim
     }
     fn round_polynomial(
         &mut self,

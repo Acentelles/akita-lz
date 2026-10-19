@@ -1,4 +1,5 @@
-//! Generic sumcheck proof types, traits, and transcript drivers.
+//! Akita's sumcheck kernels and their adapters to `jolt-sumcheck`'s
+//! single-instance driver.
 //!
 //! This crate owns only protocol-independent sumcheck machinery. Akita-specific
 //! stage provers, verifier instances, and two-round-prefix skip proofs stay in
@@ -6,27 +7,17 @@
 
 mod accum;
 mod compact_fold;
-mod proof_stream;
-mod single;
+mod fused;
+mod shape;
 mod traits;
-mod types;
 
 pub use akita_algebra::poly::{fold_evals_in_place, multilinear_eval};
 
 pub use accum::reduce_signed_accum;
 pub use compact_fold::CompactPairFoldLut;
-pub use proof_stream::{
-    prove_eq_factored_sumcheck, prove_sumcheck, verify_eq_factored_sumcheck,
-    verify_eq_factored_sumcheck_rounds, verify_sumcheck, verify_sumcheck_rounds,
-    SumcheckProverChannel, SumcheckRole, SumcheckRoundResult, SumcheckShape,
-    SumcheckVerifierChannel,
-};
-pub use single::advance_eq_factored_claim;
+pub use fused::{FusedEqFactoredRounds, FusedRounds};
+pub use shape::SumcheckShape;
 pub use traits::{
-    EqFactoredSumcheckInstanceProver, EqFactoredSumcheckKernel, InfallibleEqFactoredSumcheck,
-    InfallibleSumcheck, SumcheckInstanceProver, SumcheckInstanceVerifier, SumcheckKernel,
-};
-pub use types::{
-    uniform_sumcheck_shape, EqFactoredSumcheckProof, EqFactoredSumcheckProofShape, SumcheckProof,
-    SumcheckProofShape,
+    EqFactoredSumcheckInstanceProver, EqFactoredSumcheckKernel, SumcheckInstanceProver,
+    SumcheckKernel,
 };

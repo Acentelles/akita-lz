@@ -83,6 +83,7 @@ dependencies = [
  "criterion",
  "jolt-field",
  "jolt-poly",
+ "jolt-sumcheck",
  "jolt-transcript",
  "rand 0.8.8",
  "rayon",
@@ -93,6 +94,8 @@ dependencies = [
 name = "akita-error"
 version = "0.1.0"
 dependencies = [
+ "jolt-field",
+ "jolt-sumcheck",
  "jolt-transcript",
  "thiserror",
 ]
@@ -183,6 +186,7 @@ dependencies = [
  "akita-types",
  "jolt-field",
  "jolt-poly",
+ "jolt-sumcheck",
  "jolt-transcript",
  "tracing",
 ]
@@ -245,9 +249,9 @@ version = "0.1.0"
 dependencies = [
  "akita-algebra",
  "akita-error",
- "akita-serialization",
  "jolt-field",
  "jolt-poly",
+ "jolt-sumcheck",
  "jolt-transcript",
 ]
 
@@ -260,10 +264,10 @@ dependencies = [
  "akita-error",
  "akita-params",
  "akita-serialization",
- "akita-sumcheck",
  "criterion",
  "jolt-field",
  "jolt-poly",
+ "jolt-sumcheck",
  "jolt-transcript",
  "rand 0.8.8",
  "rand_core 0.6.4",
@@ -286,6 +290,7 @@ dependencies = [
  "criterion",
  "jolt-field",
  "jolt-poly",
+ "jolt-sumcheck",
  "jolt-transcript",
  "rayon",
  "tracing",
@@ -1061,6 +1066,18 @@ dependencies = [
  "jolt-utils",
  "num-traits",
  "rand_core 0.6.4",
+ "serde",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "jolt-sumcheck"
+version = "0.1.0"
+dependencies = [
+ "jolt-field",
+ "jolt-poly",
+ "jolt-transcript",
  "serde",
  "thiserror",
  "tracing",
@@ -2524,8 +2541,4 @@ checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
 
 [[patch.unused]]
 name = "jolt-crypto"
-version = "0.1.0"
-
-[[patch.unused]]
-name = "jolt-sumcheck"
 version = "0.1.0"

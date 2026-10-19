@@ -1,4 +1,25 @@
 use super::*;
+
+/// Serializes `items` back to back, with no length header: the schedule fixes
+/// every count.
+pub(crate) fn serialize_headerless<T: AkitaSerialize, W: Write>(
+    items: &[T],
+    mut writer: W,
+    compress: Compress,
+) -> Result<(), SerializationError> {
+    for item in items {
+        item.serialize_with_mode(&mut writer, compress)?;
+    }
+    Ok(())
+}
+
+/// Size of [`serialize_headerless`]'s encoding of `items`.
+pub(crate) fn headerless_size<T: AkitaSerialize>(items: &[T], compress: Compress) -> usize {
+    items
+        .iter()
+        .map(|item| item.serialized_size(compress))
+        .sum()
+}
 impl<E: Field + AkitaSerialize> AkitaSerialize for PhysicalL2NormProof<E> {
     fn serialize_with_mode<W: Write>(
         &self,
@@ -13,7 +34,7 @@ impl<E: Field + AkitaSerialize> AkitaSerialize for PhysicalL2NormProof<E> {
         for evaluation in &self.virtual_evaluations {
             evaluation.serialize_with_mode(&mut writer, compress)?;
         }
-        self.sumcheck.serialize_with_mode(writer, compress)
+        serialize_headerless(&self.sumcheck, writer, compress)
     }
 
     fn serialized_size(&self, compress: Compress) -> usize {
@@ -28,7 +49,7 @@ impl<E: Field + AkitaSerialize> AkitaSerialize for PhysicalL2NormProof<E> {
                 .iter()
                 .map(|evaluation| evaluation.serialized_size(compress))
                 .sum::<usize>()
-            + self.sumcheck.serialized_size(compress)
+            + headerless_size(&self.sumcheck, compress)
     }
 }
 
@@ -45,9 +66,7 @@ where
         for partial in &reduction.partials {
             partial.serialize_with_mode(&mut writer, compress)?;
         }
-        reduction
-            .sumcheck
-            .serialize_with_mode(&mut writer, compress)?;
+        serialize_headerless(&reduction.sumcheck, &mut writer, compress)?;
         for final_claim in &reduction.final_claims {
             final_claim.serialize_with_mode(&mut writer, compress)?;
         }
@@ -68,7 +87,7 @@ where
             .iter()
             .map(|partial| partial.serialized_size(compress))
             .sum::<usize>()
-            + { reduction.sumcheck.serialized_size(compress) }
+            + { headerless_size(&reduction.sumcheck, compress) }
             + reduction
                 .final_claims
                 .iter()
@@ -173,9 +192,7 @@ where
         stage3_sumcheck
             .setup_prefix_eval
             .serialize_with_mode(&mut writer, compress)?;
-        stage3_sumcheck
-            .sumcheck
-            .serialize_with_mode(&mut writer, compress)?;
+        serialize_headerless(&stage3_sumcheck.sumcheck, &mut writer, compress)?;
     }
     Ok(())
 }
@@ -190,7 +207,7 @@ where
     stage3_sumcheck.map_or(0, |stage3_sumcheck| {
         stage3_sumcheck.claim.serialized_size(compress)
             + stage3_sumcheck.setup_prefix_eval.serialized_size(compress)
-            + stage3_sumcheck.sumcheck.serialized_size(compress)
+            + headerless_size(&stage3_sumcheck.sumcheck, compress)
     })
 }
 
@@ -235,9 +252,7 @@ impl<F: Field + CanonicalEncoding + AkitaSerialize, E: Field + AkitaSerialize> A
             compress,
         )?;
         for stage in &self.stage1.stages {
-            stage
-                .sumcheck_proof
-                .serialize_with_mode(&mut writer, compress)?;
+            serialize_headerless(&stage.sumcheck_proof, &mut writer, compress)?;
             for claim in &stage.child_claims {
                 claim.serialize_with_mode(&mut writer, compress)?;
             }
@@ -248,9 +263,7 @@ impl<F: Field + CanonicalEncoding + AkitaSerialize, E: Field + AkitaSerialize> A
         if let Some(norm) = &self.stage1.norm_proof {
             norm.serialize_with_mode(&mut writer, compress)?;
         }
-        stage2
-            .sumcheck_proof
-            .serialize_with_mode(&mut writer, compress)?;
+        serialize_headerless(&stage2.sumcheck_proof, &mut writer, compress)?;
         serialize_stage3_sumcheck(self.stage3_sumcheck_proof.as_ref(), &mut writer, compress)?;
         serialize_next_witness_binding(&stage2.next_witness_binding, &mut writer, compress)?;
         stage2
@@ -269,7 +282,7 @@ impl<F: Field + CanonicalEncoding + AkitaSerialize, E: Field + AkitaSerialize> A
             .stages
             .iter()
             .map(|stage| {
-                ({ stage.sumcheck_proof.serialized_size(compress) })
+                headerless_size(&stage.sumcheck_proof, compress)
                     + stage
                         .child_claims
                         .iter()
@@ -283,7 +296,7 @@ impl<F: Field + CanonicalEncoding + AkitaSerialize, E: Field + AkitaSerialize> A
                 .norm_proof
                 .as_ref()
                 .map_or(0, |norm| norm.serialized_size(compress))
-            + ({ stage2.sumcheck_proof.serialized_size(compress) })
+            + headerless_size(&stage2.sumcheck_proof, compress)
             + stage3_sumcheck_serialized_size(self.stage3_sumcheck_proof.as_ref(), compress)
             + next_witness_binding_serialized_size(&stage2.next_witness_binding, compress)
             + stage2.next_w_eval.serialized_size(compress)

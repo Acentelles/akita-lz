@@ -20,6 +20,7 @@ use akita_types::{
 };
 use jolt_field::solinas::parallel::*;
 use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
+use jolt_sumcheck::{verify_single, SingleFormat, SingleInstance};
 use jolt_transcript::Sponge;
 
 pub(crate) struct EvaluationTraceStage2<E: Field> {
@@ -372,8 +373,16 @@ where
         level,
         0,
     );
-    let replay =
-        akita_sumcheck::verify_sumcheck_rounds::<F, E, _>(&mut channel, 0, input_claim, shape)?;
+    let replay = verify_single::<F, E, AkitaError, _>(
+        &SingleInstance {
+            input_claim,
+            rounds: shape.num_rounds(),
+            degree: shape.degree_bound(),
+            format: SingleFormat::Compressed,
+            invocation: 0,
+        },
+        &mut channel,
+    )?;
     let witness_eval = akita_types::stage2_w_eval::<F, E, _>(grinding, level, E::zero())?;
     Ok(Stage2RoundReplay {
         output_claim: replay.output_claim,

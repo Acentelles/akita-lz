@@ -1,5 +1,6 @@
 use super::*;
 use jolt_poly::UnivariatePoly;
+use jolt_sumcheck::{prove_single, SingleFormat, SingleInstance, SingleReduction};
 pub(crate) struct ProvedExtensionOpeningReduction<E: Field> {
     pub(crate) reduction: ExtensionOpeningReduction<E>,
     pub(crate) protocol_points: Vec<Vec<E>>,
@@ -94,9 +95,15 @@ where
     let mut kernel = EorSumcheck::<F, E, B> {
         backend,
         session: &mut session,
-        claim: input_claim,
         rounds: max_tail_vars,
         field: std::marker::PhantomData,
+    };
+    let instance = SingleInstance {
+        input_claim,
+        rounds: max_tail_vars,
+        degree: akita_params::EXTENSION_OPENING_REDUCTION_DEGREE,
+        format: SingleFormat::Compressed,
+        invocation: akita_types::EOR_SUMCHECK_INVOCATION,
     };
     let mut channel = akita_types::GrindingSumcheckProver::<F, E, _>::new(
         grinding,
@@ -104,15 +111,13 @@ where
         level,
         0,
     );
-    let shape = akita_sumcheck::SumcheckShape::new(
-        max_tail_vars,
-        akita_params::EXTENSION_OPENING_REDUCTION_DEGREE,
-    )?;
-    let (rho, claim) = akita_sumcheck::prove_sumcheck::<F, E, _, _>(
-        &mut kernel,
+    let SingleReduction {
+        challenges: rho,
+        output_claim: claim,
+    } = prove_single::<F, E, AkitaError, _>(
+        &mut akita_sumcheck::FusedRounds(&mut kernel),
+        &instance,
         &mut channel,
-        shape,
-        akita_types::EOR_SUMCHECK_INVOCATION,
     )?;
     let mut final_claims = backend.finish_eor(session)?;
     if final_claims.len() != num_claims
@@ -169,7 +174,6 @@ struct EorSumcheck<
 > {
     backend: &'a B,
     session: &'a mut B::EorSessionHandle,
-    claim: E,
     rounds: usize,
     field: std::marker::PhantomData<F>,
 }
@@ -178,12 +182,6 @@ impl<F: Field + CanonicalEncoding, E: Field, B: crate::backend::OpaqueEorKernel<
 {
     fn num_rounds(&self) -> usize {
         self.rounds
-    }
-    fn degree_bound(&self) -> usize {
-        akita_params::EXTENSION_OPENING_REDUCTION_DEGREE
-    }
-    fn input_claim(&self) -> E {
-        self.claim
     }
     fn round_polynomial(
         &mut self,
