@@ -239,9 +239,8 @@ where
 /// the caller's argument string. The caller owns the transcript's protocol id,
 /// session binding, and `finish`.
 ///
-/// A panic anywhere in the prover, including a backend kernel, is caught and
-/// returned as [`AkitaError::Internal`]; this relies on `panic = "unwind"`,
-/// the default for every Akita build profile.
+/// A panic anywhere in the prover, including a backend kernel, is returned as
+/// [`AkitaError::Internal`] through [`catch_prover_panic`].
 #[allow(clippy::too_many_arguments)]
 pub fn batched_prove<'a, Cfg, H, S>(
     expanded: &AkitaSetupDescriptor,
@@ -267,9 +266,7 @@ where
     H: CommitmentHandleMetadata + 'static,
     S: Sponge,
 {
-    // A panic left in a kernel or backend becomes a typed error instead of
-    // aborting the caller. The transcript is then unusable, as after any error.
-    std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+    catch_prover_panic(move || {
         let (resolved, claims, grinding_plan, descriptor_bytes) =
             root::resolve_root::<Cfg, H>(expanded, schedules, opening, basis)?;
         if registry.active.replace(true) {
@@ -373,8 +370,21 @@ where
             }
         }
         Ok(())
-    }))
-    .unwrap_or_else(|payload| {
+    })
+}
+
+/// Runs `prove`, returning a panic inside it as [`AkitaError::Internal`]
+/// instead of unwinding into the caller. This relies on `panic = "unwind"`,
+/// the default for every Akita build profile.
+///
+/// The caller's transcript is unusable afterwards, as after any error. A panic
+/// can also poison long-lived commitment state (the CPU backend's
+/// `ResidentCommitmentState` mutexes); later operations on that commitment then fail closed with
+/// [`AkitaError::Internal`] rather than proceeding on partial state.
+pub fn catch_prover_panic<T>(
+    prove: impl FnOnce() -> Result<T, AkitaError>,
+) -> Result<T, AkitaError> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(prove)).unwrap_or_else(|payload| {
         let message = payload
             .downcast_ref::<&str>()
             .map(|message| (*message).to_owned())
