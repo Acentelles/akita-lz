@@ -5,7 +5,7 @@ use akita_error::{checked, AkitaError};
 use akita_params::transcript_site::{ProtocolSiteId, SITE_FAMILY_EXTENSION_OPENING_REDUCTION};
 use akita_params::{GrindingSite, OpeningClaimsLayout};
 use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field};
-use jolt_transcript::Channel;
+use jolt_transcript::{Channel, PrivateChannel};
 
 const STAGE_OPENINGS: u32 = 1;
 const STAGE_PARTIALS: u32 = 2;
@@ -105,7 +105,7 @@ where
     state.site(eor_site(level, STAGE_OPENINGS).into());
     state.public_all(openings);
     state.site(eor_site(level, STAGE_PARTIALS).into());
-    state.exchange_all(&mut partials)?;
+    state.exchange_private::<F, E>(&mut partials)?;
     let (eta, claim_coefficients) =
         batch_challenges::<E>(opening_batch, level, split_bits, |site, count| {
             grinding.grinded_ext_challenges::<F, E>(site, count)
@@ -137,7 +137,8 @@ where
     }
     let state = grinding.state_mut();
     state.site(eor_site(level, STAGE_FINAL_CLAIMS).into());
-    Ok(state.exchange_all(final_claims)?)
+    state.exchange_private::<F, E>(final_claims)?;
+    Ok(())
 }
 
 #[cfg(test)]

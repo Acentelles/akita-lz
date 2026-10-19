@@ -257,8 +257,10 @@ $$
 (r_{N-n},\ldots,r_{N-1})
 $$
 
-of the shared challenge vector. This is the `offset = max_num_rounds - n`
-rule in `batched_sumcheck.rs`.
+of the shared challenge vector. This is the tail-aligned `offset = max_num_vars - n`
+rule of `BatchPrelude` in `jolt-sumcheck/src/batch.rs`. Akita's own
+sumchecks are unbatched and run through `jolt-sumcheck`'s single-instance
+driver.
 
 ## Where to inspect the implementation
 
@@ -267,9 +269,9 @@ rule in `batched_sumcheck.rs`.
 | Evaluate a multilinear table | `akita-algebra/src/poly.rs` |
 | Build equality-polynomial tables | `akita-algebra/src/eq_poly.rs` |
 | Represent and compress round polynomials | `jolt-poly/src/univariate.rs` and `jolt-poly/src/compressed_univariate.rs` |
-| Define prover and verifier instance contracts | `akita-sumcheck/src/traits.rs` |
-| Encode proofs and verify ordinary rounds | `akita-sumcheck/src/types.rs` |
-| Batch claims and right-align shorter instances | `akita-sumcheck/src/batched_sumcheck.rs` |
+| Define the fallible prover kernel contract | `akita-sumcheck/src/traits.rs` |
+| Adapt kernels to the shared driver's fused rounds | `akita-sumcheck/src/fused.rs` |
+| Prove and replay ordinary rounds | `jolt-sumcheck/src/single.rs` (`prove_single`, `verify_single`) |
 
 For a review, check these facts together:
 

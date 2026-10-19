@@ -2,14 +2,8 @@ use super::*;
 use akita_sumcheck::multilinear_eval;
 use akita_types::DigitRangeEqualityPoint;
 use jolt_field::Prime128Offset275;
-use jolt_poly::OmittedConstantPoly;
 
 type F = Prime128Offset275;
-
-fn advance_eq_factored_claim(claim: F, tau: F, poly: &OmittedConstantPoly<F>, challenge: F) -> F {
-    let constant = claim - tau * poly.nonconstant_term_sum_at_one();
-    constant + poly.evaluate_nonconstant_terms(challenge)
-}
 
 fn packed(witness: &[i8]) -> PackedSignedDigits {
     PackedSignedDigits::from_i8_digits_auto(witness.to_vec())
@@ -183,7 +177,7 @@ fn stage1_round0_matches_dense_reference() {
             ring_bits,
         )
         .unwrap();
-        let stage1_poly = prover.compute_round_eq_factored(0, F::zero());
+        let stage1_poly = prover.round_polynomial(0, F::zero()).unwrap();
         let compact_range_image = build_compact_range_image(&compact_digit_witness);
         let reference = compute_range_round_polynomial_from_range_image(
             &prover.split_eq,
@@ -243,8 +237,8 @@ fn stage1_prefix_aware_rounds_match_explicit_zero_padding() {
             let mut padded_claim = F::zero();
 
             for round in 0..(col_bits + ring_bits) {
-                let prefix_poly = prefix_prover.compute_round_eq_factored(round, prefix_claim);
-                let padded_poly = padded_prover.compute_round_eq_factored(round, padded_claim);
+                let prefix_poly = prefix_prover.round_polynomial(round, prefix_claim).unwrap();
+                let padded_poly = padded_prover.round_polynomial(round, padded_claim).unwrap();
                 assert_eq!(
                     prefix_poly, padded_poly,
                     "round {round} polynomial mismatch live_x_cols={live_x_cols} basis={basis}"
@@ -252,20 +246,18 @@ fn stage1_prefix_aware_rounds_match_explicit_zero_padding() {
 
                 let challenge = F::from_u64((round as u64) + 29);
                 challenges.push(challenge);
-                prefix_claim = advance_eq_factored_claim(
+                prefix_claim = prefix_poly.evaluate_from_claim(
                     prefix_claim,
                     prefix_prover.current_tau(),
-                    &prefix_poly,
                     challenge,
                 );
-                padded_claim = advance_eq_factored_claim(
+                padded_claim = padded_poly.evaluate_from_claim(
                     padded_claim,
                     padded_prover.current_tau(),
-                    &padded_poly,
                     challenge,
                 );
-                prefix_prover.ingest_challenge(round, challenge);
-                padded_prover.ingest_challenge(round, challenge);
+                prefix_prover.bind_challenge(round, challenge).unwrap();
+                padded_prover.bind_challenge(round, challenge).unwrap();
             }
 
             assert_eq!(
@@ -334,8 +326,8 @@ fn stage1_prefix_x_rounds_allow_ring_bits_at_least_col_bits() {
         let mut padded_claim = F::zero();
 
         for round in 0..(col_bits + ring_bits) {
-            let prefix_poly = prefix_prover.compute_round_eq_factored(round, prefix_claim);
-            let padded_poly = padded_prover.compute_round_eq_factored(round, padded_claim);
+            let prefix_poly = prefix_prover.round_polynomial(round, prefix_claim).unwrap();
+            let padded_poly = padded_prover.round_polynomial(round, padded_claim).unwrap();
             assert_eq!(
                 prefix_poly, padded_poly,
                 "round {round} polynomial mismatch live_x_cols={live_x_cols} basis={basis}"
@@ -343,20 +335,18 @@ fn stage1_prefix_x_rounds_allow_ring_bits_at_least_col_bits() {
 
             let challenge = F::from_u64((round as u64) + 163);
             challenges.push(challenge);
-            prefix_claim = advance_eq_factored_claim(
+            prefix_claim = prefix_poly.evaluate_from_claim(
                 prefix_claim,
                 prefix_prover.current_tau(),
-                &prefix_poly,
                 challenge,
             );
-            padded_claim = advance_eq_factored_claim(
+            padded_claim = padded_poly.evaluate_from_claim(
                 padded_claim,
                 padded_prover.current_tau(),
-                &padded_poly,
                 challenge,
             );
-            prefix_prover.ingest_challenge(round, challenge);
-            padded_prover.ingest_challenge(round, challenge);
+            prefix_prover.bind_challenge(round, challenge).unwrap();
+            padded_prover.bind_challenge(round, challenge).unwrap();
         }
 
         assert_eq!(
@@ -428,7 +418,7 @@ fn assert_rounds_match_dense_reference(
         "{shape} initial storage"
     );
     for round in 0..num_vars {
-        let poly = prover.compute_round_eq_factored(round, F::zero());
+        let poly = prover.round_polynomial(round, F::zero()).unwrap();
         let expected =
             compute_range_round_polynomial_from_range_image(&reference_eq, &precomputation, |j| {
                 (reference[2 * j], reference[2 * j + 1])
@@ -436,7 +426,7 @@ fn assert_rounds_match_dense_reference(
         assert_eq!(poly, expected, "{shape} round={round}");
 
         let r = F::from_u64(5 * round as u64 + 71);
-        prover.ingest_challenge(round, r);
+        prover.bind_challenge(round, r).unwrap();
         reference_eq.bind(r);
         fold_evals_in_place(&mut reference, r);
         assert_eq!(

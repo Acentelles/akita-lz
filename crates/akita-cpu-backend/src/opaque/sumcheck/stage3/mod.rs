@@ -19,6 +19,7 @@ use jolt_poly::UnivariatePoly;
 use akita_error::AkitaError;
 use akita_params::{CommittedGroupParams, RelationAddressGeometry, SetupProjectionGeometry};
 use akita_serialization::AkitaSerialize;
+use akita_sumcheck::SumcheckKernel;
 use akita_types::{
     ensure_setup_envelope, setup_prefix_coverage_eval_len, shared_setup_fold_gadget,
     AkitaExpandedSetup, FpExtEncoding, PreparedRelationAddress, RingRelationInstance,
@@ -145,7 +146,7 @@ where
                 "invalid Stage 3 round progression".into(),
             ));
         }
-        let polynomial = session.setup.compute_round_univariate();
+        let polynomial = session.setup.round_polynomial(round, claim)?;
         session.pending = Some(polynomial.clone());
         Ok(polynomial)
     }
@@ -166,7 +167,7 @@ where
             AkitaError::InvalidInput("Stage 3 challenge has no pending round".into())
         })?;
         session.claim = polynomial.evaluate(challenge);
-        session.setup.ingest_challenge(round, challenge);
+        session.setup.bind_challenge(round, challenge)?;
         session.round += 1;
         Ok(())
     }

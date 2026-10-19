@@ -1,6 +1,8 @@
 //! Akita-specific sumcheck stage implementations.
 //!
-//! Generic sumcheck proof types, traits, and drivers live in `akita-sumcheck`.
+//! The fallible kernel traits and their driver adapters live in
+//! `akita-sumcheck`; the driver itself is `jolt-sumcheck`'s single-instance
+//! driver.
 //! Consumer-owned digit-range, relation/range-image, and stage implementations
 //! live here; recursive witness storage remains in `opaque::recursive`.
 

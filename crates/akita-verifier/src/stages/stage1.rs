@@ -18,6 +18,8 @@ use akita_types::{
     batch_l2_virtual_evaluations, FpExtEncoding, PhysicalResponsePlan, RelationRangeImagePlan,
 };
 use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field, Ring};
+use jolt_poly::Point;
+use jolt_sumcheck::{verify_single, SingleFormat, SingleInstance};
 use jolt_transcript::Sponge;
 pub(crate) struct Stage1VerifyOutput<E: Field> {
     pub(crate) point: Vec<E>,
@@ -75,12 +77,19 @@ impl<E: Field + Ring + AkitaSerialize> Stage1Verifier<E> {
                 level,
                 stage,
             );
-            let replay = akita_sumcheck::verify_eq_factored_sumcheck_rounds::<F, E, _>(
-                &current_equality_point,
-                current_claim,
-                akita_sumcheck::SumcheckShape::new(rounds, arity)?,
+            let replay = verify_single::<F, E, AkitaError, _>(
+                &SingleInstance {
+                    input_claim: current_claim,
+                    rounds,
+                    degree: arity,
+                    format: SingleFormat::EqFactored {
+                        equality_point: Point::low_to_high(std::mem::take(
+                            &mut current_equality_point,
+                        )),
+                    },
+                    invocation: 0,
+                },
                 &mut channel,
-                0,
             )?;
             let mut child_claims = akita_types::extension_slots::<E>(expected.child_claims)?;
             akita_types::stage1_child_claims::<F, E, _>(grinding, level, stage, &mut child_claims)?;
@@ -160,12 +169,17 @@ impl<E: Field + Ring + AkitaSerialize> Stage1Verifier<E> {
             level,
             stage,
         );
-        let replay = akita_sumcheck::verify_eq_factored_sumcheck_rounds::<F, E, _>(
-            &leaf.equality_point,
-            leaf.input_claim,
-            akita_sumcheck::SumcheckShape::new(leaf.equality_point.len(), degree_bound)?,
+        let replay = verify_single::<F, E, AkitaError, _>(
+            &SingleInstance {
+                input_claim: leaf.input_claim,
+                rounds: leaf.equality_point.len(),
+                degree: degree_bound,
+                format: SingleFormat::EqFactored {
+                    equality_point: Point::low_to_high(leaf.equality_point),
+                },
+                invocation: 0,
+            },
             &mut channel,
-            0,
         )?;
         let range_image_evaluation =
             akita_types::stage1_range_image::<F, E, _>(grinding, level, stage, E::zero())?;

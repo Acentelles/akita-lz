@@ -145,7 +145,7 @@ where
         &stage1,
         relation.claim,
         &opening_semantics,
-        prepared.level_layout.stage2_sumcheck(),
+        prepared.level_layout.stage2_rounds(),
     )?;
     let stage3 = match prepared.stage3 {
         Some(next_params) => Some(verify_stage3::<F, E, _>(

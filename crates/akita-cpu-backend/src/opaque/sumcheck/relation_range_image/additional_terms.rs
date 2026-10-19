@@ -312,17 +312,16 @@ impl<E: Field + Ring> AdditionalRelationTerms<E> {
         &self,
         compact_witness: PackedSignedDigitView<'_>,
         bound: &[E],
-    ) -> super::RoundMessage<E>
+    ) -> Result<super::RoundMessage<E>, AkitaError>
     where
         E: Unreduced,
     {
         if bound.is_empty() {
-            return self.round_message_compact_initial(compact_witness);
+            return Ok(self.round_message_compact_initial(compact_witness));
         }
-        let bound_weights =
-            EqPolynomial::evals(bound).expect("compact prefix binds few coefficient challenges");
+        let bound_weights = EqPolynomial::evals(bound)?;
         let stride = bound_weights.len();
-        self.round_message_with(|index| {
+        Ok(self.round_message_with(|index| {
             bound_weights
                 .iter()
                 .enumerate()
@@ -331,7 +330,7 @@ impl<E: Field + Ring> AdditionalRelationTerms<E> {
                         .get(index * stride + offset)
                         .map_or(sum, |value| sum + weight * E::from_i64(i64::from(value)))
                 })
-        })
+        }))
     }
 
     /// First-round specialization while the witness is still packed signed digits.

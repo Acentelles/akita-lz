@@ -4,10 +4,11 @@ use akita_config::proof_optimized::fp128::OneHot;
 use akita_error::AkitaError;
 use akita_params::*;
 use akita_prover::backend::*;
-use akita_sumcheck::SumcheckKernel;
+use akita_sumcheck::{FusedRounds, SumcheckKernel};
 use akita_types::*;
 use jolt_field::{Ext2, ExtField, Field, One, Prime128OffsetA7F7, Ring, Zero};
 use jolt_poly::UnivariatePoly;
+use jolt_sumcheck::{prove_single, verify_single, SingleFormat, SingleInstance};
 use jolt_transcript::{ProverTranscript, VerifierTranscript};
 use std::sync::Arc;
 type F = Prime128OffsetA7F7;
@@ -64,18 +65,11 @@ struct ProvedReduction {
 struct EorDriver<'a> {
     backend: &'a CpuBackend,
     session: &'a mut super::eor::CpuEorSession<E>,
-    claim: E,
     rounds: usize,
 }
 impl SumcheckKernel<E> for EorDriver<'_> {
     fn num_rounds(&self) -> usize {
         self.rounds
-    }
-    fn degree_bound(&self) -> usize {
-        EXTENSION_OPENING_REDUCTION_DEGREE
-    }
-    fn input_claim(&self) -> E {
-        self.claim
     }
     fn round_polynomial(
         &mut self,
@@ -125,11 +119,11 @@ fn prove_eor(
         &prefix.eta,
         &prefix.claim_coefficients,
     )?;
+    let rounds = layout.max_num_vars() - 1;
     let mut driver = EorDriver {
         backend,
         session: &mut session,
-        claim,
-        rounds: layout.max_num_vars() - 1,
+        rounds,
     };
     let mut channel = GrindingSumcheckProver::<F, E, _>::new(
         grinding,
@@ -137,15 +131,18 @@ fn prove_eor(
         1,
         0,
     );
-    let (rho, final_claim) = akita_sumcheck::prove_sumcheck::<F, E, _, _>(
-        &mut driver,
+    let reduction = prove_single::<F, E, AkitaError, _>(
+        &mut FusedRounds(&mut driver),
+        &SingleInstance {
+            input_claim: claim,
+            rounds,
+            degree: EXTENSION_OPENING_REDUCTION_DEGREE,
+            format: SingleFormat::Compressed,
+            invocation: EOR_SUMCHECK_INVOCATION,
+        },
         &mut channel,
-        akita_sumcheck::SumcheckShape::new(
-            layout.max_num_vars() - 1,
-            EXTENSION_OPENING_REDUCTION_DEGREE,
-        )?,
-        EOR_SUMCHECK_INVOCATION,
     )?;
+    let (rho, final_claim) = (reduction.challenges, reduction.output_claim);
     let mut final_claims = <CpuBackend as OpaqueEorKernel<F, E>>::finish_eor(backend, session)?;
     if final_claims
         .iter()
@@ -514,11 +511,15 @@ fn mixed_setup_prefix_and_suffix_eor_matches_independent_dense_oracle() {
                 1,
                 0,
             );
-            let rounds = akita_sumcheck::verify_sumcheck_rounds::<F, E, _>(
+            let rounds = verify_single::<F, E, AkitaError, _>(
+                &SingleInstance {
+                    input_claim: input,
+                    rounds: 8,
+                    degree: EXTENSION_OPENING_REDUCTION_DEGREE,
+                    format: SingleFormat::Compressed,
+                    invocation: EOR_SUMCHECK_INVOCATION,
+                },
                 &mut channel,
-                EOR_SUMCHECK_INVOCATION,
-                input,
-                akita_sumcheck::SumcheckShape::new(8, EXTENSION_OPENING_REDUCTION_DEGREE).unwrap(),
             )
             .unwrap();
             let claim = rounds.output_claim;

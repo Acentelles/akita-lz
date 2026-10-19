@@ -10,7 +10,7 @@ use akita_types::Commitment;
 use akita_types::GrindingReplay;
 use akita_types::{AkitaVerifierSetup, FpExtEncoding, OpeningClaims, RingVec};
 use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
-use jolt_transcript::{Channel, Sponge};
+use jolt_transcript::{Channel, PrivateChannel, Sponge};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn verify_root<F, E, H: Sponge>(
@@ -83,6 +83,8 @@ where
     grinding.state_mut().public_all(&openings);
     let payload_geometry = relation_layout.opening_payload_geometry()?;
     let opening_payload = {
+        let mut payload =
+            akita_types::extension_slots::<F>(payload_geometry.transmitted_coefficients())?;
         let state = grinding.state_mut();
         state.site(
             akita_types::FoldSite::OpeningPayload {
@@ -92,9 +94,9 @@ where
             .id()?
             .into(),
         );
-        state.receive_n::<F>(payload_geometry.transmitted_coefficients())
-    }
-    .map(RingVec::from_coeffs)?;
+        state.exchange_private_base::<F>(&mut payload)?;
+        RingVec::from_coeffs(payload)
+    };
     let prefix = finalize_claims::<F, E, _>(opening_batch, material, grinding, 0)?;
     let order = opening_batch.root_group_order()?;
     let commitment_payloads = order

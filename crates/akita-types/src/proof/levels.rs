@@ -8,13 +8,13 @@
 //! them.
 
 use super::*;
-use akita_sumcheck::{EqFactoredSumcheckProof, SumcheckProof};
+use jolt_poly::{CompressedPoly, OmittedConstantPoly};
 
 /// One stage in the stage-1 range-check tree.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct AkitaStage1StageProof<F: Field> {
-    /// Eq-factored sumcheck proof for this stage.
-    pub sumcheck_proof: EqFactoredSumcheckProof<F>,
+    /// Eq-factored sumcheck rounds for this stage, serialized headerless.
+    pub sumcheck_proof: Vec<OmittedConstantPoly<F>>,
     /// Claimed child-node evaluations at this stage's output point.
     ///
     /// Non-leaf stages populate these so the verifier can seed the next stage;
@@ -45,8 +45,8 @@ pub(crate) struct PhysicalL2NormProof<F: Field> {
     pub subclaims: Vec<F>,
     /// Final virtual response or limb evaluations consumed by Stage 2.
     pub virtual_evaluations: Vec<F>,
-    /// General final-leaf sumcheck batching range and norm terms.
-    pub sumcheck: SumcheckProof<F>,
+    /// General final-leaf sumcheck rounds batching range and norm terms.
+    pub sumcheck: Vec<CompressedPoly<F>>,
 }
 
 /// FoldSchedule-shaped outgoing witness binding for an intermediate fold.
@@ -65,8 +65,8 @@ pub(crate) enum NextWitnessBinding<F: Field> {
 /// Intermediate-stage payload for stage 2 of a fold level.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct AkitaStage2Proof<F: Field, E: Field> {
-    /// Stage-2 fused sumcheck proof.
-    pub sumcheck_proof: SumcheckProof<E>,
+    /// Stage-2 fused sumcheck rounds.
+    pub sumcheck_proof: Vec<CompressedPoly<E>>,
     /// FoldSchedule-shaped binding for the next witness.
     pub next_witness_binding: NextWitnessBinding<F>,
     /// Claimed evaluation of the next witness `w` at the stage-2 challenge point.
@@ -84,8 +84,8 @@ pub(crate) struct ExtensionOpeningReductionProof<E: Field> {
     /// check.
     pub partials: Vec<E>,
     /// One degree-two sumcheck for an early random linear combination of all
-    /// extension-opening claims.
-    pub sumcheck: SumcheckProof<E>,
+    /// extension-opening claims, as its rounds.
+    pub sumcheck: Vec<CompressedPoly<E>>,
     /// Individual terminal claims at the common sumcheck point. These are
     /// absorbed before the later application batching challenge.
     pub final_claims: Vec<E>,
@@ -98,8 +98,8 @@ pub(crate) struct SetupSumcheckProof<E: Field> {
     pub claim: E,
     /// Claimed setup-prefix opening carried into the next fold as a precommitted group.
     pub setup_prefix_eval: E,
-    /// Degree-two setup-product sumcheck.
-    pub sumcheck: SumcheckProof<E>,
+    /// Degree-two setup-product sumcheck rounds.
+    pub sumcheck: Vec<CompressedPoly<E>>,
 }
 
 /// Proof for one non-terminal fold level, including the root.

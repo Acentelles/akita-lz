@@ -4,7 +4,7 @@ use crate::GrindingReplay;
 use akita_error::AkitaError;
 use akita_params::transcript_site::{ProtocolSiteId, SITE_FAMILY_STAGE1};
 use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field};
-use jolt_transcript::Channel;
+use jolt_transcript::{Channel, PrivateChannel};
 
 const ROLE_CHILD_CLAIMS: u32 = 1;
 const ROLE_RANGE_IMAGE: u32 = 2;
@@ -36,7 +36,8 @@ where
 {
     let state = grinding.state_mut();
     state.site(stage1_site(level, stage, ROLE_CHILD_CLAIMS).into());
-    Ok(state.exchange_all(claims)?)
+    state.exchange_private::<F, E>(claims)?;
+    Ok(())
 }
 
 /// Exchange the final range-image evaluation after leaf sumcheck challenges.
@@ -53,7 +54,7 @@ where
 {
     let state = grinding.state_mut();
     state.site(stage1_site(level, stage, ROLE_RANGE_IMAGE).into());
-    state.exchange(&mut evaluation)?;
+    state.exchange_private::<F, E>(std::slice::from_mut(&mut evaluation))?;
     Ok(evaluation)
 }
 

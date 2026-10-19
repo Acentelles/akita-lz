@@ -4,7 +4,7 @@ use crate::GrindingReplay;
 use akita_error::AkitaError;
 use akita_params::transcript_site::{ProtocolSiteId, SITE_FAMILY_STAGE3};
 use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field};
-use jolt_transcript::Channel;
+use jolt_transcript::{Channel, PrivateChannel};
 
 const ROLE_SETUP_SLOT: u32 = 1;
 const ROLE_INPUT_CLAIM: u32 = 2;
@@ -62,7 +62,7 @@ where
 {
     let state = grinding.state_mut();
     state.site(site.into());
-    state.exchange(&mut value)?;
+    state.exchange_private::<F, E>(std::slice::from_mut(&mut value))?;
     Ok(value)
 }
 

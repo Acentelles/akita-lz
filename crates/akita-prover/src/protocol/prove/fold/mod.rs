@@ -700,11 +700,7 @@ where
         .copied()
         .eq(level_layout.stage1_stages())
         || stage1_norm != level_layout.stage1_norm()
-        || level_layout.stage2_sumcheck()
-            != akita_sumcheck::SumcheckShape::new(
-                relation_geometry.relation_point_variable_count(),
-                3,
-            )?
+        || level_layout.stage2_rounds() != relation_geometry.relation_point_variable_count()
     {
         return Err(AkitaError::Internal(
             "native level grammar disagrees with fold plan".into(),
@@ -833,5 +829,9 @@ where
     })
 }
 
+#[cfg_attr(
+    not(test),
+    deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)
+)]
 mod sumcheck;
 use sumcheck::{prove_stage1, prove_stage2, prove_stage3};

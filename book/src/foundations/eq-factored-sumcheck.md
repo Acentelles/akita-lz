@@ -112,11 +112,11 @@ No inverse or accumulated claim scale appears, and the formula remains valid
 when $\tau_j=0$ or when an earlier equality evaluation vanishes. The final
 verifier check compares $T_n$ directly with the expected folded oracle value.
 
-The public function `advance_eq_factored_claim` in
-`akita-sumcheck/src/single.rs` implements these equations directly. The direct
-`prove_eq_factored_sumcheck` and `verify_eq_factored_sumcheck` functions both
-call it, so transcript replay and proof generation cannot drift onto different
-update rules.
+Jolt's `OmittedConstantPoly::evaluate_from_claim` implements these equations
+directly. Akita runs both roles through `jolt-sumcheck`'s single-instance
+driver (`prove_single` and `verify_single` with the eq-factored format), which
+calls it on each side, so transcript replay and proof generation cannot drift
+onto different update rules.
 
 ## Avoiding a full equality table
 
@@ -172,9 +172,10 @@ matching verifier equation.
 | --- | --- |
 | Equality polynomial definition and tables | `akita-algebra/src/eq_poly.rs` |
 | Split equality state and suffix caches | `akita-algebra/src/split_eq.rs` |
-| Factored prover interface | `akita-sumcheck/src/traits.rs` |
-| Factored round message and proof encoding | `akita-sumcheck/src/types.rs` |
-| Direct prover/verifier functions and normalized claim update | `akita-sumcheck/src/single.rs` |
+| Factored kernel interface | `akita-sumcheck/src/traits.rs` |
+| Factored round message and normalized claim update | `jolt-poly/src/omitted_constant.rs` |
+| Kernel adapter that recovers `q_0` from the instance's `tau` | `akita-sumcheck/src/fused.rs` |
+| Prover and verifier driver | `jolt-sumcheck/src/single.rs` (`prove_single`, `verify_single`) |
 
 For a review, check these facts together:
 

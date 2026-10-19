@@ -18,6 +18,7 @@ use akita_types::{setup_prefix_coverage_eval_len, AkitaVerifierSetup, PreparedRe
 #[cfg(test)]
 use jolt_field::solinas::parallel::*;
 use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field, Ring};
+use jolt_sumcheck::{verify_single, SingleFormat, SingleInstance};
 use jolt_transcript::Sponge;
 
 /// Verifier counterpart to `AkitaStage3Prover`: replays the setup product
@@ -106,11 +107,15 @@ impl<E: Field> SetupSumcheckVerifier<E> {
             level,
             0,
         );
-        let replay = akita_sumcheck::verify_sumcheck_rounds::<F, E, _>(
+        let replay = verify_single::<F, E, AkitaError, _>(
+            &SingleInstance {
+                input_claim: claim,
+                rounds: self.rounds,
+                degree: SETUP_SUMCHECK_DEGREE,
+                format: SingleFormat::Compressed,
+                invocation: 0,
+            },
             &mut channel,
-            0,
-            claim,
-            akita_sumcheck::SumcheckShape::new(self.rounds, SETUP_SUMCHECK_DEGREE)?,
         )?;
         let setup_prefix_eval =
             akita_types::stage3_prefix_eval::<F, E, _>(grinding, level, E::zero())?;

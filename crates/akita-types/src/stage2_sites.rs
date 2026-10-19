@@ -4,7 +4,7 @@ use crate::GrindingReplay;
 use akita_error::AkitaError;
 use akita_params::transcript_site::{ProtocolSiteId, SITE_FAMILY_STAGE2};
 use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field};
-use jolt_transcript::Channel;
+use jolt_transcript::{Channel, PrivateChannel};
 
 fn witness_evaluation_site(level: u32) -> ProtocolSiteId {
     ProtocolSiteId {
@@ -31,7 +31,7 @@ where
 {
     let state = grinding.state_mut();
     state.site(witness_evaluation_site(level).into());
-    state.exchange(&mut evaluation)?;
+    state.exchange_private::<F, E>(std::slice::from_mut(&mut evaluation))?;
     Ok(evaluation)
 }
 

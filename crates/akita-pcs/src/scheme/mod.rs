@@ -170,6 +170,12 @@ where
     /// The body of [`batched_prove`](Self::batched_prove) on any transcript:
     /// import the schedule's setup prefixes, route every fold to `backend`,
     /// and run the core prover. The caller finishes `transcript`.
+    ///
+    /// A panic anywhere in this body, including schedule resolution, prefix
+    /// import, and backend registration, is returned as
+    /// [`AkitaError::Internal`] through [`akita_prover::catch_prover_panic`].
+    /// Commitment and setup entry points are not wrapped: a panic there still
+    /// unwinds into the caller.
     #[allow(clippy::type_complexity)]
     pub(crate) fn prove_on_transcript<'a, H: Sponge>(
         &self,
@@ -194,25 +200,27 @@ where
             CommitmentHandle = CommitmentHandle<Cfg::Field, Cfg::ExtField>,
         >,
     {
-        let resolved = self.schedules.resolve_selection(opening.selection())?;
-        let required_prefix_ids = akita_config::required_setup_prefix_slot_ids_for_schedule(
-            resolved.schedule(),
-            opening.opening_layout(),
-        )?;
-        let prefix_slots =
-            backend.import_setup_prefixes(&setup.prefix_slots, &required_prefix_ids)?;
-        let mut registry = BackendRegistry::<Cfg, H>::new()?;
-        let root = registry.register(backend, &prefix_slots)?;
-        let mut route = FixedFoldRoute::new(vec![root; resolved.schedule().num_fold_levels()]);
-        akita_prover::batched_prove::<Cfg, _, _>(
-            setup.expanded.descriptor(),
-            &self.schedules,
-            &registry,
-            opening,
-            transcript,
-            basis,
-            &mut route,
-        )
+        akita_prover::catch_prover_panic(move || {
+            let resolved = self.schedules.resolve_selection(opening.selection())?;
+            let required_prefix_ids = akita_config::required_setup_prefix_slot_ids_for_schedule(
+                resolved.schedule(),
+                opening.opening_layout(),
+            )?;
+            let prefix_slots =
+                backend.import_setup_prefixes(&setup.prefix_slots, &required_prefix_ids)?;
+            let mut registry = BackendRegistry::<Cfg, H>::new()?;
+            let root = registry.register(backend, &prefix_slots)?;
+            let mut route = FixedFoldRoute::new(vec![root; resolved.schedule().num_fold_levels()]);
+            akita_prover::batched_prove::<Cfg, _, _>(
+                setup.expanded.descriptor(),
+                &self.schedules,
+                &registry,
+                opening,
+                transcript,
+                basis,
+                &mut route,
+            )
+        })
     }
 
     /// Build a verifier for `setup` over this scheme's schedule catalog.

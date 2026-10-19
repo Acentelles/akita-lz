@@ -86,7 +86,7 @@ fail_if_match 'Validate::No|deserialize_[a-z_]*unchecked' "${proof_input_roots[@
 # boundary and unit-test fixtures may start one.
 constructor_files="$(search_files '(Prover|Verifier)Transcript(::<[^>]*>)?::new' "${proof_input_roots[@]}" | sort)"
 expected_constructor_files='crates/akita-prover/src/protocol/prove/suffix.rs
-crates/akita-sumcheck/src/proof_stream.rs
+crates/akita-sumcheck/src/fused.rs
 crates/akita-types/src/transcript.rs
 crates/akita-verifier/src/fold/verify.rs
 crates/akita-verifier/src/stages/opening_claims/extension_claim.rs'
