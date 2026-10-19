@@ -233,7 +233,7 @@ impl RingRelationProver {
             )?;
         let (
             prepared_relation_groups,
-            opening_payload,
+            mut opening_payload,
             opening_payload_ring_dimension,
             build_handle,
         ) = build_start.into_parts();
@@ -263,7 +263,7 @@ impl RingRelationProver {
         );
         grinding
             .state_mut()
-            .exchange_private_base::<F>(&mut opening_payload.coeffs().to_vec())?;
+            .exchange_private_base::<F>(opening_payload.coeffs_mut())?;
         drop(opening_rows_span);
 
         // Public claim batching is intentionally delayed until every

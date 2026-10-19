@@ -80,6 +80,12 @@ impl<F: Field> RingVec<F> {
         &self.coeffs
     }
 
+    /// Mutable coefficient slice, for in-place transcript exchange. The length
+    /// and ring dimension cannot change through it.
+    pub fn coeffs_mut(&mut self) -> &mut [F] {
+        &mut self.coeffs
+    }
+
     /// Number of stored field coefficients.
     pub fn coeff_len(&self) -> usize {
         self.coeffs.len()
