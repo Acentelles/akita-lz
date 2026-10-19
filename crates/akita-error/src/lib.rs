@@ -79,20 +79,21 @@ impl From<jolt_transcript::TranscriptError> for AkitaError {
 /// A failure of the shared single-instance sumcheck driver.
 ///
 /// Transcript failures reject the proof as [`jolt_transcript::TranscriptError`]
-/// does. A failed prover self-check is a caller input error. A malformed public
-/// shape is a setup error. Every other variant is a failed internal invariant.
+/// does. A malformed public shape is a setup error. Every other variant,
+/// including a failed prover self-check (a kernel bug), is a failed internal
+/// invariant.
 impl<F: jolt_field::Field> From<jolt_sumcheck::SumcheckError<F>> for AkitaError {
     fn from(error: jolt_sumcheck::SumcheckError<F>) -> Self {
         use jolt_sumcheck::SumcheckError;
         match error {
             SumcheckError::Transcript(error) => error.into(),
-            SumcheckError::RoundCheckFailed { .. } => Self::InvalidInput(error.to_string()),
             SumcheckError::ZeroDegreeBound
             | SumcheckError::ShapeOverflow { .. }
             | SumcheckError::EqFactoredZeroRounds
             | SumcheckError::EqualityPointLengthMismatch { .. }
             | SumcheckError::RoundCountMismatch { .. } => Self::InvalidSetup(error.to_string()),
-            SumcheckError::DegreeBoundExceeded { .. }
+            SumcheckError::RoundCheckFailed { .. }
+            | SumcheckError::DegreeBoundExceeded { .. }
             | SumcheckError::ZeroBatchDegree { .. }
             | SumcheckError::BatchMemberRoundsOutOfRange { .. }
             | SumcheckError::BatchPaddingExponentOutOfRange { .. }

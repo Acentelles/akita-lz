@@ -461,7 +461,7 @@ mod tests {
                 &compressed(claim + F::one(), 4, 7),
                 &mut prover,
             ),
-            Err(AkitaError::InvalidInput(_))
+            Err(AkitaError::Internal(_))
         ));
     }
 
