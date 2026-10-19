@@ -603,19 +603,6 @@ impl<'a> PackedSignedDigitView<'a> {
         Ok(output)
     }
 
-    pub(crate) fn decode_rings<const D: usize>(
-        self,
-        start_ring: usize,
-        count: usize,
-    ) -> Result<Vec<[i8; D]>, AkitaError> {
-        let start = checked::product([start_ring, D]).ok_or_else(|| {
-            AkitaError::InvalidInput("packed signed-digit ring offset overflow".into())
-        })?;
-        let mut output = vec![[0i8; D]; count];
-        self.decode_range(start, output.as_flattened_mut())?;
-        Ok(output)
-    }
-
     pub(crate) fn decode_range(self, start: usize, output: &mut [i8]) -> Result<usize, AkitaError> {
         let end = start.checked_add(output.len()).ok_or_else(|| {
             AkitaError::InvalidInput("packed signed-digit decode range overflow".into())

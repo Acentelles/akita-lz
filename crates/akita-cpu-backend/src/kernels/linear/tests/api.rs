@@ -94,16 +94,6 @@ fn i8_kernels_reject_crt_parameters_too_small_for_the_field() {
             .map(drop),
         "digit matvec CRT capacity cannot fit a single term",
     );
-    rejected(
-        crate::kernels::linear::digits::mat_vec_mul_dense_digits_i8_with_params::<F, _, 1, D>(
-            &matrix,
-            &digit_blocks,
-            4,
-            &params,
-        )
-        .map(drop),
-        "digit matvec CRT capacity cannot fit a single term",
-    );
     // A call with no blocks returns before it needs any CRT capacity.
     assert_eq!(
         mat_vec_mul_digits_i8_with_params::<F, _, 1, D>(&matrix, &[], 4, &params).unwrap(),

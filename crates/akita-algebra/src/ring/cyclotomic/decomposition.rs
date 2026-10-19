@@ -47,6 +47,23 @@ impl BalancedSignedDigit for i8 {
     }
 }
 
+/// Truncation of a digit lane to the low 16 bits a digit field reads.
+trait LowU16 {
+    fn low_u16(self) -> u16;
+}
+
+macro_rules! low_u16 {
+    ($($lane:ty),*) => {$(
+        impl LowU16 for $lane {
+            #[inline(always)]
+            fn low_u16(self) -> u16 {
+                self as u16
+            }
+        }
+    )*};
+}
+low_u16!(u16, u32, u64);
+
 impl BalancedSignedDigit for i16 {
     const MAX_LOG_BASIS: u32 = 16;
 
@@ -55,6 +72,29 @@ impl BalancedSignedDigit for i16 {
         (field & mask).wrapping_sub(half_b) as Self
     }
 }
+
+/// Signed integer inputs of [`BalancedDecomposePow2Params::decompose_small_signed_into`].
+#[doc(hidden)]
+pub trait SmallSignedValue: Copy {
+    const MIN: i32;
+    const MAX: i32;
+    fn widen(self) -> i32;
+}
+
+macro_rules! small_signed_value {
+    ($($carrier:ty),*) => {$(
+        impl SmallSignedValue for $carrier {
+            const MIN: i32 = <$carrier>::MIN as i32;
+            const MAX: i32 = <$carrier>::MAX as i32;
+
+            #[inline(always)]
+            fn widen(self) -> i32 {
+                i32::from(self)
+            }
+        }
+    )*};
+}
+small_signed_value!(i8, i16);
 
 /// Precomputed parameters for balanced power-of-two signed decomposition.
 ///
@@ -153,6 +193,107 @@ impl<F: Field + CanonicalEncoding> BalancedDecomposePow2Params<F> {
     #[inline]
     pub fn log_basis(&self) -> u32 {
         self.log_basis
+    }
+
+    /// Decompose a small signed ring using its canonical field residues.
+    ///
+    /// Output planes use the same order as field decomposition.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the plane count differs from `levels()` or a digit does not fit
+    /// the output carrier (`i8` or `i16`).
+    #[doc(hidden)]
+    #[allow(private_bounds)]
+    #[inline]
+    pub fn decompose_small_signed_into<T, O, const D: usize>(
+        &self,
+        ring: &[T; D],
+        out: &mut [[O; D]],
+    ) where
+        T: SmallSignedValue,
+        O: BalancedSignedDigit,
+    {
+        assert_eq!(
+            out.len(),
+            self.levels,
+            "digit plane count must match levels"
+        );
+        assert!(
+            self.log_basis <= O::MAX_LOG_BASIS,
+            "basis exceeds output carrier"
+        );
+        // When every carrier value is its own centered representative,
+        // `x + H` is `v + H` in two's complement and the digits read its low
+        // `digit_bits()` bits, so the narrowest lane holding them is exact.
+        let centered = self.threshold >= T::MAX as u128
+            && self.q - self.threshold > T::MIN.unsigned_abs() as u128;
+        let bias = self.bias_nonnegative[0];
+        match self.digit_bits() {
+            bits if centered && bits <= 16 => {
+                self.small_signed_lanes(ring, out, |value| (value as u16).wrapping_add(bias as u16))
+            }
+            bits if centered && bits <= 32 => {
+                self.small_signed_lanes(ring, out, |value| (value as u32).wrapping_add(bias as u32))
+            }
+            bits if centered && bits <= 64 => {
+                self.small_signed_lanes(ring, out, |value| (value as u64).wrapping_add(bias))
+            }
+            _ => self.small_signed_residues(ring, out),
+        }
+    }
+
+    /// Digit planes of `word(v)`, the low bits of `v + H` in one lane type.
+    #[inline(always)]
+    fn small_signed_lanes<T, O, W, const D: usize>(
+        &self,
+        ring: &[T; D],
+        out: &mut [[O; D]],
+        word: impl Fn(i32) -> W,
+    ) where
+        T: SmallSignedValue,
+        O: BalancedSignedDigit,
+        W: Copy + std::ops::Shr<u32, Output = W> + LowU16,
+    {
+        let mask = ((1u32 << self.log_basis) - 1) as u16;
+        let half_b = (1u32 << (self.log_basis - 1)) as u16;
+        for (level, plane) in out.iter_mut().enumerate() {
+            let shift = level as u32 * self.log_basis;
+            for (digit, &value) in plane.iter_mut().zip(ring) {
+                *digit =
+                    O::from_biased_field((word(value.widen()) >> shift).low_u16(), mask, half_b);
+            }
+        }
+    }
+
+    /// Exact path through each value's canonical residue, for parameters
+    /// that recenter part of the carrier or read past 64 bits.
+    fn small_signed_residues<T, O, const D: usize>(&self, ring: &[T; D], out: &mut [[O; D]])
+    where
+        T: SmallSignedValue,
+        O: BalancedSignedDigit,
+    {
+        let mask = ((1u32 << self.log_basis) - 1) as u16;
+        let half_b = (1u32 << (self.log_basis - 1)) as u16;
+        for (coefficient, value) in ring.iter().copied().enumerate() {
+            let value = value.widen();
+            let canonical = if value >= 0 {
+                value as u128
+            } else {
+                self.q - u128::from(value.unsigned_abs())
+            };
+            let words = self.biased(canonical);
+            for (level, plane) in out.iter_mut().enumerate() {
+                let shift = level as u32 * self.log_basis;
+                let word = (shift / 64) as usize;
+                let bit = shift % 64;
+                let mut field = words[word] >> bit;
+                if bit + self.log_basis > 64 {
+                    field |= words[word + 1] << (64 - bit);
+                }
+                plane[coefficient] = O::from_biased_field(field as u16, mask, half_b);
+            }
+        }
     }
 
     /// Low bits of `x + H` that the digits read.

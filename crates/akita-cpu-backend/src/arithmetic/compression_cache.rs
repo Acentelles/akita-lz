@@ -11,9 +11,7 @@ use std::any::Any;
 use std::collections::HashMap;
 #[cfg(test)]
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
-
-type CompressionSlotCell = OnceLock<Result<Arc<ErasedCpuNttCache>, AkitaError>>;
+use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 struct CompressionNttCacheKey {
@@ -30,7 +28,7 @@ pub(super) enum CompressionNttDomains {
 
 #[derive(Debug, Default)]
 pub(super) struct CompressionNttCache {
-    slots: Mutex<HashMap<CompressionNttCacheKey, Arc<CompressionSlotCell>>>,
+    slots: Mutex<HashMap<CompressionNttCacheKey, Arc<ErasedCpuNttCache>>>,
     #[cfg(test)]
     slot_build_count: AtomicUsize,
 }
@@ -51,23 +49,22 @@ impl CompressionNttCache {
             input_width,
             domains,
         };
-        let entry = {
-            let mut slots = self
-                .slots
-                .lock()
-                .map_err(|_| AkitaError::Internal("compression NTT cache lock poisoned".into()))?;
-            Arc::clone(
-                slots
-                    .entry(key)
-                    .or_insert_with(|| Arc::new(OnceLock::new())),
-            )
-        };
-        let build_result = entry.get_or_init(|| {
-            #[cfg(test)]
-            self.slot_build_count.fetch_add(1, Ordering::Relaxed);
-            build_slot::<F, D>(expanded, input_width, domains).map(Arc::new)
-        });
-        let slot = build_result.as_ref().map_err(Clone::clone)?;
+        let slot = crate::cache::get_or_build(
+            &self.slots,
+            "compression NTT cache lock poisoned",
+            |slots| slots.get(&key).cloned(),
+            || {
+                #[cfg(test)]
+                {
+                    self.slot_build_count.fetch_add(1, Ordering::Relaxed);
+                    crate::cache::tests::run_build_hook()?;
+                }
+                build_slot::<F, D>(expanded, input_width, domains)
+            },
+            |slots, candidate| {
+                slots.insert(key, candidate);
+            },
+        )?;
         if slot.ring_d != D {
             return Err(AkitaError::Internal(format!(
                 "prepared compression NTT ring_d mismatch: stored {}, requested {D}",
@@ -86,14 +83,12 @@ impl CompressionNttCache {
             .lock()
             .unwrap_or_else(|error| error.into_inner())
             .values()
-            .filter_map(|entry| entry.get())
-            .filter_map(|result| result.as_ref().ok())
             .map(|slot| slot.cache_bytes)
             .sum()
     }
 
     #[cfg(test)]
-    fn slot_count(&self) -> usize {
+    pub(super) fn slot_count(&self) -> usize {
         self.slots
             .lock()
             .unwrap_or_else(|error| error.into_inner())
@@ -101,7 +96,7 @@ impl CompressionNttCache {
     }
 
     #[cfg(test)]
-    fn slot_build_count(&self) -> usize {
+    pub(super) fn slot_build_count(&self) -> usize {
         self.slot_build_count.load(Ordering::Relaxed)
     }
 }
@@ -220,26 +215,6 @@ mod tests {
         CpuBackend::<F, F>::for_arithmetic_tests()
             .cyclic_digit_rows::<D>(&prepared, 1, &cyclic_digits, 1)
             .expect("cyclic transform remains available");
-    }
-
-    #[test]
-    fn concurrent_same_shape_warm_builds_once() {
-        let prepared = empty_prepared();
-        let digits = vec![[0i8; D]; 3];
-
-        std::thread::scope(|scope| {
-            for _ in 0..8 {
-                let prepared = &prepared;
-                let digits = &digits;
-                scope.spawn(move || {
-                    CpuBackend::<F, F>::for_arithmetic_tests()
-                        .compression_rows_products::<D>(prepared, &[digits.as_slice()])
-                        .expect("compression rows");
-                });
-            }
-        });
-
-        assert_eq!(prepared.compression_ntt.slot_build_count(), 1);
     }
 
     #[test]

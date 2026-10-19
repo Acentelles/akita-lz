@@ -14,21 +14,19 @@ use std::any::Any;
 use std::collections::HashMap;
 #[cfg(test)]
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
-
-type NttSlotCell = OnceLock<Result<Arc<ErasedCpuNttCache>, AkitaError>>;
+use std::sync::{Arc, Mutex};
 
 /// CPU-prepared setup keyed by runtime ring dimension.
 ///
 /// NTT caches are keyed by [`NttCacheKey`] and built lazily. Each ring
 /// dimension/domain pair retains only its largest requested prefix; a covering
-/// cell also serves smaller requests. Each cell makes concurrent construction
-/// of that prefix single-flight. Diagnostic compression caches remain in a
-/// separate namespace.
+/// value also serves smaller requests. Cold acquisitions may build duplicate
+/// candidates without waiting for in-flight builds. Diagnostic compression
+/// caches remain in a separate namespace.
 #[derive(Debug)]
 pub struct CpuPreparedSetup<F: Field> {
     pub(crate) expanded: Arc<AkitaExpandedSetup<F>>,
-    pub(super) shared_ntt: Mutex<HashMap<NttCacheKey, Arc<NttSlotCell>>>,
+    pub(super) shared_ntt: Mutex<HashMap<NttCacheKey, Arc<ErasedCpuNttCache>>>,
     pub(super) compression_ntt: CompressionNttCache,
     ntt_i8_capacity_by_ring_d: Mutex<HashMap<usize, CrtI8CapacityProfile>>,
     #[cfg(test)]
@@ -163,8 +161,6 @@ impl<F: Field + CanonicalEncoding> CpuPreparedSetup<F> {
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .values()
-            .filter_map(|entry| entry.get())
-            .filter_map(|result| result.as_ref().ok())
             .map(|slot| slot.cache_bytes)
             .sum()
     }
@@ -180,23 +176,14 @@ impl<F: Field + CanonicalEncoding> CpuPreparedSetup<F> {
             .shared_ntt
             .lock()
             .map_err(|_| AkitaError::Internal("NTT cache lock poisoned".into()))?;
-        let mut released_keys = Vec::new();
-        for (key, cell) in cache.iter() {
-            if let Some(bytes) = cell
-                .get()
-                .and_then(|result| result.as_ref().ok())
-                .map(|slot| slot.cache_bytes)
-            {
-                freed = freed.checked_add(bytes).ok_or_else(|| {
-                    AkitaError::Internal("released shared matrix NTT cache bytes overflow".into())
-                })?;
-                released_keys.push(*key);
-            }
+        for slot in cache.values() {
+            freed = freed.checked_add(slot.cache_bytes).ok_or_else(|| {
+                AkitaError::Internal("released shared matrix NTT cache bytes overflow".into())
+            })?;
         }
-        for key in released_keys {
-            cache.remove(&key);
-        }
+        let retired = std::mem::take(&mut *cache);
         drop(cache);
+        drop(retired);
         if freed > 0 {
             tracing::info!(freed_bytes = freed, "dropped built shared matrix NTT slots");
         }
@@ -213,14 +200,9 @@ impl<F: Field + CanonicalEncoding> CpuPreparedSetup<F> {
             .map_err(|_| AkitaError::Internal("NTT cache lock poisoned".into()))?;
         let mut metrics = cache
             .iter()
-            .filter_map(|(key, entry)| {
-                entry
-                    .get()
-                    .and_then(|result| result.as_ref().ok())
-                    .map(|slot| PreparedNttCacheMetric {
-                        key: *key,
-                        cache_bytes: slot.cache_bytes,
-                    })
+            .map(|(key, slot)| PreparedNttCacheMetric {
+                key: *key,
+                cache_bytes: slot.cache_bytes,
             })
             .collect::<Vec<_>>();
         metrics.sort_by_key(|metric| {
@@ -320,13 +302,12 @@ fn prepare_ntt_slot_on_prepared<F: Field + CanonicalEncoding>(
         requested_key.ring_d,
         |RING_D| selected_crt_i8_capacity_profile::<F, RING_D>()
     )?;
-    loop {
-        let (key, entry) = {
-            let mut cache = prepared
-                .shared_ntt
-                .lock()
-                .map_err(|_| AkitaError::Internal("NTT cache lock poisoned".into()))?;
-            if let Some((key, entry)) = cache
+    let mut retired = Vec::new();
+    let slot = crate::cache::get_or_build(
+        &prepared.shared_ntt,
+        "NTT cache lock poisoned",
+        |cache| {
+            cache
                 .iter()
                 .filter(|(key, _)| {
                     key.ring_d == requested_key.ring_d
@@ -334,59 +315,34 @@ fn prepare_ntt_slot_on_prepared<F: Field + CanonicalEncoding>(
                         && key.num_ring_elements >= requested_key.num_ring_elements
                 })
                 .min_by_key(|(key, _)| key.num_ring_elements)
-                .map(|(key, entry)| (*key, Arc::clone(entry)))
-            {
-                (key, entry)
-            } else {
-                let entry = Arc::new(OnceLock::new());
-                cache.insert(requested_key, Arc::clone(&entry));
-                (requested_key, entry)
-            }
-        };
-        let build_result = entry.get_or_init(|| {
+                .map(|(_, slot)| Arc::clone(slot))
+        },
+        || {
             #[cfg(test)]
-            prepared
-                .ntt_slot_build_count
-                .fetch_add(1, Ordering::Relaxed);
-            build_ntt_slot_for_key(prepared.expanded.as_ref(), key).map(Arc::new)
-        });
-        match build_result {
-            Ok(slot) => {
-                // Keep smaller prefixes available until the larger build has
-                // completed successfully.  A failed growth must not evict a
-                // working covering candidate; once the new slot is ready the
-                // smaller entries are redundant and can be reclaimed.
-                let mut cache = prepared
-                    .shared_ntt
-                    .lock()
-                    .map_err(|_| AkitaError::Internal("NTT cache lock poisoned".into()))?;
-                cache.retain(|cached_key, _| {
-                    cached_key.ring_d != key.ring_d
-                        || cached_key.domain != key.domain
-                        || cached_key.num_ring_elements >= key.num_ring_elements
-                });
-                drop(cache);
-                record_ntt_profile_on_prepared(prepared, key, profile)?;
-                return Ok(Arc::clone(slot));
+            {
+                prepared
+                    .ntt_slot_build_count
+                    .fetch_add(1, Ordering::Relaxed);
+                crate::cache::tests::run_build_hook()?;
             }
-            Err(error) => {
-                let mut cache = prepared
-                    .shared_ntt
-                    .lock()
-                    .map_err(|_| AkitaError::Internal("NTT cache lock poisoned".into()))?;
-                if cache
-                    .get(&key)
-                    .is_some_and(|current| Arc::ptr_eq(current, &entry))
-                {
-                    cache.remove(&key);
+            build_ntt_slot_for_key(prepared.expanded.as_ref(), requested_key)
+        },
+        |cache, candidate| {
+            cache.insert(requested_key, candidate);
+            cache.retain(|key, slot| {
+                let keep = key.ring_d != requested_key.ring_d
+                    || key.domain != requested_key.domain
+                    || key.num_ring_elements >= requested_key.num_ring_elements;
+                if !keep {
+                    retired.push(Arc::clone(slot));
                 }
-                drop(cache);
-                if key == requested_key {
-                    return Err(error.clone());
-                }
-            }
-        }
-    }
+                keep
+            });
+        },
+    )?;
+    drop(retired);
+    record_ntt_profile_on_prepared(prepared, requested_key, profile)?;
+    Ok(slot)
 }
 
 fn ensure_ntt_slot_on_prepared<F: Field + CanonicalEncoding>(
