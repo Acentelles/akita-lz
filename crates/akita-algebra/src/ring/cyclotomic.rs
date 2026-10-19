@@ -20,7 +20,7 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 pub use decomposition::{
     balanced_decompose_coefficients_pow2_i8_into, decompose_centering_threshold,
-    BalancedDecomposePow2Params,
+    BalancedDecomposePow2Params, SmallSignedValue,
 };
 pub use shift_windows::NegacyclicShiftWindows;
 pub use wide::WideCyclotomicRing;

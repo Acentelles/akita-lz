@@ -1,12 +1,13 @@
 use super::prepared_tests::{prepared, D, F};
 use super::CpuBackend;
 use crate::kernels::linear::{
-    fused_split_eq_quotients_prover_bounds, mat_vec_mul_ntt_digits_i8,
-    mat_vec_mul_ntt_raw_digits_i8, mat_vec_mul_ntt_single_i8, mat_vec_mul_ntt_single_i8_cyclic,
+    fused_split_eq_quotients_prover_bounds, mat_vec_mul_ntt_blocks_i8, mat_vec_mul_ntt_digits_i8,
+    mat_vec_mul_ntt_single_i8, mat_vec_mul_ntt_single_i8_cyclic, I8CommitPolicy,
 };
 use crate::opaque::RingSwitchRelationView;
 use crate::opaque::{CyclicRowsComputeBackend, DigitRowsComputeBackend};
 use crate::opaque::{RingSwitchRelationKernel, RingSwitchRelationPlan};
+use crate::sources::block_digits::{DigitRows, DigitShape};
 use crate::sources::packed_digits::PackedSignedDigits;
 use akita_error::AkitaError;
 use akita_types::{NttCacheKey, NttTransformDomain};
@@ -173,7 +174,29 @@ fn packed_recursive_raw_commit_matches_predecoded_kernel() {
     let expected = prepared
         .with_shared_ntt::<D, _>(
             NttCacheKey::from_matrix_shape(D, 1, 2, NttTransformDomain::Negacyclic).unwrap(),
-            |ntt| mat_vec_mul_ntt_raw_digits_i8(ntt, 1, 2, &blocks),
+            |ntt| {
+                let source = DigitRows {
+                    blocks: &blocks,
+                    digit_abs_bound: 6,
+                };
+                let ranges = (0..coeffs.len())
+                    .step_by(2)
+                    .map(|start| start..start + 2)
+                    .collect::<Vec<_>>();
+                mat_vec_mul_ntt_blocks_i8(
+                    ntt,
+                    1,
+                    2,
+                    &source,
+                    &ranges,
+                    DigitShape {
+                        num_digits: 1,
+                        log_basis: 3,
+                    },
+                    true,
+                    I8CommitPolicy::Recursive { raw: true },
+                )
+            },
         )
         .unwrap();
     assert_eq!(got, expected);
@@ -257,4 +280,85 @@ fn cpu_ring_switch_relation_rows_use_distinct_open_and_outer_bases() {
     assert_eq!(via_backend.d_negacyclic, expected_d_negacyclic);
     assert_eq!(via_backend.b_cyclic, direct.b_cyclic);
     assert!(via_backend.a_quotients.is_empty());
+}
+
+#[test]
+fn recursive_raw_commit_matches_schoolbook_across_decode_batches() {
+    use akita_algebra::CyclotomicRing;
+    use jolt_field::Ring;
+
+    let prepared = prepared();
+    let width = 17;
+    let matrix = prepared
+        .expanded
+        .shared_matrix()
+        .ring_view::<D>(2, width)
+        .unwrap();
+    for num_blocks in [3, 20] {
+        let coeffs = (0..num_blocks * width - 3)
+            .map(|ring| std::array::from_fn(|k| [-128, -1, 0, 127][(ring + k) % 4]))
+            .collect::<Vec<[i8; D]>>();
+        let packed =
+            PackedSignedDigits::from_i8_digits_auto(coeffs.iter().flatten().copied().collect());
+        let got = CpuBackend::<F, F>::for_arithmetic_tests()
+            .recursive_packed_witness_commit_rows::<D>(
+                &prepared,
+                packed.view(),
+                2,
+                width,
+                num_blocks,
+                1,
+                3,
+            )
+            .unwrap();
+        let expected = coeffs
+            .chunks(width)
+            .map(|block| {
+                matrix
+                    .rows()
+                    .map(|row| {
+                        row.iter().zip(block).fold(
+                            CyclotomicRing::zero(),
+                            |acc, (entry, digits)| {
+                                acc + *entry
+                                    * CyclotomicRing::from_coefficients(digits.map(F::from_i8))
+                            },
+                        )
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(got, expected, "{num_blocks} blocks");
+        let blocks = coeffs.chunks(width).collect::<Vec<_>>();
+        let source = DigitRows {
+            blocks: &blocks,
+            digit_abs_bound: 128,
+        };
+        let ranges = (0..coeffs.len())
+            .step_by(width)
+            .map(|start| start..(start + width).min(coeffs.len()))
+            .collect::<Vec<_>>();
+        let predecoded = prepared
+            .with_shared_ntt::<D, _>(
+                NttCacheKey::from_matrix_shape(D, 2, width, NttTransformDomain::Negacyclic)
+                    .unwrap(),
+                |ntt| {
+                    mat_vec_mul_ntt_blocks_i8(
+                        ntt,
+                        2,
+                        width,
+                        &source,
+                        &ranges,
+                        DigitShape {
+                            num_digits: 1,
+                            log_basis: 3,
+                        },
+                        true,
+                        I8CommitPolicy::Recursive { raw: true },
+                    )
+                },
+            )
+            .unwrap();
+        assert_eq!(predecoded, expected, "predecoded {num_blocks} blocks");
+    }
 }
