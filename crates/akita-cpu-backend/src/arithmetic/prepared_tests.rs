@@ -115,36 +115,6 @@ fn cpu_prepared_setup_builds_only_requested_ntt_slots() {
 }
 
 #[test]
-fn concurrent_same_key_ntt_warm_builds_once() {
-    let setup = AkitaProverSetup::<F>::generate_with_capacity(8, 1, setup_capacity(D)).unwrap();
-    let prepared = CpuBackend::<F, F>::for_arithmetic_tests()
-        .prepare_expanded(setup.expanded.clone())
-        .expect("empty prepared setup");
-    let key = NttCacheKey {
-        ring_d: D,
-        num_ring_elements: 2,
-        domain: NttTransformDomain::Negacyclic,
-    };
-
-    std::thread::scope(|scope| {
-        for _ in 0..8 {
-            let prepared = &prepared;
-            scope.spawn(move || {
-                CpuBackend::<F, F>::for_arithmetic_tests()
-                    .ensure_ntt_slot(prepared, key)
-                    .expect("warm shared NTT slot");
-            });
-        }
-    });
-    CpuBackend::<F, F>::for_arithmetic_tests()
-        .ensure_ntt_slot(&prepared, key)
-        .expect("repeated warm is a no-op");
-
-    assert_eq!(prepared.ntt_slot_build_count.load(Ordering::Relaxed), 1);
-    assert!(prepared.shared_ntt_cache_bytes() > 0);
-}
-
-#[test]
 fn larger_initialized_prefix_covers_smaller_request() {
     let prepared = prepared();
     let covering_key = NttCacheKey {

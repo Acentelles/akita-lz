@@ -163,7 +163,7 @@ fn setup_first_slice_pruning_uses_the_padded_direct_prefix() {
     use akita_config::{policy_of, proof_optimized::fp32::OneHot};
     use akita_params::{CommitmentSliceCount, SisModulusProfileId};
 
-    let mut policy = policy_of::<OneHot>();
+    let mut policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     policy.selection_policy = crate::SelectionPolicyId::MinFirstDirectSetupThenExactProofAndWorkV5;
     let params_for = |outer_slice_count| {
         let mut params = CommittedGroupParams::params_only(

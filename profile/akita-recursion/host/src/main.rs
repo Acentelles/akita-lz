@@ -19,9 +19,9 @@ use std::time::Instant;
 
 use akita_config::proof_optimized::{fp128, fp32, fp64};
 use akita_config::{CommitmentConfig, RecursiveCommitmentConfig};
+use akita_params::BasisMode;
 use akita_recursion_glue::{read_blob_case, AkitaJoltCase, AkitaJoltInputs, MAX_JOLT_BLOB_BYTES};
-use akita_types::{prepared_verifier_ntt_cache_metadata};
-use akita_params::{BasisMode};
+use akita_types::prepared_verifier_ntt_cache_metadata;
 use akita_verifier::{build_riscv64_terminal_ntt_cache, AkitaVerifier};
 use clap::Parser;
 use tracing::info;
@@ -150,9 +150,12 @@ fn load_blob(input: &Path) -> Result<Vec<u8>, String> {
 macro_rules! strict_decode_and_verify {
     ($blob:expr, $field:ty, $cfg:ty, $d:expr) => {{
         type CaseExt = <$cfg as CommitmentConfig>::ExtField;
-        let (schedules, inner_blob) =
-            akita_recursion_glue::split_schedule_catalog::<$cfg>($blob)
-                .map_err(|err| format!("trusted schedule catalog failed: {err}"))?;
+        // Every supported AkitaJoltCase currently expects a single-chunk catalog.
+        let (schedules, inner_blob) = akita_recursion_glue::split_schedule_catalog::<$cfg>(
+            $blob,
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        )
+        .map_err(|err| format!("trusted schedule catalog failed: {err}"))?;
         let decoded =
             AkitaJoltInputs::<$field, $d, CaseExt>::read_from_bytes::<$cfg>(inner_blob, &schedules)
                 .map_err(|err| format!("strict input decode failed: {err}"))?;

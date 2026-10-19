@@ -5,6 +5,7 @@
 //! provers. Config and schedule policy live in `akita-config`.
 
 pub(crate) mod arithmetic;
+mod cache;
 pub(crate) mod commitment;
 pub(crate) mod kernels;
 pub(crate) mod opaque;
@@ -26,8 +27,9 @@ pub use commitment::{
 };
 pub use opaque::standalone;
 pub use opaque::{
-    evaluate_root_polynomial, CpuBackend, PreparedCrtNttProfile, PreparedNttCacheMetric,
-    RootPolyMeta, RootPolyShape, RootPolynomialEvaluator,
+    evaluate_root_polynomial, CpuBackend, CpuExportPacket, CpuImportPacket, CpuPacketDescriptor,
+    CpuPacketSections, PreparedCrtNttProfile, PreparedNttCacheMetric, RootPolyMeta, RootPolyShape,
+    RootPolynomialEvaluator, SuccessorEncoding, SuccessorSection, SuccessorSectionDescriptor,
 };
 pub use opaque::{CommitOutput, CommitmentHandle, CpuSource, SourceHandle};
 pub use setup::AkitaProverSetup;
@@ -47,7 +49,7 @@ pub mod custom_source {
         AvailablePolynomialTypes, BackendKindId, CommitSourceClass, CommitSourceDescriptor,
         CommitmentSource, ExternalInnerCommitmentCapability, ExternalInnerCommitmentInput,
         ExternalInnerCommitmentOperation, ExternalOperationIdentity, PolynomialRepresentation,
-        PolynomialTypeSelection, PreparedExternalInnerCommitment,
+        PolynomialTypeSelection, PreparedExternalInnerCommitment, SignedBlockDecoder, SignedBlocks,
     };
     pub use crate::opaque::{
         aggregate_decompose_fold_witnesses, CommitInnerPlan, CpuFoldResponses,
@@ -61,6 +63,7 @@ pub mod custom_source {
         RootOpeningSource, RootPolyMeta, RootPolyShape, SourceCoefficients,
     };
     pub use crate::sources::poly_helpers::fill_rotated_challenge;
+    pub use crate::sources::signed_blocks::SignedBlockPoly;
 }
 
 /// Arithmetic entry points exercised by the crate's standalone kernel benchmarks.

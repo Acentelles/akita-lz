@@ -268,6 +268,101 @@ fn parameters_derive_the_field_modulus() {
     assert_eq!(params.q, modulus::<Prime32Offset99>());
 }
 
+fn check_small_signed_decompose<F: Field + CanonicalEncoding>() {
+    let q = modulus::<F>();
+    let field_bits = 128 - (q - 1).leading_zeros();
+    for log_basis in 1..=8 {
+        let half_basis = 1i16 << (log_basis - 1);
+        let ring = [
+            i16::MIN,
+            i16::MIN + 1,
+            -257,
+            -256,
+            -129,
+            -128,
+            -half_basis - 1,
+            -half_basis,
+            -half_basis + 1,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            half_basis - 1,
+            half_basis,
+            half_basis + 1,
+            127,
+            128,
+            255,
+            256,
+            i16::MAX - 1,
+            i16::MAX,
+        ];
+        let i8_ring = [
+            i8::MIN,
+            -127,
+            -65,
+            -64,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            63,
+            64,
+            126,
+            i8::MAX,
+        ];
+        let field_ring = CyclotomicRing::from_coefficients(ring.map(|v| F::from_i64(i64::from(v))));
+        let i8_field_ring =
+            CyclotomicRing::from_coefficients(i8_ring.map(|v| F::from_i64(i64::from(v))));
+        let max_levels = if log_basis == 1 {
+            field_bits
+        } else {
+            (128 + log_basis) / log_basis
+        } as usize;
+        for levels in 0..=max_levels {
+            let params = BalancedDecomposePow2Params::<F>::new(levels, log_basis);
+            if log_basis == 1 && levels == field_bits as usize {
+                assert_eq!(params.threshold, 0);
+            }
+            let mut expected_i8 = vec![[0i8; 23]; levels];
+            field_ring.balanced_decompose_pow2_i8_into_with_params(&mut expected_i8, &params);
+            let mut expected_i16 = vec![[0i16; 23]; levels];
+            field_ring.balanced_decompose_pow2_i16_into(&mut expected_i16, &params);
+            let mut expected_i8_carrier = vec![[0i8; 13]; levels];
+            i8_field_ring
+                .balanced_decompose_pow2_i8_into_with_params(&mut expected_i8_carrier, &params);
+            for fill in [0, 1] {
+                let mut actual_i8 = vec![[fill as i8; 23]; levels];
+                params.decompose_small_signed_into(&ring, &mut actual_i8);
+                assert_eq!(
+                    actual_i8, expected_i8,
+                    "i8: basis={log_basis} levels={levels}"
+                );
+                let mut actual_i16 = vec![[fill as i16; 23]; levels];
+                params.decompose_small_signed_into(&ring, &mut actual_i16);
+                assert_eq!(
+                    actual_i16, expected_i16,
+                    "i16: basis={log_basis} levels={levels}"
+                );
+                let mut actual_i8_carrier = vec![[fill as i8; 13]; levels];
+                params.decompose_small_signed_into(&i8_ring, &mut actual_i8_carrier);
+                assert_eq!(actual_i8_carrier, expected_i8_carrier);
+            }
+        }
+    }
+}
+
+#[test]
+fn decompose_small_signed_matches_field_all_accepted_shapes() {
+    check_small_signed_decompose::<Prime32Offset99>();
+    check_small_signed_decompose::<Prime40Offset195>();
+    check_small_signed_decompose::<Prime64Offset59>();
+    check_small_signed_decompose::<Prime128Offset275>();
+    check_small_signed_decompose::<Prime128OffsetA7F7>();
+}
+
 #[test]
 fn add_bias_decomposition_matches_exact_recurrence_fp128() {
     check_field_against_exact_recurrence::<Prime128OffsetA7F7>(0xa7f7);
