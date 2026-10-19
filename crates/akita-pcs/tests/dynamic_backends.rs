@@ -295,14 +295,28 @@ fn run(check_failures: bool) -> Result<(), AkitaError> {
                 );
             }
         }
-        // A kernel panic surfaces as a typed error at the prove entry point.
+        // A kernel panic surfaces as a typed error at the prove entry point,
+        // releases every admitted scope, and leaves the backends reusable.
         private.fault.set(Fault::PanicStage1Round);
         let error = prove(false).unwrap_err();
         assert_eq!(
             error,
             AkitaError::Internal("prover panicked: injected Stage-1 kernel panic".into())
         );
+        for backend in backends {
+            assert_eq!(
+                backend.admitted.get(),
+                backend.finished.get() + backend.aborted.get()
+            );
+        }
         private.fault.set(Fault::None);
+        assert_eq!(prove(false)?, reference);
+        for backend in backends {
+            assert_eq!(
+                backend.admitted.get(),
+                backend.finished.get() + backend.aborted.get()
+            );
+        }
     }
     Ok(())
 }
