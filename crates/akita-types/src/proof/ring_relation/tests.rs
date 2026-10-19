@@ -838,3 +838,42 @@ fn packing_instance_emits_all_physical_e_coordinate_planes() {
     .expect("wrong-k carrier construction is schedule-independent");
     assert!(wrong_k_instance.segment_layout(&lp, None).is_err());
 }
+
+#[test]
+fn packing_challenge_construction_rejects_malformed_sparse_entries() {
+    let geometry = SubringCoefficientPackingGeometry::try_new(2, 256, 64).unwrap();
+    let config = geometry.fold_challenge_config();
+    let valid = SparseChallenge {
+        positions: (0..config.weight()).map(|index| index as u32).collect(),
+        coeffs: std::iter::repeat_n(1, config.count_pm1)
+            .chain(std::iter::repeat_n(2, config.count_pm2))
+            .collect(),
+    };
+    assert!(CoefficientPackingChallenges::new(
+        geometry,
+        Challenges::from_sparse(vec![valid.clone()], 1, 1).unwrap()
+    )
+    .is_ok());
+    let mut out_of_range = valid.clone();
+    out_of_range.positions[0] = geometry.challenge_subring_dimension() as u32;
+    let mut mismatched = valid.clone();
+    mismatched.positions.pop();
+    let mut zero_coefficient = valid.clone();
+    zero_coefficient.coeffs[0] = 0;
+    let mut repeated_position = valid;
+    repeated_position.positions[1] = repeated_position.positions[0];
+    for malformed in [
+        out_of_range,
+        mismatched,
+        zero_coefficient,
+        repeated_position,
+    ] {
+        assert!(matches!(
+            CoefficientPackingChallenges::new(
+                geometry,
+                Challenges::from_sparse(vec![malformed], 1, 1).unwrap()
+            ),
+            Err(AkitaError::InvalidInput(_))
+        ));
+    }
+}

@@ -30,81 +30,70 @@ macro_rules! dispatch_slot {
     }};
 }
 
-/// Column-tiled A*x across multiple blocks simultaneously.
-///
-/// Each rayon thread owns one column tile of `ntt_mat` (sized to fit in L2
-/// cache) and iterates over all blocks, accumulating partial NTT results.
-/// The matrix is loaded from DRAM exactly once. A final reduction sums
-/// partial accumulators across tiles for each block.
-///
-/// Accepts raw ring-coefficient slices per block. Decomposes to i8 digits
-/// on-the-fly per tile to avoid materializing all digits at once.
-/// Tile width is auto-computed from ring parameters and target L2 cache size.
-#[tracing::instrument(skip_all, name = "mat_vec_mul_ntt_i8")]
-pub(crate) fn mat_vec_mul_ntt_i8<F: Field + CanonicalEncoding, const D: usize>(
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn mat_vec_mul_ntt_blocks_i8<
+    F: Field + CanonicalEncoding,
+    S: I8Rows<D>,
+    const D: usize,
+>(
     slot: &PreparedNttCache<D>,
     num_rows: usize,
     num_cols: usize,
-    blocks: &[&[CyclotomicRing<F, D>]],
-    num_digits: usize,
-    log_basis: u32,
+    source: &S,
+    blocks: &[Range<usize>],
+    shape: DigitShape,
+    check_zero: bool,
+    policy: I8CommitPolicy,
 ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
-    validate_i8_log_basis(log_basis)?;
-    Ok(dispatch_slot!(
-        slot,
-        num_rows,
-        num_cols,
-        mat_vec_mul_i8_with_params,
-        blocks,
-        num_digits,
-        log_basis
-    )?)
-}
-
-/// Dense-optimized matrix-vector multiplication over i8 digit planes.
-///
-/// Skips the full-plane zero scans that are useful for sparse inputs but are
-/// almost always wasted work on dense witnesses.
-#[tracing::instrument(skip_all, name = "mat_vec_mul_ntt_i8_dense")]
-pub(crate) fn mat_vec_mul_ntt_i8_dense<F: Field + CanonicalEncoding, const D: usize>(
-    slot: &PreparedNttCache<D>,
-    num_rows: usize,
-    num_cols: usize,
-    blocks: &[&[CyclotomicRing<F, D>]],
-    num_digits: usize,
-    log_basis: u32,
-) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
-    validate_i8_log_basis(log_basis)?;
-    Ok(dispatch_slot!(
-        slot,
-        num_rows,
-        num_cols,
-        mat_vec_mul_i8_dense_with_params,
-        blocks,
-        num_digits,
-        log_basis
-    )?)
-}
-
-/// Single-row dense variant of [`mat_vec_mul_ntt_i8_dense`].
-#[tracing::instrument(skip_all, name = "mat_vec_mul_ntt_i8_dense_single_row")]
-pub(crate) fn mat_vec_mul_ntt_i8_dense_single_row<F: Field + CanonicalEncoding, const D: usize>(
-    slot: &PreparedNttCache<D>,
-    num_cols: usize,
-    blocks: &[&[CyclotomicRing<F, D>]],
-    num_digits: usize,
-    log_basis: u32,
-) -> Result<Vec<CyclotomicRing<F, D>>, AkitaError> {
-    validate_i8_log_basis(log_basis)?;
-    Ok(dispatch_slot!(
-        slot,
-        1usize,
-        num_cols,
-        mat_vec_mul_i8_dense_single_row_with_params,
-        blocks,
-        num_digits,
-        log_basis
-    )?)
+    validate_i8_log_basis(shape.log_basis)?;
+    if matches!(policy, I8CommitPolicy::Dense) && !check_zero && num_rows == 1 {
+        return Ok(dispatch_slot!(
+            slot,
+            1usize,
+            num_cols,
+            mat_vec_mul_blocks_i8_single_row_with_params,
+            source,
+            blocks,
+            shape
+        )?
+        .into_iter()
+        .map(|ring| vec![ring])
+        .collect());
+    }
+    macro_rules! run {
+        ($zero:literal) => {{
+            fn driver<
+                F: Field + CanonicalEncoding,
+                S: I8Rows<D>,
+                W: PrimeWidth,
+                const K: usize,
+                const D: usize,
+            >(
+                matrix: &[&[CyclotomicCrtNtt<W, K, D>]],
+                source: &S,
+                blocks: &[Range<usize>],
+                shape: DigitShape,
+                policy: I8CommitPolicy,
+                params: &CrtNttParamSet<W, K, D>,
+            ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
+                mat_vec_mul_blocks_i8_with_params_impl::<F, S, W, K, D, $zero>(
+                    matrix,
+                    source,
+                    blocks,
+                    shape,
+                    policy,
+                    "i8 matvec CRT capacity cannot fit a single term",
+                    params,
+                )
+            }
+            dispatch_slot!(slot, num_rows, num_cols, driver, source, blocks, shape, policy)
+        }};
+    }
+    if check_zero {
+        run!(true)
+    } else {
+        run!(false)
+    }
 }
 
 /// Column-tiled A*x across multiple blocks of pre-decomposed i8 digit planes.
@@ -136,111 +125,5 @@ pub fn mat_vec_mul_ntt_digits_i8<F: Field + CanonicalEncoding, const D: usize>(
         mat_vec_mul_digits_i8_with_params,
         blocks,
         log_basis
-    )
-}
-
-/// Predecomposed mat-vec over a source that decodes one commitment block at a
-/// time. This keeps the full byte witness out of memory while sharing one NTT
-/// dispatch and one digit-LUT policy across all blocks.
-pub(crate) fn mat_vec_mul_ntt_packed_digits_i8<
-    F: Field + CanonicalEncoding,
-    Decode,
-    const D: usize,
->(
-    slot: &PreparedNttCache<D>,
-    num_rows: usize,
-    row_width: usize,
-    num_live_blocks: usize,
-    decode_block: &Decode,
-    log_basis: u32,
-) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError>
-where
-    Decode: Fn(usize) -> Result<Vec<[i8; D]>, AkitaError> + Sync,
-{
-    validate_i8_log_basis(log_basis)?;
-    dispatch_slot!(
-        slot,
-        num_rows,
-        row_width,
-        mat_vec_mul_packed_digits_i8_with_params,
-        num_live_blocks,
-        row_width,
-        decode_block,
-        log_basis
-    )
-}
-
-/// Dense pre-decomposed digit mat-vec for the backend-owned digit cache.
-///
-/// The generic pre-decomposed digit kernel skips all-zero planes, which is
-/// profitable for sparse witnesses. Dense witnesses pay that scan on almost
-/// every plane, so this kernel uses the same math without the zero checks. The
-/// cache is produced by Akita's validated decomposer and does not need a second
-/// full scan at each commit.
-#[tracing::instrument(skip_all, name = "mat_vec_mul_ntt_dense_digits_i8")]
-pub(crate) fn mat_vec_mul_ntt_dense_digits_i8<F: Field + CanonicalEncoding, const D: usize>(
-    slot: &PreparedNttCache<D>,
-    num_rows: usize,
-    num_cols: usize,
-    blocks: &[&[[i8; D]]],
-    log_basis: u32,
-) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
-    validate_i8_log_basis(log_basis)?;
-    dispatch_slot!(
-        slot,
-        num_rows,
-        num_cols,
-        mat_vec_mul_dense_digits_i8_with_params,
-        blocks,
-        log_basis
-    )
-}
-
-/// Fold-major (block) direct-signed-i8 variant for recursive witnesses.
-///
-/// The block/column layout and output shape match
-/// [`mat_vec_mul_ntt_digits_i8`], but this path does not assume the rows are
-/// balanced gadget digits: it is the `num_digits_inner = 1` commit path for a
-/// recursive witness whose extension-field tensor base-lift packing can push
-/// coefficients past the balanced range. Coefficients too large for the CRT
-/// lift are rejected as `AkitaError` rather than panicking.
-#[tracing::instrument(skip_all, name = "mat_vec_mul_ntt_raw_digits_i8")]
-#[cfg(test)]
-pub(crate) fn mat_vec_mul_ntt_raw_digits_i8<F: Field + CanonicalEncoding, const D: usize>(
-    slot: &PreparedNttCache<D>,
-    num_rows: usize,
-    num_cols: usize,
-    blocks: &[&[[i8; D]]],
-) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
-    dispatch_slot!(
-        slot,
-        num_rows,
-        num_cols,
-        mat_vec_mul_raw_digits_i8_with_params,
-        blocks
-    )
-}
-
-/// Raw signed counterpart of [`mat_vec_mul_ntt_packed_digits_i8`].
-pub(crate) fn mat_vec_mul_ntt_packed_raw_i8<F: Field + CanonicalEncoding, Decode, const D: usize>(
-    slot: &PreparedNttCache<D>,
-    num_rows: usize,
-    row_width: usize,
-    num_live_blocks: usize,
-    rhs_bound: u64,
-    decode_block: &Decode,
-) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError>
-where
-    Decode: Fn(usize) -> Result<Vec<[i8; D]>, AkitaError> + Sync,
-{
-    dispatch_slot!(
-        slot,
-        num_rows,
-        row_width,
-        mat_vec_mul_packed_raw_i8_with_params,
-        num_live_blocks,
-        row_width,
-        rhs_bound,
-        decode_block
     )
 }

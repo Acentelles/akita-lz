@@ -116,7 +116,10 @@ fn packing_rejects_tensor_projected_commitment_source() {
 fn prepare<'a, Base, Extension>(
     fixture: &'a Fixture<Base, Extension>,
     alpha: Extension,
-) -> CoefficientPackingGroupSemantics<'a, Extension>
+) -> (
+    CoefficientPackingGroupSemantics<'a, Extension>,
+    CoefficientPackingRelationEvents<Extension>,
+)
 where
     Base: Field + CanonicalEncoding + Ring,
     Extension: ExtField<Base> + FpExtEncoding<Base> + Ring + ExtField<Base>,
@@ -162,34 +165,25 @@ fn relation_event_consumer_matches_dense_oracle() {
         2,
     );
     for alpha in [E::zero(), E::one(), E::from_u64(17)] {
-        let semantics = prepare(&fixture, alpha);
-        let padded_len = semantics
-            .relation_events()
-            .physical_field_len()
-            .next_power_of_two();
+        let (_, events) = prepare(&fixture, alpha);
+        let padded_len = events.physical_field_len().next_power_of_two();
         let point = (0..padded_len.trailing_zeros())
             .map(|index| E::from_u64(23 + index as u64))
             .collect::<Vec<_>>();
-        let mut dense_events = materialize_events(semantics.relation_events());
+        let mut dense_events = materialize_events(&events);
         dense_events.resize(padded_len, E::zero());
         assert_eq!(
-            semantics
-                .relation_events()
-                .evaluate_at_point(&point)
-                .unwrap(),
+            events.evaluate_at_point(&point).unwrap(),
             multilinear_eval(&dense_events, &point).unwrap()
         );
-        let mut reordered_events = semantics.relation_events().clone();
+        let mut reordered_events = events.clone();
         reordered_events.events.reverse();
         assert_eq!(
             reordered_events.evaluate_at_point(&point).unwrap(),
             multilinear_eval(&dense_events, &point).unwrap(),
             "direct-index alpha caching must not depend on event order"
         );
-        assert!(semantics
-            .relation_events()
-            .evaluate_at_point(&point[..point.len() - 1])
-            .is_err());
+        assert!(events.evaluate_at_point(&point[..point.len() - 1]).is_err());
     }
 }
 
@@ -206,16 +200,13 @@ fn relation_event_large_batch_matches_dense_oracle() {
         2,
         2,
     );
-    let semantics = prepare(&fixture, E::from_u64(17));
-    let padded_len = semantics
-        .relation_events()
-        .physical_field_len()
-        .next_power_of_two();
+    let (_, events) = prepare(&fixture, E::from_u64(17));
+    let padded_len = events.physical_field_len().next_power_of_two();
     let point = (0..padded_len.trailing_zeros())
         .map(|index| E::from_u64(31 + index as u64))
         .collect::<Vec<_>>();
 
-    let mut repeated_events = semantics.relation_events().clone();
+    let mut repeated_events = events.clone();
     let event_work = repeated_events
         .events()
         .iter()
@@ -261,7 +252,7 @@ fn semantics_bind_partial_blocks_claims_planes_and_positive_q_convention() {
         1,
     );
     let alpha = E::from_u64(13);
-    let semantics = prepare(&fixture, alpha);
+    let (semantics, events) = prepare(&fixture, alpha);
     assert_eq!(semantics.geometry().packing_factor(), 2);
     assert_eq!(semantics.group_claim_range(), 0..2);
     assert_eq!(
@@ -294,7 +285,7 @@ fn semantics_bind_partial_blocks_claims_planes_and_positive_q_convention() {
     let extension_degree = <E as ExtField<F>>::DEGREE;
     let expected_e_events = 2 * 2 * depth_open * extension_degree;
     let expected_q_events = quotient_depth * extension_degree;
-    let events = semantics.relation_events().events();
+    let events = events.events();
     assert_eq!(events.len(), expected_e_events + expected_q_events);
     for event in &events[..expected_e_events] {
         assert_eq!(event.physical_coefficients().len(), 64);
@@ -454,9 +445,8 @@ fn e_events_split_planes_at_d_boundaries_without_changing_exponents() {
         1,
         1,
     );
-    let semantics = prepare(&fixture, E::from_u64(17));
-    let continued_plane_chunks = semantics
-        .relation_events()
+    let (_, events) = prepare(&fixture, E::from_u64(17));
+    let continued_plane_chunks = events
         .events()
         .iter()
         .filter(|event| event.alpha_exponent_start() == 64)
@@ -484,8 +474,8 @@ fn semantic_events_match_an_independent_dense_accumulation() {
         1,
     );
     let alpha = E::from_u64(19);
-    let semantics = prepare(&fixture, alpha);
-    let got = materialize_events(semantics.relation_events());
+    let (semantics, events) = prepare(&fixture, alpha);
+    let got = materialize_events(&events);
     let mut expected = vec![E::zero(); got.len()];
     let geometry = semantics.geometry();
     let s = geometry.challenge_subring_dimension();
@@ -751,7 +741,7 @@ fn packing_metadata_exposes_canonical_backend_factors() {
         2,
     );
     let alpha = E4::from_u64(41);
-    let semantics = prepare(&fixture, alpha);
+    let (semantics, _) = prepare(&fixture, alpha);
 
     let geometry = semantics.geometry();
     assert_eq!(geometry.extension_degree(), 4);
@@ -853,7 +843,7 @@ fn production_extension_degrees_include_exact_overlap_and_h_greater_than_one() {
         1,
         1,
     );
-    let overlap_semantics = prepare(&overlap, F1::from_u64(29));
+    let (overlap_semantics, _) = prepare(&overlap, F1::from_u64(29));
     assert_eq!(overlap_semantics.geometry().extension_degree(), 1);
     assert_eq!(overlap_semantics.geometry().packing_factor(), 1);
     assert_eq!(
@@ -878,7 +868,7 @@ fn production_extension_degrees_include_exact_overlap_and_h_greater_than_one() {
         1,
         1,
     );
-    let four_plane_semantics = prepare(&four_planes, E4::from_u64(31));
+    let (four_plane_semantics, four_plane_events) = prepare(&four_planes, E4::from_u64(31));
     assert_eq!(four_plane_semantics.geometry().extension_degree(), 4);
     assert_eq!(four_plane_semantics.geometry().packing_factor(), 4);
     let q_events = four_planes
@@ -887,7 +877,7 @@ fn production_extension_degrees_include_exact_overlap_and_h_greater_than_one() {
         .quotient_depth()
         .expect("quotient-lift fixture")
         * 4;
-    let events = four_plane_semantics.relation_events().events();
+    let events = four_plane_events.events();
     for event in &events[events.len() - q_events..] {
         assert_eq!(event.physical_coefficients().len(), 64);
         assert_eq!(event.alpha_exponent_start(), 0);

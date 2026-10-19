@@ -2,6 +2,8 @@
 #![allow(missing_docs)]
 
 mod common;
+#[path = "backend_ownership/signed_block_poly.rs"]
+mod signed_block_poly;
 
 use akita_config::proof_optimized::fp128;
 use akita_cpu_backend::{CommitmentHandle, CpuBackend, DensePoly, GroupContext};
