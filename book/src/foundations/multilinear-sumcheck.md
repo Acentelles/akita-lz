@@ -257,8 +257,10 @@ $$
 (r_{N-n},\ldots,r_{N-1})
 $$
 
-of the shared challenge vector. This is the `offset = max_num_rounds - n`
-rule in `batched_sumcheck.rs`.
+of the shared challenge vector. This is the tail-aligned `offset = max_num_vars - n`
+rule of `BatchPrelude` in `jolt-sumcheck/src/batch.rs`. Akita's own
+sumchecks are unbatched and run through `jolt-sumcheck`'s single-instance
+driver.
 
 ## Where to inspect the implementation
 
