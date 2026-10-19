@@ -4,7 +4,7 @@
 
 use std::io::{Read, Write};
 
-use jolt_crypto::lattice::{PublicMatrixDerivation, PublicMatrixSeed};
+use jolt_crypto::lattice::PublicMatrixSeed;
 
 use crate::{AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate};
 
@@ -34,18 +34,13 @@ impl AkitaDeserialize for PublicMatrixSeed {
 
     fn deserialize_with_mode<R: Read>(
         mut reader: R,
-        compress: Compress,
-        validate: Validate,
+        _compress: Compress,
+        _validate: Validate,
         _ctx: &(),
     ) -> Result<Self, SerializationError> {
-        let tag = u8::deserialize_with_mode(&mut reader, compress, validate, &())?;
-        let derivation = PublicMatrixDerivation::from_tag(tag).ok_or_else(|| {
-            SerializationError::InvalidData(format!(
-                "unsupported public matrix derivation tag {tag}"
-            ))
-        })?;
-        let mut seed = [0u8; 32];
-        reader.read_exact(&mut seed)?;
-        Ok(Self { derivation, seed })
+        let mut bytes = [0u8; Self::CANONICAL_LEN];
+        reader.read_exact(&mut bytes)?;
+        Self::from_canonical_bytes(&bytes)
+            .map_err(|error| SerializationError::InvalidData(error.to_string()))
     }
 }

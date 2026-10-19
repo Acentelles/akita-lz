@@ -33,6 +33,7 @@ parallel = [
   "akita-params/parallel",
   "akita-algebra/parallel",
   "jolt-field/parallel",
+  "jolt-crypto/parallel",
 ]
 
 [dev-dependencies]

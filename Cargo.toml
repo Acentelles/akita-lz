@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "crates/akita-algebra",
+  "crates/akita-challenges",
   "crates/akita-config",
   "crates/akita-cpu-backend",
   "crates/akita-error",

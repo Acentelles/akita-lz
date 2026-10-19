@@ -17,7 +17,6 @@ mod transcript_grinding_binding;
 
 pub use transcript_grinding_binding::TranscriptGrindingBinding;
 
-use crate::AkitaSetupSeed;
 use akita_error::AkitaError;
 use akita_params::descriptor_bytes::{
     digest_descriptor_bytes, sis_modulus_profile_tag, DescriptorDigest,
@@ -31,6 +30,7 @@ use akita_serialization::{
     AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate,
     DEFAULT_MAX_SEQUENCE_LEN,
 };
+use jolt_crypto::lattice::PublicMatrixSeed;
 use jolt_field::narrowing::{usize_to_u32, usize_to_u8};
 use jolt_field::{CanonicalEncoding, ExtField, Field};
 use std::io::{Read, Write};
@@ -45,7 +45,7 @@ use std::io::{Read, Write};
 ///
 /// Returns a serialization error if the seed cannot be canonically serialized.
 pub fn setup_seed_digest(
-    setup_seed: &AkitaSetupSeed,
+    setup_seed: &PublicMatrixSeed,
 ) -> Result<DescriptorDigest, SerializationError> {
     digest_serializable(setup_seed)
 }
@@ -157,7 +157,7 @@ pub struct SetupSection {
     pub sis_modulus_profile: SisModulusProfileId,
     /// Commitment-compression protocol bound into the transcript preamble.
     pub compression_policy: CompressionPolicyId,
-    /// Digest of the canonical [`AkitaSetupSeed`] bytes.
+    /// Digest of the canonical [`PublicMatrixSeed`] bytes.
     pub setup_seed_digest: DescriptorDigest,
     /// Protocol-affecting feature mode (transparent-only after zk-strip).
     pub protocol_features: ProtocolFeatureSet,
@@ -177,7 +177,7 @@ impl SetupSection {
     pub fn from_parts(
         decomposition: DecompositionParams,
         sis_modulus_profile: SisModulusProfileId,
-        setup_seed: &AkitaSetupSeed,
+        setup_seed: &PublicMatrixSeed,
     ) -> Result<Self, SerializationError> {
         Ok(Self {
             decomposition,

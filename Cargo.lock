@@ -38,6 +38,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "akita-challenges"
+version = "0.1.0"
+dependencies = [
+ "jolt-crypto",
+]
+
+[[package]]
 name = "akita-config"
 version = "0.1.0"
 dependencies = [

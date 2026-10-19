@@ -94,8 +94,7 @@ pub use ring_relation::{
 pub use scheme::OpeningPoints;
 pub use setup::{
     sample_akita_setup_seed, validate_public_matrix_matches_seed, AkitaExpandedSetup,
-    AkitaSetupDescriptor, AkitaSetupSeed, AkitaVerifierSetup,
-    MAX_GENERIC_SETUP_DECODE_FIELD_ELEMENTS,
+    AkitaSetupDescriptor, AkitaVerifierSetup, MAX_GENERIC_SETUP_DECODE_FIELD_ELEMENTS,
 };
 pub use setup_prefix::{
     setup_prefix_coverage_eval_len, SetupPrefixPublicCommitment, SetupPrefixVerifierRegistry,

@@ -15,6 +15,7 @@ orchestration lives in `akita-pcs`.
 |-------|------|
 | `akita-error` | Shared protocol error |
 | `jolt-field` (external; re-exports `jolt-algebra`) | Shared field traits, prime and extension fields, packed and unreduced kernels, cyclotomic ring, NTT/CRT, smooth FFT, checked integer formulas, parallel helpers |
+| `jolt-crypto` (external, `lattice` feature) | Sparse fold challenges, operator-norm rejection, and public-matrix derivation |
 | `akita-serialization` | Serialization, validation, compression traits |
 | `akita-algebra` | Multilinear, equality, split-equality, and offset-equality polynomial utilities |
 | `jolt-transcript` (external) | Fiat-Shamir proof channel (NARG prover/verifier transcripts, sponges, grinding) |

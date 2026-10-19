@@ -56,7 +56,7 @@ pub use proof::{
     relation_claim_from_rows_extension, relation_rhs_coeff_len, relation_rhs_row_count,
     ring_subfield_packed_extension_opening_point, row_coefficients, sample_akita_setup_seed,
     setup_prefix_coverage_eval_len, validate_coefficient_packing_batch_groups,
-    validate_public_matrix_matches_seed, AkitaExpandedSetup, AkitaSetupDescriptor, AkitaSetupSeed,
+    validate_public_matrix_matches_seed, AkitaExpandedSetup, AkitaSetupDescriptor,
     AkitaVerifierSetup, CoefficientPackingBatchSemanticInputs, CoefficientPackingBatchSemantics,
     CoefficientPackingChallenges, CoefficientPackingGroupSemantics, Commitment, CommittedGroup,
     CompressionRelationWeights, DigitBlockIter, DigitBlocks, ExtensionOpeningReductionShape,

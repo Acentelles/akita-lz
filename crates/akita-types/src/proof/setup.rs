@@ -12,11 +12,6 @@ use jolt_field::{CanonicalEncoding, Field};
 use std::io::{Read, Write};
 use std::sync::Arc;
 
-/// Semantic identity of the infinite public field stream: its derivation and
-/// seed. Its canonical bytes (`AkitaSerialize`) are the derivation tag
-/// followed by the 32 seed bytes.
-pub type AkitaSetupSeed = PublicMatrixSeed;
-
 /// Maximum setup matrix field elements accepted by self-describing setup
 /// deserialization.
 ///
@@ -36,7 +31,7 @@ pub struct AkitaSetupDescriptor {
     /// Number of materialized public-matrix field elements.
     pub num_field_elements: usize,
     /// Semantic identity of the infinite public field stream.
-    pub setup_seed: AkitaSetupSeed,
+    pub setup_seed: PublicMatrixSeed,
 }
 
 /// Expanded setup stage containing materialized public matrices.
@@ -170,10 +165,10 @@ where
 
 /// Fixed public seed for deterministic, reproducible setup.
 #[must_use]
-pub fn sample_akita_setup_seed() -> AkitaSetupSeed {
+pub fn sample_akita_setup_seed() -> PublicMatrixSeed {
     let mut seed = [0u8; 32];
     seed[..8].copy_from_slice(&0xDEAD_BEEF_CAFE_BABEu64.to_le_bytes());
-    AkitaSetupSeed::shake256_paged_v1(seed)
+    PublicMatrixSeed::shake256_paged_v1(seed)
 }
 
 /// Check that a materialized public matrix has exactly the shape declared by
@@ -276,7 +271,7 @@ impl AkitaDeserialize for AkitaSetupDescriptor {
         let num_field_elements =
             usize::deserialize_with_mode(&mut reader, compress, validate, &())?;
         let setup_seed =
-            AkitaSetupSeed::deserialize_with_mode(&mut reader, compress, validate, &())?;
+            PublicMatrixSeed::deserialize_with_mode(&mut reader, compress, validate, &())?;
         let out = Self {
             max_num_vars,
             max_num_batched_polys,
@@ -476,7 +471,7 @@ mod tests {
 
     fn derive_matrix<F: Field + CanonicalEncoding>(
         num_field_elements: usize,
-        seed: &AkitaSetupSeed,
+        seed: &PublicMatrixSeed,
     ) -> FlatMatrix<F> {
         FlatMatrix::from_flat_data(
             derive_public_matrix_prefix::<F>(num_field_elements, seed).expect("derive matrix"),
@@ -567,7 +562,7 @@ mod tests {
             ),
         );
         let foreign_registry =
-            SetupPrefixVerifierRegistry::new(AkitaSetupSeed::shake256_paged_v1([9u8; 32]));
+            SetupPrefixVerifierRegistry::new(PublicMatrixSeed::shake256_paged_v1([9u8; 32]));
 
         let err = AkitaVerifierSetup::from_parts(expanded, foreign_registry)
             .expect_err("cross-seed prefix registry must be rejected");
@@ -578,7 +573,7 @@ mod tests {
     fn strict_verifier_setup_decode_rejects_matrix_not_derived_from_seed() {
         let descriptor = seed([7u8; 32]);
         let setup_seed = descriptor.setup_seed.clone();
-        let wrong_seed = AkitaSetupSeed::shake256_paged_v1([9u8; 32]);
+        let wrong_seed = PublicMatrixSeed::shake256_paged_v1([9u8; 32]);
         let wrong_matrix = derive_matrix::<F>(2 * D, &wrong_seed);
         let setup = AkitaVerifierSetup {
             expanded: Arc::new(
@@ -671,7 +666,7 @@ mod tests {
 
     #[test]
     fn flat_derivation_is_prefix_stable() {
-        let seed = AkitaSetupSeed::shake256_paged_v1([7u8; 32]);
+        let seed = PublicMatrixSeed::shake256_paged_v1([7u8; 32]);
         let small = derive_matrix::<SmallF>(6 * SMALL_D, &seed);
         let large = derive_matrix::<SmallF>(24 * SMALL_D, &seed);
         let small_view = small.ring_view::<SMALL_D>(1, 6).unwrap();
@@ -683,8 +678,8 @@ mod tests {
 
     #[test]
     fn paged_derivation_golden_vector() {
-        let seed = AkitaSetupSeed::shake256_paged_v1([31u8; 32]);
-        fn samples<F: Field + CanonicalEncoding>(seed: &AkitaSetupSeed) -> [u128; 3] {
+        let seed = PublicMatrixSeed::shake256_paged_v1([31u8; 32]);
+        fn samples<F: Field + CanonicalEncoding>(seed: &PublicMatrixSeed) -> [u128; 3] {
             let page_field_elements = seed.derivation.page_field_elements();
             let derived = derive_matrix::<F>(page_field_elements + 64, seed);
             let canonical = derived
@@ -727,7 +722,7 @@ mod tests {
 
     #[test]
     fn different_shapes_from_same_flat() {
-        let seed = AkitaSetupSeed::shake256_paged_v1([13u8; 32]);
+        let seed = PublicMatrixSeed::shake256_paged_v1([13u8; 32]);
         let flat = derive_matrix::<SmallF>(12 * SMALL_D, &seed);
         let view_3x4 = flat.ring_view::<SMALL_D>(3, 4).unwrap();
         let view_2x6 = flat.ring_view::<SMALL_D>(2, 6).unwrap();

@@ -40,6 +40,7 @@ ark-serialize = { git = "https://github.com/a16z/arkworks-algebra", branch = "de
 # harness links one Akita and one `jolt-field` (scripts/check-shared-field-identity.sh).
 [patch."https://github.com/LayerZero-Labs/akita.git"]
 akita-algebra = { path = "../../crates/akita-algebra" }
+akita-challenges = { path = "../../crates/akita-challenges" }
 akita-config = { path = "../../crates/akita-config" }
 akita-error = { path = "../../crates/akita-error" }
 akita-params = { path = "../../crates/akita-params" }
