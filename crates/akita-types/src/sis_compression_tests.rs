@@ -6,8 +6,8 @@ mod tests {
     #[test]
     fn reachable_negative_binary_widths_need_no_exactness_tail() {
         use crate::prepare_compression_ntt_cache;
-        use akita_algebra::CyclotomicRing;
         use akita_params::FlatMatrix;
+        use jolt_field::CyclotomicRing;
 
         // First-map dimensions sit in both the protocol NTT band and the compression ladder.
         assert!(!ntt_cache_requires_exactness_tail::<Prime128OffsetA7F7, 16>(4_096, 1).unwrap());

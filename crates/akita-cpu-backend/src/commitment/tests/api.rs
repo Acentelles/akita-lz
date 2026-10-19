@@ -461,10 +461,10 @@ fn commitment_bytes_ignore_opening_method_and_profiles_reject_tensor_sources() {
     {
         let digits = canonical.inner().digits;
         let mut planes = vec![[0i8; D]; digits.num_digits];
-        akita_algebra::CyclotomicRing::<F, D>::from_coefficients(coefficients.try_into().unwrap())
+        jolt_field::CyclotomicRing::<F, D>::from_coefficients(coefficients.try_into().unwrap())
             .balanced_decompose_pow2_i8_into_with_params(
                 &mut planes,
-                &akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params::new(
+                &jolt_field::ring::cyclotomic::BalancedDecomposePow2Params::new(
                     digits.num_digits,
                     digits.log_basis,
                 ),
@@ -482,12 +482,12 @@ fn commitment_bytes_ignore_opening_method_and_profiles_reject_tensor_sources() {
         .enumerate()
     {
         let expected = a_matrix.row(row).unwrap().iter().zip(&source_digits).fold(
-            akita_algebra::CyclotomicRing::zero(),
+            jolt_field::CyclotomicRing::zero(),
             |sum, (matrix, digits)| {
                 sum + *matrix
-                    * akita_algebra::CyclotomicRing::from_coefficients(std::array::from_fn(
-                        |index| F::from_i8(digits[index]),
-                    ))
+                    * jolt_field::CyclotomicRing::from_coefficients(std::array::from_fn(|index| {
+                        F::from_i8(digits[index])
+                    }))
             },
         );
         assert_eq!(*actual, expected, "A commitment row {row} mismatch");

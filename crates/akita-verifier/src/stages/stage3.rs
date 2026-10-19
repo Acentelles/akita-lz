@@ -6,15 +6,15 @@ use crate::stages::ring_switch::RingSwitchVerifyOutput;
 use crate::SetupIndexWeightMle;
 #[cfg(test)]
 use akita_algebra::eq_poly::{EqPolynomial, SplitEqEvals};
-#[cfg(test)]
-use akita_algebra::ring::eval_ring_at_pows_fast;
-use akita_algebra::ring::evaluate_power_sequence_mle;
 use akita_error::AkitaError;
 use akita_params::{CommittedGroupParams, SETUP_SUMCHECK_DEGREE};
 use akita_serialization::AkitaSerialize;
 #[cfg(test)]
 use akita_types::AkitaExpandedSetup;
 use akita_types::{setup_prefix_coverage_eval_len, AkitaVerifierSetup, PreparedRelationAddress};
+#[cfg(test)]
+use jolt_field::ring::eval_ring_at_pows_fast;
+use jolt_field::ring::evaluate_power_sequence_mle;
 #[cfg(test)]
 use jolt_field::solinas::parallel::*;
 use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field, Ring};

@@ -4,12 +4,12 @@ use crate::opaque::witness_build::compression_emission::{
     emit_packed_negative_binary, quotient_digits,
 };
 use crate::{CpuBackend, PortableCompressionState};
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
 use akita_error::AkitaError;
 use akita_params::{
     field_modulus, r_decomp_levels, CommittedGroupParams, RelationQuotientPlan, RelationRhsLayout,
     RingRelationMode, WitnessLayout,
 };
+use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
 use jolt_field::{CanonicalEncoding, Field};
 
 /// One nonempty canonical compression-owned range of final witness coefficients.

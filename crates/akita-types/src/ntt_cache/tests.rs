@@ -1,6 +1,6 @@
 use super::*;
-use akita_algebra::CyclotomicRing;
 use core::mem::size_of;
+use jolt_field::CyclotomicRing;
 use jolt_field::{Prime128Offset275, Prime32Offset99, Prime64Offset59, Ring};
 
 fn flat_zeros<F: Field, const D: usize>(len: usize) -> akita_params::FlatMatrix<F> {

@@ -1,12 +1,13 @@
 //! Dense polynomial storage and constructors.
 
 use crate::sources::poly_helpers::SignedDigitBasis;
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
-use akita_algebra::CyclotomicRing;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_params::SUPPORTED_COMMITMENT_RING_DIMS;
 use akita_types::RingVec;
+use jolt_field::checked;
+use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
 use jolt_field::solinas::parallel::*;
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field};
 use std::borrow::Cow;
 use std::mem::size_of;

@@ -822,7 +822,7 @@ pub(super) fn fused_test_reduced_profile<F: Field + CanonicalEncoding, const D: 
     usize,
     usize,
 ) {
-    use akita_algebra::ntt::tables::I16_TAIL_PRIME;
+    use jolt_field::ntt::tables::I16_TAIL_PRIME;
     let params = CrtNttParamSet::<i16, 1, D>::new([I16_TAIL_PRIME]);
     let plan = plan_fused_quotients::<F, _, _, D>(t_hat, z, n_b, n_a, 1, 1, &params)
         .expect("reduced CRT plan");

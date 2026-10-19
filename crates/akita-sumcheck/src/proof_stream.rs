@@ -4,7 +4,8 @@ use crate::{advance_eq_factored_claim, SumcheckInstanceVerifier, SumcheckKernel}
 #[cfg(test)]
 use crate::{EqFactoredSumcheckInstanceProver, SumcheckInstanceProver};
 use akita_algebra::split_eq::GruenSplitEq;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
+use jolt_field::checked;
 use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field};
 use jolt_poly::{CompressedPoly, OmittedConstantPoly};
 use jolt_transcript::{Channel, ProverTranscript, SiteId, Sponge, VerifierTranscript};

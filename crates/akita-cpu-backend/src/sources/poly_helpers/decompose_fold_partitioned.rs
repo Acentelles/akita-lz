@@ -11,11 +11,12 @@ use super::{
     fill_rotated_challenge, sparse_mul_acc, sparse_mul_acc_i16, sparse_mul_acc_i16_pm1,
     sparse_mul_acc_pm1, SignedDigitBasis, ValidatedSparseChallenge, ValidatedSparseChallenges,
 };
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
-use akita_algebra::CyclotomicRing;
 use akita_challenges::SparseChallenge;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
+use jolt_field::checked;
+use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
 use jolt_field::solinas::parallel::*;
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field};
 use std::ops::Range;
 

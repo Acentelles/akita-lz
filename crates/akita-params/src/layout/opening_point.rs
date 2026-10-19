@@ -1,8 +1,9 @@
 //! Ring-native opening point for the Akita protocol.
 
-use akita_algebra::{eq_poly::EqPolynomial, CyclotomicRing};
+use akita_algebra::eq_poly::EqPolynomial;
 use akita_error::AkitaError;
 use akita_serialization::DEFAULT_MAX_SEQUENCE_LEN;
+use jolt_field::CyclotomicRing;
 use jolt_field::Field;
 
 /// Polynomial basis mode for the evaluation relation.

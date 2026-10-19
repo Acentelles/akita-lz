@@ -1,9 +1,10 @@
 //! Canonical proof-stream grammar for extension-opening reduction.
 
 use crate::{tensor_opening_split, GrindingReplay};
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_params::transcript_site::{ProtocolSiteId, SITE_FAMILY_EXTENSION_OPENING_REDUCTION};
 use akita_params::{GrindingSite, OpeningClaimsLayout};
+use jolt_field::checked;
 use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field};
 use jolt_transcript::Channel;
 

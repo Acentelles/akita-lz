@@ -9,11 +9,11 @@
 //! as a `rows × cols` matrix of `CyclotomicRing<F, D>` elements, enabling
 //! the same underlying vector to serve multiple roles with different shapes.
 
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
 use akita_serialization::{
     AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate,
 };
+use jolt_field::CyclotomicRing;
 use jolt_field::Field;
 use std::io::{Read, Write};
 

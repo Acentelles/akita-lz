@@ -4,12 +4,12 @@ mod ring_multiplier;
 mod subfield;
 
 use crate::{embed_ring_subfield_vector, FpExtEncoding, RingVec};
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
 use akita_params::{
     basis_weights, basis_weights_prefix, reduce_inner_opening_to_ring_element,
     ring_opening_point_from_field, BasisMode,
 };
+use jolt_field::CyclotomicRing;
 use jolt_field::{ExtField, Field};
 
 pub use ring_multiplier::{PreparedRingMultiplier, RingMultiplierOpeningPoint};
@@ -301,7 +301,7 @@ mod high_half_tests;
 mod tests {
     use super::*;
 
-    use akita_algebra::ring::{eval_ring_at_pows_fast, scalar_powers};
+    use jolt_field::ring::{eval_ring_at_pows_fast, scalar_powers};
 
     use jolt_field::{Ext2, ExtField, Fp32, FpExt4, FpExt8, MulBaseUnreduced, Ring, Zero};
 

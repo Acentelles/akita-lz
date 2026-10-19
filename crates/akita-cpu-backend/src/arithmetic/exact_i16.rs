@@ -1,11 +1,11 @@
 use super::CpuPreparedSetup;
 use crate::sources::block_digits::{DigitShape, I16Rows};
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
 use akita_params::balanced_signed_digit_abs_bound;
 use akita_types::{NttCacheKey, NttTransformDomain};
 #[allow(unused_imports)]
 use jolt_field::solinas::parallel::*;
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field};
 use std::ops::Range;
 

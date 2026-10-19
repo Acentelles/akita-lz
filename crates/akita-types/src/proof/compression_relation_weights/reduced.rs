@@ -1,9 +1,6 @@
 use super::*;
-use akita_algebra::{
-    eq_poly::EqPolynomial,
-    offset_eq::OffsetEqWindow,
-    ring::{eval_flat_ring_at_pows_fast, ResidueKernelPoint},
-};
+use akita_algebra::{eq_poly::EqPolynomial, offset_eq::OffsetEqWindow};
+use jolt_field::ring::{eval_flat_ring_at_pows_fast, ResidueKernelPoint};
 use jolt_field::{ExtField, Unreduced, Zero};
 
 #[derive(Clone, Debug)]

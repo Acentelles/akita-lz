@@ -1,6 +1,6 @@
 use super::*;
-use akita_algebra::ring::terminal_residue_kernel;
 use akita_challenges::{Challenges, SparseChallenge};
+use jolt_field::ring::terminal_residue_kernel;
 
 struct ValidatedSparseChallenge<'a> {
     challenge: &'a SparseChallenge,
@@ -46,7 +46,7 @@ fn embedded_terminal_functionals<E: Field>(
                 .get_mut(start..end)
                 .ok_or(AkitaError::InvalidProof)?
                 .copy_from_slice(native_equality);
-            terminal_residue_kernel(&embedded, alpha)
+            terminal_residue_kernel(&embedded, alpha).map_err(AkitaError::from)
         })
         .collect()
 }

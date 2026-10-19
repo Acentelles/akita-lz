@@ -317,7 +317,7 @@ impl FoldSuccessor<'_> {
             Self::Recursive(params) => params.blocks().positions_per_block,
             Self::Terminal(params) => params.blocks.positions_per_block,
         };
-        akita_error::checked::product([self.ring_dimension(), positions])
+        jolt_field::checked::product([self.ring_dimension(), positions])
             .ok_or_else(|| AkitaError::InvalidSetup("source block width overflow".into()))
     }
 

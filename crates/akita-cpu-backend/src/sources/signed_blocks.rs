@@ -5,9 +5,10 @@ use crate::sources::block_digits::{
     BlockDigits, DigitPlanes, DigitShape, I16Rows, I8Rows, RingValueSource, RingValues,
 };
 use crate::sources::poly_helpers::{I8DigitSpan, SignedDigitBasis};
-use akita_algebra::ring::cyclotomic::{BalancedDecomposePow2Params, SmallSignedValue};
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_params::SignedDigitKernel;
+use jolt_field::checked;
+use jolt_field::ring::cyclotomic::{BalancedDecomposePow2Params, SmallSignedValue};
 use jolt_field::{CanonicalEncoding, Field};
 use std::marker::PhantomData;
 use std::ops::Range;

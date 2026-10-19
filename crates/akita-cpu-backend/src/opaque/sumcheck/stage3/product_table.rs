@@ -2,7 +2,7 @@ use super::utils::{accumulate_left_round, fold_dense_left_round, fold_factor_in_
 #[cfg(test)]
 use super::utils::{accumulate_right_round, fold_left_round, fold_right_round, product_claim};
 use akita_algebra::eq_poly::EqPolynomial;
-use akita_algebra::ring::eval_flat_ring_at_pows_fast;
+use jolt_field::ring::eval_flat_ring_at_pows_fast;
 use jolt_poly::UnivariatePoly;
 
 use akita_error::AkitaError;
@@ -336,7 +336,7 @@ impl<E: Field + Ring> FactoredProductTerm<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use akita_algebra::ring::scalar_powers;
+    use jolt_field::ring::scalar_powers;
     use jolt_field::Prime128Offset275 as F;
 
     fn scalar(value: u64) -> F {

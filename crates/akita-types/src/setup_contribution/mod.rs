@@ -7,8 +7,9 @@
 //! setup scan, closed-form structured groups, and the setup-index weight MLE
 //! at the stage-3 challenge point) lives in `akita-verifier`.
 
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_params::{CommittedGroupParams, OpeningClaimsLayout};
+use jolt_field::checked;
 use jolt_field::{CanonicalEncoding, Field};
 
 mod geometry;

@@ -42,7 +42,7 @@ where
         &self,
         prepared: &Self::PreparedSetup,
         digit_vectors: &[&[[i8; D]]],
-    ) -> Result<Vec<Vec<akita_algebra::CyclotomicRing<F, D>>>, AkitaError> {
+    ) -> Result<Vec<Vec<jolt_field::CyclotomicRing<F, D>>>, AkitaError> {
         let input_width = validate_compression_batch_shape(digit_vectors)?;
         let total_ring_elements = prepared.expanded.shared_matrix.num_field_elements() / D;
         validate_digit_row_request(1, input_width, total_ring_elements)?;

@@ -1,16 +1,16 @@
 #![allow(missing_docs)]
 
-use akita_algebra::ntt::butterfly::{forward_ntt, inverse_ntt, NttTwiddles};
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
-use akita_algebra::tables::{
+use akita_params::FlatMatrix;
+use akita_types::{prepare_ntt_cache, NttCacheMode};
+use jolt_field::ntt::butterfly::{forward_ntt, inverse_ntt, NttTwiddles};
+use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_field::tables::{
     q128_primes, I16_TAIL_PRIME, Q128_NUM_PRIMES, Q32_MODULUS, Q32_NUM_PRIMES, Q32_PRIMES,
 };
-use akita_algebra::{
+use jolt_field::{
     balanced_decompose_coefficients_pow2_i8_into, mat_vec_i16_with_tail, CrtNttParamSet,
     CyclotomicCrtNtt, CyclotomicRing, DigitMontLut, I16TailParams, MontCoeff, NttKernelPlan,
 };
-use akita_params::FlatMatrix;
-use akita_types::{prepare_ntt_cache, NttCacheMode};
 use std::hint::black_box;
 
 use criterion::{criterion_group, criterion_main, Criterion};

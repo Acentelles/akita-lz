@@ -83,7 +83,7 @@ enforces. A planner estimate, certificate check, and runtime verifier must not
 carry separate versions of one bound.
 
 The repository follows one canonical function per concept. Generic checked
-integer formulas live in `akita_error::checked`. Schedule validation belongs to
+integer formulas live in `jolt_field::checked`. Schedule validation belongs to
 the configuration and schedule admission path. Transcript labels and order
 belong to the transcript implementation. Serialization validity belongs to the
 type that owns the encoding.

@@ -512,7 +512,6 @@ where
 mod tests {
     use super::*;
     use crate::benchmark_support::evaluation_trace_benchmark_case;
-    use akita_algebra::CyclotomicRing;
     use akita_config::proof_optimized::fp128;
     use akita_params::{
         basis_weights_prefix, ring_opening_point_from_field, BasisMode, CommittedGroupParams,
@@ -520,6 +519,7 @@ mod tests {
         WitnessLayout,
     };
     use akita_types::{PreparedOpeningPoint, RelationRangeImagePlan, RingMultiplierOpeningPoint};
+    use jolt_field::CyclotomicRing;
     use jolt_field::Zero;
 
     #[test]

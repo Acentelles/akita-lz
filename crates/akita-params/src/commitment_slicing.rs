@@ -2,7 +2,8 @@
 
 use std::ops::Range;
 
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
+use jolt_field::checked;
 
 use crate::compression::CommitmentPayloadMode;
 use crate::witness::dyadic_block_ranges;

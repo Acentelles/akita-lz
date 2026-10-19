@@ -44,10 +44,10 @@ mod scheme;
 #[path = "../tests/support/mod.rs"]
 mod test_support;
 
-pub use akita_algebra::fft;
-pub use akita_algebra::fft::SmoothFftField;
 pub use akita_config::SetupRequirements;
 pub use akita_error::AkitaError;
+pub use jolt_field::fft;
+pub use jolt_field::fft::SmoothFftField;
 // Specialized field surfaces mirror jolt-field's curated exports.
 #[doc(hidden)]
 pub use akita_cpu_backend::custom_source;

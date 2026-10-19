@@ -16,7 +16,7 @@ orchestration lives in `akita-pcs`.
 | `akita-error` | Shared protocol error and reusable checked integer formulas |
 | `jolt-field` (external) | Shared field traits, prime and extension fields, packed and unreduced kernels, parallel helpers |
 | `akita-serialization` | Serialization, validation, compression traits |
-| `akita-algebra` | Modules, NTTs, cyclotomic rings, polynomials |
+| `akita-algebra` | Multilinear, equality, split-equality, and offset-equality polynomial utilities |
 | `jolt-transcript` (external) | Fiat-Shamir proof channel (NARG prover/verifier transcripts, sponges, grinding) |
 | `akita-challenges` | Challenge sampling helpers |
 | `akita-sumcheck` | Sumcheck proofs, drivers, folding, batching |
@@ -155,8 +155,8 @@ graph TD
 
 ## Ownership Rules
 
-- `akita-error` owns `AkitaError` and the reusable exact `usize` formulas in
-  `akita_error::checked`. The formulas return `Option` and do not choose a
+- `akita-error` owns `AkitaError`. The reusable exact `usize` formulas live in
+  `jolt_field::checked`. The formulas return `Option` and do not choose a
   protocol error variant. Callers map failure at the boundary where its meaning
   is known. Generic checked helpers must not be redefined in downstream crates.
 - `akita-planner` is the offline schedule search and artifact emission engine.

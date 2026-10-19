@@ -2,10 +2,10 @@ use super::coefficient_packing;
 use super::d_rows;
 use super::finalize::{RelationDQuotientWitness, RingRelationGroupWitness};
 use crate::opaque::OperationCtx;
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
 use akita_error::AkitaError;
 use akita_params::CommittedGroupParams;
 use akita_types::{DigitBlocks, RingVec};
+use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
 use jolt_field::{CanonicalEncoding, Field};
 
 enum ConsumerOpeningKind<F: Field> {
@@ -24,7 +24,7 @@ pub(crate) struct PreparedOpeningWitness<F: Field> {
 }
 
 fn decompose_opening_rows<F: Field + CanonicalEncoding, const D: usize>(
-    pre_folded_e: &[&[akita_algebra::CyclotomicRing<F, D>]],
+    pre_folded_e: &[&[jolt_field::CyclotomicRing<F, D>]],
     role_subcolumns: usize,
     depth_open: usize,
     log_basis: u32,

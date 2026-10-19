@@ -127,7 +127,7 @@ fn decompose_commit_block_rows_into<F, const D_A: usize, const D_ROLE: usize>(
         let (subcolumns, remainder) = row.coefficients().as_chunks::<D_ROLE>();
         debug_assert!(remainder.is_empty());
         for (coefficients, subcolumn_dst) in subcolumns.iter().zip(row_dst.chunks_mut(num_digits)) {
-            akita_algebra::balanced_decompose_coefficients_pow2_i8_into(
+            jolt_field::balanced_decompose_coefficients_pow2_i8_into(
                 coefficients,
                 subcolumn_dst.as_flattened_mut(),
                 params,

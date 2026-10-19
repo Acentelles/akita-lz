@@ -2,7 +2,6 @@ use super::*;
 use akita_algebra::eq_poly::EqPolynomial;
 use akita_algebra::offset_eq::eq_eval_at_index;
 use akita_algebra::poly::multilinear_eval;
-use akita_algebra::ring::scalar_powers;
 use akita_challenges::SparseChallengeConfig;
 use akita_params::{
     gadget_row_scalars, CommitmentPayloadMode, FlatMatrix, GroupCommitPhaseParams,
@@ -14,6 +13,7 @@ use akita_params::{
 use akita_types::{
     build_reduced_compression_relation_weights, AkitaSetupDescriptor, NegativeBinarySupport,
 };
+use jolt_field::ring::scalar_powers;
 use jolt_field::{Ext2, ExtField, One, Prime64Offset59, Zero};
 
 type F = Prime64Offset59;

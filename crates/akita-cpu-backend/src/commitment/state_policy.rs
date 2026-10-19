@@ -122,10 +122,10 @@ impl<F: Field> PortableCompressionState<F> {
     #[cfg(test)]
     fn retained_bytes(&self) -> Result<usize, AkitaError> {
         let quotient_coefficients = match self.quotients() {
-            Some(quotients) => akita_error::checked::sum(quotients.iter().map(RingVec::coeff_len))
+            Some(quotients) => jolt_field::checked::sum(quotients.iter().map(RingVec::coeff_len))
                 .ok_or_else(|| {
-                    AkitaError::InvalidInput("compression material retained bytes overflow".into())
-                })?,
+                AkitaError::InvalidInput("compression material retained bytes overflow".into())
+            })?,
             None => 0,
         };
         self.witness()
@@ -439,7 +439,7 @@ impl<F: Field> ResidentCommitmentState<F> {
             }
             None => 0,
         };
-        akita_error::checked::sum([inner_bytes, compression_bytes]).ok_or_else(|| {
+        jolt_field::checked::sum([inner_bytes, compression_bytes]).ok_or_else(|| {
             AkitaError::InvalidInput("resident commitment retained-byte total overflow".into())
         })
     }
@@ -549,7 +549,7 @@ impl<F: Field> InnerRelationStateMaterial<F> {
         rows: Vec<RingVec<F>>,
     ) -> Result<Self, AkitaError> {
         let expected_coefficients =
-            akita_error::checked::product([plan.num_live_blocks, plan.n_a, plan.ring_dimension])
+            jolt_field::checked::product([plan.num_live_blocks, plan.n_a, plan.ring_dimension])
                 .ok_or_else(|| AkitaError::Internal("inner-relation row length overflow".into()))?;
         if rows.len() != source_count
             || rows.iter().any(|row| {
@@ -606,11 +606,11 @@ impl<F: Field> InnerRelationStateMaterial<F> {
 
     #[cfg(test)]
     fn retained_bytes(&self) -> Result<usize, AkitaError> {
-        let coefficients = akita_error::checked::sum(self.rows.iter().map(RingVec::coeff_len))
+        let coefficients = jolt_field::checked::sum(self.rows.iter().map(RingVec::coeff_len))
             .ok_or_else(|| {
                 AkitaError::InvalidInput("inner-relation coefficient total overflow".into())
             })?;
-        akita_error::checked::product([coefficients, size_of::<F>()]).ok_or_else(|| {
+        jolt_field::checked::product([coefficients, size_of::<F>()]).ok_or_else(|| {
             AkitaError::InvalidInput("inner-relation retained bytes overflow".into())
         })
     }
@@ -738,7 +738,7 @@ impl<F: Field + 'static> InnerRelationState<F> for PortableCommitmentHandle<F> {
         source_count: usize,
     ) -> Result<(), AkitaError> {
         let expected_coefficients =
-            akita_error::checked::product([plan.num_live_blocks, plan.n_a, plan.ring_dimension])
+            jolt_field::checked::product([plan.num_live_blocks, plan.n_a, plan.ring_dimension])
                 .ok_or_else(|| {
                     AkitaError::InvalidInput("inner-relation row length overflow".into())
                 })?;

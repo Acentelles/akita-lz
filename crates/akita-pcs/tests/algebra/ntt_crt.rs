@@ -1,10 +1,10 @@
-use akita_algebra::ntt::butterfly::{forward_ntt, inverse_ntt, NttTwiddles};
-use akita_algebra::tables::{
+use jolt_field::ntt::butterfly::{forward_ntt, inverse_ntt, NttTwiddles};
+use jolt_field::tables::{
     q128_primes, Q128_MODULUS, Q128_NUM_PRIMES, Q32_MODULUS, Q32_NUM_PRIMES, Q32_PRIMES,
     Q64_MODULUS, Q64_NUM_PRIMES, Q64_PRIMES,
 };
-use akita_algebra::NttPrime;
-use akita_algebra::{
+use jolt_field::NttPrime;
+use jolt_field::{
     CenteredMontLut, CrtNttParamSet, CyclotomicCrtNtt, CyclotomicRing, DigitMontLut, LimbQ,
     MontCoeff, NttKernelPlan,
 };

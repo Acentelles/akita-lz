@@ -5,16 +5,16 @@ use super::{
     mat_vec_mul_digits_i8_with_params, mat_vec_mul_ntt_digits_i8, mat_vec_mul_ntt_single_i8_cyclic,
     mat_vec_mul_unchecked, precompute_dense_mat_ntt_with_params,
 };
-use akita_algebra::ntt::{
-    tables::{Q128_NUM_PRIMES, Q32_NUM_PRIMES, Q64_NUM_PRIMES},
-    PrimeWidth,
-};
-use akita_algebra::{CrtNttParamSet, CyclotomicCrtNtt, CyclotomicRing};
 use akita_params::layout::{FlatMatrix, RingMatrixView};
 use akita_types::{
     prepare_ntt_cache, select_crt_ntt_params, NttCacheMode, PreparedNttCache, ProtocolCrtNttParams,
 };
+use jolt_field::ntt::{
+    tables::{Q128_NUM_PRIMES, Q32_NUM_PRIMES, Q64_NUM_PRIMES},
+    PrimeWidth,
+};
 use jolt_field::{CanonicalEncoding, Field, Fp64, One, Prime128Offset275, Prime64Offset59, Ring};
+use jolt_field::{CrtNttParamSet, CyclotomicCrtNtt, CyclotomicRing};
 
 fn field_source<F: Field + CanonicalEncoding, const D: usize>(
     blocks: &[&[CyclotomicRing<F, D>]],
@@ -78,7 +78,7 @@ fn field_matvec<
 ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, akita_error::AkitaError> {
     let (rings, ranges) = field_source(blocks);
     let decomposition =
-        akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params::new(num_digits, log_basis);
+        jolt_field::ring::cyclotomic::BalancedDecomposePow2Params::new(num_digits, log_basis);
     let source = super::LiveRings {
         coeffs: &rings,
         params: &decomposition,
@@ -111,7 +111,7 @@ fn mat_vec_mul_i8_dense_single_row_with_params<
 ) -> Result<Vec<CyclotomicRing<F, D>>, akita_error::AkitaError> {
     let (rings, ranges) = field_source(blocks);
     let decomposition =
-        akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params::new(num_digits, log_basis);
+        jolt_field::ring::cyclotomic::BalancedDecomposePow2Params::new(num_digits, log_basis);
     let source = super::LiveRings {
         coeffs: &rings,
         params: &decomposition,
@@ -137,7 +137,7 @@ fn mat_vec_mul_ntt_i8_dense_single_row<F: Field + CanonicalEncoding, const D: us
 ) -> Result<Vec<CyclotomicRing<F, D>>, akita_error::AkitaError> {
     let (rings, ranges) = field_source(blocks);
     let decomposition =
-        akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params::new(num_digits, log_basis);
+        jolt_field::ring::cyclotomic::BalancedDecomposePow2Params::new(num_digits, log_basis);
     let source = super::LiveRings {
         coeffs: &rings,
         params: &decomposition,

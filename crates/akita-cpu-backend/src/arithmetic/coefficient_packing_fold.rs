@@ -1,6 +1,7 @@
 use akita_challenges::SparseChallenge;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_params::SubringCoefficientPackingGeometry;
+use jolt_field::checked;
 use jolt_field::{ExtField, Field, Ring};
 use std::mem;
 

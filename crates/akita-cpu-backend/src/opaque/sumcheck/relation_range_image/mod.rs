@@ -87,9 +87,8 @@
 use akita_algebra::poly::trim_trailing_zeros;
 use akita_algebra::split_eq::{GruenSplitEq, PreparedLinearQRecovery};
 use akita_error::AkitaError;
-use akita_sumcheck::{
-    fold_evals_in_place, reduce_signed_accum, CompactPairFoldLut, SumcheckInstanceProver,
-};
+use akita_sumcheck::{fold_evals_in_place, CompactPairFoldLut, SumcheckInstanceProver};
+use jolt_field::reduce_signed_accum;
 use jolt_field::solinas::parallel::*;
 use jolt_field::{Field, Ring, Zero};
 use jolt_field::{Fold, Unreduced};

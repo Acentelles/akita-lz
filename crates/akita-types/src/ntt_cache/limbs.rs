@@ -305,7 +305,7 @@ impl<const D: usize> PreparedLimbMatrix<D> {
         log_basis: u32,
         num_rows: usize,
         rhs: &[[i16; D]],
-    ) -> Result<Vec<akita_algebra::CyclotomicRing<F, D>>, AkitaError> {
+    ) -> Result<Vec<jolt_field::CyclotomicRing<F, D>>, AkitaError> {
         let rhs_abs_bound = validate_i16_rhs(log_basis, rhs)?;
         let capacity = match &self.residues {
             LimbResidues::I32 { params, .. } => params.crt_capacity(),
@@ -353,8 +353,8 @@ impl<const D: usize> PreparedLimbMatrix<D> {
 mod tests {
     use super::super::exact::ExactCachePlan;
     use super::*;
-    use akita_algebra::CyclotomicRing;
     use akita_params::FlatMatrix;
+    use jolt_field::CyclotomicRing;
     use jolt_field::{Prime128Offset275, Prime32Offset99, Prime64Offset59};
 
     fn extreme_matrix<F: Field + CanonicalEncoding, const D: usize>(

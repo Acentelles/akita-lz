@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 
-use akita_algebra::fft::SmoothFftField;
-use akita_algebra::fft::{field_pow, primitive_nth_root, rs_extend_fft, SmoothDomain};
+use jolt_field::fft::SmoothFftField;
+use jolt_field::fft::{field_pow, primitive_nth_root, rs_extend_fft, SmoothDomain};
 use std::hint::black_box;
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
@@ -26,8 +26,8 @@ fn bench_forward(c: &mut Criterion) {
         if F::SMOOTH_SUBGROUP_ORDER % n != 0 {
             continue;
         }
-        let omega = primitive_nth_root::<F>(n);
-        let domain = SmoothDomain::new(omega, n);
+        let omega = primitive_nth_root::<F>(n).unwrap();
+        let domain = SmoothDomain::new(omega, n).unwrap();
         let mut rng = StdRng::seed_from_u64(0xff00 + n as u64);
         let input: Vec<F> = (0..n).map(|_| Field::random(&mut rng)).collect();
 
@@ -47,11 +47,11 @@ fn bench_inverse(c: &mut Criterion) {
         if F::SMOOTH_SUBGROUP_ORDER % n != 0 {
             continue;
         }
-        let omega = primitive_nth_root::<F>(n);
-        let domain = SmoothDomain::new(omega, n);
+        let omega = primitive_nth_root::<F>(n).unwrap();
+        let domain = SmoothDomain::new(omega, n).unwrap();
         let mut rng = StdRng::seed_from_u64(0xff01 + n as u64);
         let input: Vec<F> = (0..n).map(|_| Field::random(&mut rng)).collect();
-        let transformed = domain.forward(&input);
+        let transformed = domain.forward(&input).unwrap();
 
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, _| {
             b.iter(|| black_box(domain.inverse(black_box(&transformed))))
@@ -69,9 +69,9 @@ fn bench_rs_extend(c: &mut Criterion) {
         if F::SMOOTH_SUBGROUP_ORDER % n != 0 {
             continue;
         }
-        let omega_n = primitive_nth_root::<F>(n);
+        let omega_n = primitive_nth_root::<F>(n).unwrap();
         let omega_k = field_pow(omega_n, blowup as u64);
-        let domain_k = SmoothDomain::new(omega_k, k);
+        let domain_k = SmoothDomain::new(omega_k, k).unwrap();
         let mut rng = StdRng::seed_from_u64(0xff02 + k as u64);
         let evals: Vec<F> = (0..k).map(|_| Field::random(&mut rng)).collect();
 
@@ -87,8 +87,8 @@ fn bench_rs_extend(c: &mut Criterion) {
 fn bench_rs_expand_256_to_1024(c: &mut Criterion) {
     let domain_size = 1458usize;
     let k = 256usize;
-    let omega = primitive_nth_root::<F>(domain_size);
-    let domain = SmoothDomain::new(omega, domain_size);
+    let omega = primitive_nth_root::<F>(domain_size).unwrap();
+    let domain = SmoothDomain::new(omega, domain_size).unwrap();
 
     let mut rng = StdRng::seed_from_u64(0xff03);
     let base_evals: Vec<F> = (0..k).map(|_| Field::random(&mut rng)).collect();
@@ -99,11 +99,11 @@ fn bench_rs_expand_256_to_1024(c: &mut Criterion) {
     // evaluations at the remaining domain points).
     let mut padded_evals = vec![F::zero(); domain_size];
     padded_evals[..k].copy_from_slice(&base_evals);
-    let coeffs = domain.inverse(&padded_evals);
+    let coeffs = domain.inverse(&padded_evals).unwrap();
 
     c.bench_function("fft_rs_expand/256_to_1024_via_1458", |b| {
         b.iter(|| {
-            let all_evals = domain.coset_forward(black_box(&coeffs), F::one());
+            let all_evals = domain.coset_forward(black_box(&coeffs), F::one()).unwrap();
             black_box(&all_evals[k..k + 1024]);
             all_evals
         })
@@ -122,7 +122,7 @@ fn run_rs_expand_256_par<Fld>(
 {
     let k = 256usize;
     let count = 32_768usize;
-    let domain = SmoothDomain::new(omega, domain_size);
+    let domain = SmoothDomain::new(omega, domain_size).unwrap();
 
     let coeffs_batch: Vec<Vec<Fld>> = (0..count)
         .map(|i| {
@@ -130,7 +130,7 @@ fn run_rs_expand_256_par<Fld>(
             let base: Vec<Fld> = (0..k).map(|_| Field::random(&mut rng)).collect();
             let mut padded = vec![Fld::zero(); domain_size];
             padded[..k].copy_from_slice(&base);
-            domain.inverse(&padded)
+            domain.inverse(&padded).unwrap()
         })
         .collect();
 
@@ -138,7 +138,7 @@ fn run_rs_expand_256_par<Fld>(
         b.iter(|| {
             let results: Vec<Vec<Fld>> = coeffs_batch
                 .par_iter()
-                .map(|coeffs| domain.coset_forward(coeffs, Fld::one()))
+                .map(|coeffs| domain.coset_forward(coeffs, Fld::one()).unwrap())
                 .collect();
             black_box(&results);
         })
@@ -152,7 +152,7 @@ fn bench_rs_expand_256_to_1024_par(c: &mut Criterion) {
     // that still covers the 256+1024 RS-extend budget is `1458 = 2·3⁶`.
     {
         let domain_size = 1458usize;
-        let omega = primitive_nth_root::<F>(domain_size);
+        let omega = primitive_nth_root::<F>(domain_size).unwrap();
         run_rs_expand_256_par::<F>(
             c,
             "fft_rs_expand/256_to_1024_via_1458_x32768_par_A7F7",

@@ -6,9 +6,10 @@ use std::ops::Range;
 use akita_algebra::offset_eq::{OffsetEqWindow, MAX_COMPACT_STRIDE_TERMS};
 #[cfg(test)]
 use akita_algebra::poly::multilinear_eval;
-use akita_algebra::ring::scalar_powers;
 use akita_challenges::Challenges;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
+use jolt_field::checked;
+use jolt_field::ring::scalar_powers;
 use jolt_field::{canonical_extension_basis, CanonicalEncoding, ExtField, Field};
 
 use super::{

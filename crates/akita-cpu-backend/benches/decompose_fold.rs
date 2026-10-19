@@ -1,13 +1,13 @@
 #![allow(missing_docs)]
 
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
-use akita_algebra::CyclotomicRing;
 use akita_challenges::{SparseChallenge, SparseChallengeConfig};
 use akita_cpu_backend::benchmark_support::balanced_ring_decompose_fold_partitioned;
 use akita_cpu_backend::standalone::{
     decompose_recursive_witness, recursive_witness_from_i8_digits,
 };
 use akita_params::sis::compute_num_digits_field_width;
+use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_field::CyclotomicRing;
 use std::hint::black_box;
 
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};

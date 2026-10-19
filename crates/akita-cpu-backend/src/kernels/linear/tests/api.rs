@@ -52,8 +52,8 @@ fn i8_kernels_reject_crt_parameters_too_small_for_the_field() {
     use crate::kernels::linear::single_cyclic::{
         mat_vec_mul_single_i8_cyclic_with_params, mat_vec_mul_single_i8_with_params,
     };
-    use akita_algebra::ntt::tables::Q32_PRIMES;
     use akita_error::AkitaError;
+    use jolt_field::ntt::tables::Q32_PRIMES;
 
     type F = Prime128Offset275;
     const D: usize = 64;

@@ -6,11 +6,11 @@ use super::{
     ValidatedSparseChallenges,
 };
 use crate::sources::block_digits::{CachedDigits, DigitShape};
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
-use akita_algebra::CyclotomicRing;
 use akita_challenges::SparseChallenge;
 use akita_error::AkitaError;
 use akita_params::sis::compute_num_digits_field_width;
+use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Fp64, Prime128Offset275, Ring, Zero};
 
 fn cached_fold<const D: usize>(
@@ -670,9 +670,8 @@ fn fp128_boundary_values_fold_through_rotated_and_sparse_paths() {
     for log_basis in [4u32, 8, 9, 11] {
         let num_digits = compute_num_digits_field_width(128, log_basis);
         let params = BalancedDecomposePow2Params::new(num_digits, log_basis);
-        let threshold = akita_algebra::ring::cyclotomic::decompose_centering_threshold(
-            num_digits, log_basis, q,
-        );
+        let threshold =
+            jolt_field::ring::cyclotomic::decompose_centering_threshold(num_digits, log_basis, q);
         let i128_max = i128::MAX as u128;
         let boundary_values = [
             0,

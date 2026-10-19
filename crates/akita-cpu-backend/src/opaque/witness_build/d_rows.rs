@@ -5,10 +5,10 @@ use crate::opaque::RingSwitchRelationView;
 use crate::opaque::{
     OperationCtx, RingSwitchProveBackend, RingSwitchRelationKernel, RingSwitchRelationPlan,
 };
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
 use akita_params::RingRelationMode;
 use akita_types::DigitBlocks;
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field};
 
 use super::relation_quotient::quotient_from_cyclic_and_reduced;

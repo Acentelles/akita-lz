@@ -123,7 +123,7 @@ where
             profile.inner.digits.num_digits,
         );
         let modulus = akita_params::field_modulus::<F>()?;
-        let centering_threshold = akita_algebra::ring::cyclotomic::decompose_centering_threshold(
+        let centering_threshold = jolt_field::ring::cyclotomic::decompose_centering_threshold(
             profile.inner.digits.num_digits,
             profile.inner.digits.log_basis,
             modulus,

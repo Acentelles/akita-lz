@@ -2,8 +2,8 @@ use super::*;
 use crate::opaque::eor::ExtensionOpeningSession;
 use crate::opaque::{CpuBackend, RootOpeningSource, RootPolyShape};
 use crate::sources::packed_digits::PackedSignedDigits;
-use akita_algebra::CyclotomicRing;
 use akita_challenges::SparseChallenge;
+use jolt_field::CyclotomicRing;
 use jolt_field::{One, Prime128OffsetA7F7 as F, Ring, Zero};
 
 #[test]

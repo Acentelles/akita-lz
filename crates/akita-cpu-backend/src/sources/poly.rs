@@ -108,7 +108,7 @@ where
 /// centering convention is written once: a canonical
 /// residue at or below `centering_threshold` is the positive side, anything above
 /// it is negative with magnitude `modulus - canonical`. That is the same split
-/// `akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params` applies when
+/// `jolt_field::ring::cyclotomic::BalancedDecomposePow2Params` applies when
 /// it selects the bias for a residue. The range check tracks the `u128`
 /// magnitude on each side because `modulus - canonical` can exceed `i128::MAX`
 /// for a full-width residue.
@@ -195,7 +195,7 @@ fn evaluate_root_polynomial_with_kernel<F, P, const D: usize>(
     num_positions_per_block: usize,
     num_live_blocks: usize,
     basis: akita_params::BasisMode,
-    evaluate: impl FnOnce(&[F], &[F], usize) -> Result<akita_algebra::CyclotomicRing<F, D>, AkitaError>,
+    evaluate: impl FnOnce(&[F], &[F], usize) -> Result<jolt_field::CyclotomicRing<F, D>, AkitaError>,
 ) -> Result<F, AkitaError>
 where
     F: Field + CanonicalEncoding,

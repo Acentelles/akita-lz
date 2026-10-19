@@ -276,9 +276,9 @@ impl CpuWitnessHandle {
             witness_layout.live_coeff_len(),
         )?;
         let digit_range = akita_params::DigitRangePlan::new(
-            akita_error::checked::pow2(level.open().digits.log_basis as usize).ok_or_else(
-                || AkitaError::Internal("validated relation digit range basis overflow".into()),
-            )?,
+            jolt_field::checked::pow2(level.open().digits.log_basis as usize).ok_or_else(|| {
+                AkitaError::Internal("validated relation digit range basis overflow".into())
+            })?,
         )?;
         self.relation_plan = Some(Arc::new(akita_types::RelationRangeImagePlan::new(
             akita_params::RelationWitnessGeometry::for_level(

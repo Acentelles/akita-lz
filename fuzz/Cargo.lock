@@ -10,7 +10,6 @@ dependencies = [
  "akita-serialization",
  "jolt-field",
  "jolt-poly",
- "rand_core 0.6.4",
  "tracing",
 ]
 
@@ -18,6 +17,7 @@ dependencies = [
 name = "akita-error"
 version = "0.1.0"
 dependencies = [
+ "jolt-field",
  "jolt-transcript",
  "thiserror",
 ]

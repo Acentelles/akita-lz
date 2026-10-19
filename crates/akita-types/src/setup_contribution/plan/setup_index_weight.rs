@@ -1,9 +1,9 @@
 use super::*;
-use akita_algebra::fft::field_pow;
-use akita_algebra::{
-    offset_eq::{materialize_eq_tensor_left, EqPairTensorAxis, EqPairTensorFamily, OffsetEqWindow},
-    ring::{evaluate_power_sequence_mle, scalar_powers_with_stride},
+use akita_algebra::offset_eq::{
+    materialize_eq_tensor_left, EqPairTensorAxis, EqPairTensorFamily, OffsetEqWindow,
 };
+use jolt_field::fft::field_pow;
+use jolt_field::ring::{evaluate_power_sequence_mle, scalar_powers_with_stride};
 
 struct GroupSetupIndexWeights<E> {
     projection_scales: [Option<Vec<E>>; 3],
@@ -136,7 +136,9 @@ impl<E: Field> SetupContributionPlan<E> {
             if ratio == 1 {
                 Ok(None)
             } else {
-                scalar_powers_with_stride(alpha, base_ring_dim, ratio).map(Some)
+                scalar_powers_with_stride(alpha, base_ring_dim, ratio)
+                    .map(Some)
+                    .map_err(AkitaError::from)
             }
         };
         Ok([

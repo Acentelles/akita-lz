@@ -1,17 +1,17 @@
 use std::hint::black_box;
 
-use akita_algebra::ntt::butterfly::{forward_ntt, inverse_ntt};
-use akita_algebra::ntt::prime::I32_LAZY_DOT_BATCH;
-use akita_algebra::ntt::NttTwiddles;
-use akita_algebra::tables::{
+use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
+use jolt_field::ntt::butterfly::{forward_ntt, inverse_ntt};
+use jolt_field::ntt::prime::I32_LAZY_DOT_BATCH;
+use jolt_field::ntt::NttTwiddles;
+use jolt_field::tables::{
     q128_primes, I16_TAIL_PRIME, Q128_NUM_PRIMES, Q32_NUM_PRIMES, Q32_PRIMES, Q64_NUM_PRIMES,
     Q64_PRIMES,
 };
-use akita_algebra::{
+use jolt_field::{
     CenteredMontLut, CrtNttParamSet, CyclotomicCrtNtt, DigitMontLut, MontCoeff, NttKernelPlan,
     NttPrime,
 };
-use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 
 fn input<const K: usize, const D: usize>(
     primes: &[NttPrime<i32>; K],

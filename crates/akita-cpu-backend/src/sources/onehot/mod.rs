@@ -19,12 +19,12 @@
 //!     D-free; ring-shaped ops take the kernel dispatch dimension as a
 //!     method-level const generic.
 
-use akita_algebra::ring::cyclotomic::{NegacyclicShiftWindows, WideCyclotomicRing};
-use akita_algebra::CyclotomicRing;
 use akita_challenges::SparseChallenge;
 use akita_error::AkitaError;
 use akita_params::RingMatrixView;
+use jolt_field::ring::cyclotomic::{NegacyclicShiftWindows, WideCyclotomicRing};
 use jolt_field::solinas::parallel::*;
+use jolt_field::CyclotomicRing;
 use jolt_field::{AdditiveGroup, CanonicalEncoding, ExtField, Field};
 use jolt_field::{Unreduced, WithCommitAccumulator};
 use std::marker::PhantomData;

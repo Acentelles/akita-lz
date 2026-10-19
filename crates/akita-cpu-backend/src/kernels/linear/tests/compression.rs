@@ -2,9 +2,9 @@ use super::schoolbook_digit_mat_vec;
 use crate::kernels::linear::{
     mat_vec_mul_ntt_digits_i8, mat_vec_mul_ntt_single_i8_cyclic, validate_compression_batch_shape,
 };
-use akita_algebra::CyclotomicRing;
 use akita_params::layout::FlatMatrix;
 use akita_types::prepare_compression_ntt_cache;
+use jolt_field::CyclotomicRing;
 use jolt_field::{
     CanonicalEncoding, Field, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59, Ring,
 };

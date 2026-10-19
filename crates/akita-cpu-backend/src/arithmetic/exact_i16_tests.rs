@@ -5,10 +5,10 @@ use crate::sources::block_digits::{DigitShape, LiveRings};
 use crate::sources::packed_digits::PackedSignedDigits;
 use crate::sources::poly_helpers::SignedDigitBasis;
 use crate::validation::signed_digit_kernel_for_setup;
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
-use akita_algebra::CyclotomicRing;
 use akita_params::sis::compute_num_digits_field_width;
 use akita_types::{NttCacheKey, NttTransformDomain};
+use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, One, Ring};
 
 #[test]

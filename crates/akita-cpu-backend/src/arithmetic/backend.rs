@@ -1,9 +1,9 @@
 use crate::arithmetic::requirements::RoutedNttRequirement;
 #[cfg(test)]
 use crate::AkitaProverSetup;
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
 use akita_types::{AkitaExpandedSetup, NttCacheKey};
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field};
 #[cfg(test)]
 use std::sync::Arc;

@@ -18,10 +18,7 @@ mod transcript_grinding_binding;
 pub use transcript_grinding_binding::TranscriptGrindingBinding;
 
 use crate::AkitaSetupSeed;
-use akita_error::{
-    narrowing::{usize_to_u32, usize_to_u8},
-    AkitaError,
-};
+use akita_error::AkitaError;
 use akita_params::descriptor_bytes::{
     digest_descriptor_bytes, sis_modulus_profile_tag, DescriptorDigest,
     AKITA_INSTANCE_DESCRIPTOR_VERSION,
@@ -34,6 +31,7 @@ use akita_serialization::{
     AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate,
     DEFAULT_MAX_SEQUENCE_LEN,
 };
+use jolt_field::narrowing::{usize_to_u32, usize_to_u8};
 use jolt_field::{CanonicalEncoding, ExtField, Field};
 use std::io::{Read, Write};
 

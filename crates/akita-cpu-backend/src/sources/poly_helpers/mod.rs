@@ -15,10 +15,10 @@ pub(crate) use windowed_accum::{I8DigitSpan, WindowedChallenge};
 
 #[cfg(target_arch = "aarch64")]
 use crate::kernels::neon_decompose_fold as decompose_fold_neon;
-use akita_algebra::CyclotomicRing;
 use akita_challenges::SparseChallenge;
 use akita_error::AkitaError;
 use akita_types::SubfieldMultiplierOpeningPoint;
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field};
 
 #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
@@ -126,7 +126,7 @@ impl<'a, const D: usize> ValidatedSparseChallenges<'a, D> {
 
 /// Whether the SIMD `decompose-fold` dispatch is enabled.
 ///
-/// On aarch64 this delegates to [`akita_algebra::ntt::neon::use_neon_ntt`]
+/// On aarch64 this delegates to [`jolt_field::ntt::neon::use_neon_ntt`]
 /// so a single `AKITA_SCALAR_NTT=1` env var disables both the NEON NTT and
 /// the NEON decompose-fold for A/B benchmarks. On x86 we read the same env
 /// var locally (the NEON module isn't compiled, so we can't share the
@@ -138,7 +138,7 @@ impl<'a, const D: usize> ValidatedSparseChallenges<'a, D> {
 fn use_simd_decompose_fold() -> bool {
     #[cfg(target_arch = "aarch64")]
     {
-        akita_algebra::ntt::neon::use_neon_ntt()
+        jolt_field::ntt::neon::use_neon_ntt()
     }
     #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
     {

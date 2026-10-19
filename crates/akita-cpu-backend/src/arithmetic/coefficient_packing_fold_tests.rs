@@ -679,10 +679,10 @@ fn malformed_reference_inputs_reject_without_panicking() {
 
 mod packing_relation {
     use super::*;
-    use akita_algebra::ring::scalar_powers;
     use akita_params::SisModulusProfileId;
     use akita_types::{coefficient_packing_fixture, RingRelationGroupOpeningView};
     use jolt_field::canonical_extension_basis;
+    use jolt_field::ring::scalar_powers;
 
     #[test]
     fn every_extension_plane_is_bound_by_the_packing_divisibility_identity() {

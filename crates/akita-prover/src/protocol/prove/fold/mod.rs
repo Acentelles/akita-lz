@@ -152,7 +152,7 @@ where
             group_lp.opening_method(),
             akita_params::OpeningMethod::EvaluationTrace
         ) {
-            let target_len = akita_error::checked::sum([
+            let target_len = jolt_field::checked::sum([
                 group_alpha_bits,
                 group_lp.position_index_bits(),
                 group_lp.block_index_bits(),

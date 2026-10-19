@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import functools
+import json
 import math
 import pathlib
 import re
+import subprocess
 import sys
 
 PROFILES = [
@@ -129,12 +132,29 @@ def fmt_primes(values: list[int]) -> str:
     return ", ".join(str(value) for value in values)
 
 
-def rust_ntt_path(filename: str) -> pathlib.Path:
-    return (
-        pathlib.Path(__file__).resolve().parents[1]
-        / "crates/akita-algebra/src/ntt"
-        / filename
+@functools.cache
+def jolt_algebra_ntt_dir() -> pathlib.Path:
+    # The NTT tables live in jolt-algebra; resolve the exact source Cargo
+    # builds Akita against.
+    metadata = json.loads(
+        subprocess.run(
+            ["cargo", "metadata", "--format-version", "1"],
+            cwd=pathlib.Path(__file__).resolve().parents[1],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
     )
+    manifest = next(
+        package["manifest_path"]
+        for package in metadata["packages"]
+        if package["name"] == "jolt-algebra"
+    )
+    return pathlib.Path(manifest).parent / "src/ntt"
+
+
+def rust_ntt_path(filename: str) -> pathlib.Path:
+    return jolt_algebra_ntt_dir() / filename
 
 
 def extract_rust_prime_const(filename: str, name: str) -> list[int]:

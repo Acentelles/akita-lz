@@ -14,7 +14,7 @@ orchestration lives in `akita-pcs`.
 | `akita-error` | Shared protocol error and reusable checked integer formulas for exact sizes, offsets, and ranges |
 | `jolt-field` (external) | Shared field traits, prime and extension fields, packed and unreduced kernels, parallel helpers |
 | `akita-serialization` | Serialization, validation, and compression traits |
-| `akita-algebra` | Modules, vectors, NTTs, cyclotomic rings, sparse challenges, polynomials |
+| `akita-algebra` | Multilinear, equality, split-equality, and offset-equality polynomial utilities |
 | `jolt-transcript` (external) | Fiat-Shamir proof channel: prover/verifier transcripts, sponges, grinding, event log |
 | `akita-challenges` | Fiat-Shamir challenge sampling helpers |
 | `akita-sumcheck` | Sumcheck proofs, drivers, compact folding, batching, accumulation |
@@ -34,8 +34,8 @@ CI enforces one-way boundaries via `scripts/check-crate-deps.sh`.
 
 Key structural facts:
 
-- `akita-error` is the lowest shared failure layer. It owns `AkitaError` and
-  reusable exact `usize` formulas in `akita_error::checked`. These formulas
+- `akita-error` is the lowest shared failure layer. It owns `AkitaError`.
+  Reusable exact `usize` formulas live in `jolt_field::checked`. These formulas
   return `Option`; each caller maps failure to the `AkitaError` variant that
   describes its protocol boundary. Field arithmetic lives in the shared
   external `jolt-field` crate.
@@ -144,7 +144,7 @@ Mixed-dimension malformed proof rejection is covered by
 
 | Type | Role |
 |------|------|
-| `AkitaError`, `akita_error::checked` | Shared protocol failures and reusable checked formulas for sizes, offsets, ranges, alignment, and exact division |
+| `AkitaError`, `jolt_field::checked` | Shared protocol failures and reusable checked formulas for sizes, offsets, ranges, alignment, and exact division |
 | `AkitaCommitmentScheme<Cfg>` | Stateful top-level PCS orchestration that owns one trusted catalog for setup, commitment, proving, and verification (`akita-pcs`) |
 | `AkitaProverSetup<F>` | Prover setup wrapper around a materialized prefix of the dimension-free public field stream |
 | `Commitment<F>`, `RingVec<F>` | protocol commitment and field-vector storage |

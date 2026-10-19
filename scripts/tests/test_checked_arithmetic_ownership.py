@@ -45,7 +45,7 @@ class CheckedArithmeticOwnershipTests(unittest.TestCase):
         self.assertEqual(
             violations,
             [],
-            "generic checked arithmetic belongs in akita_error::checked:\n"
+            "generic checked arithmetic belongs in jolt_field::checked:\n"
             + "\n".join(violations),
         )
 

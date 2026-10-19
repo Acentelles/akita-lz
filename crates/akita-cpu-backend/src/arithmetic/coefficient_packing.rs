@@ -1,8 +1,9 @@
 //! Shared checked construction for coefficient-packing backend kernels.
 
 use crate::opaque::SubringCoefficientPackingPlan;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_types::FpExtEncoding;
+use jolt_field::checked;
 use jolt_field::solinas::parallel::*;
 use jolt_field::{AdditiveGroup, ExtField, Field, MulBaseUnreduced, Unreduced};
 
@@ -265,10 +266,10 @@ mod tests {
         SubringCoefficientPackingPlan,
     };
     use crate::opaque::{DensePoly, OneHotPoly, RecursiveWitnessFlat};
-    use akita_algebra::CyclotomicRing;
     use akita_error::AkitaError;
     use akita_params::{BasisMode, SubringCoefficientPackingGeometry};
     use akita_types::{FpExtEncoding, PreparedSubringCoefficientPackingPoint};
+    use jolt_field::CyclotomicRing;
     use jolt_field::{
         CanonicalEncoding, Ext2, ExtField, Field, FpExt4, One, Prime128OffsetA7F7, Prime32Offset99,
         Prime64Offset59, Ring,

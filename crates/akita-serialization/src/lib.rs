@@ -6,6 +6,7 @@
 
 mod field_impls;
 mod poly_impls;
+mod ring_impls;
 
 use std::io::{Cursor, Read, Write};
 

@@ -1,9 +1,9 @@
 use super::PhysicalBWeightTerm;
-#[cfg(test)]
-use akita_algebra::ring::eval_flat_ring_at_pows_fast;
-use akita_algebra::ring::eval_ring_at_pows_fast;
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
+#[cfg(test)]
+use jolt_field::ring::eval_flat_ring_at_pows_fast;
+use jolt_field::ring::eval_ring_at_pows_fast;
+use jolt_field::CyclotomicRing;
 use jolt_field::{ExtField, Field, MulBaseUnreduced};
 
 #[derive(Clone)]

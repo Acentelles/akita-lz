@@ -6,11 +6,12 @@ use crate::commitment::{
     IntoPortableCommitmentState,
 };
 use crate::opaque::DensePoly;
-#[cfg(test)]
-use akita_algebra::CyclotomicRing;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_params::SetupPrefixSlotId;
 use akita_types::{AkitaExpandedSetup, RingVec, SetupPrefixPublicCommitment};
+use jolt_field::checked;
+#[cfg(test)]
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field};
 
 pub(crate) struct ValidatedSetupPrefixCommitment<'a> {

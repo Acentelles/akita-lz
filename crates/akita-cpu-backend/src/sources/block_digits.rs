@@ -4,11 +4,11 @@ use crate::sources::packed_digits::PackedSignedDigitView;
 use crate::sources::poly_helpers::{
     I8DigitSpan, SignedDigitBasis, ValidatedSparseChallenge, WidePlan, WindowedChallenge,
 };
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
-use akita_algebra::CyclotomicRing;
 use akita_challenges::SparseChallenge;
 use akita_error::AkitaError;
 use akita_params::SignedDigitKernel;
+use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field};
 use std::ops::Range;
 

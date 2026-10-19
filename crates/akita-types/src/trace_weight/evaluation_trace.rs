@@ -3,8 +3,8 @@
 use std::ops::Range;
 use std::sync::Arc;
 
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, ExtField, Field, Ring};
 
 use crate::field_reduction::trace_open_ring_row;

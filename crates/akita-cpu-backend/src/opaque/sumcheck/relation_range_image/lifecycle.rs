@@ -1,5 +1,5 @@
 use super::*;
-use akita_error::checked;
+use jolt_field::checked;
 use jolt_poly::UnivariatePoly;
 
 fn stage2_geometry(

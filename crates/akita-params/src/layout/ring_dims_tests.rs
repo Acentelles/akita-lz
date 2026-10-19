@@ -203,7 +203,7 @@ fn reduced_residue_oracle_tracks_every_admitted_commitment_dimension() {
             })
             .collect::<Vec<_>>();
         assert_eq!(
-            akita_algebra::residue_kernel(&coefficients, alpha).unwrap(),
+            jolt_field::residue_kernel(&coefficients, alpha).unwrap(),
             expected,
             "residue kernel disagrees at admitted dimension {dimension}"
         );

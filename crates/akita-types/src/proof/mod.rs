@@ -103,7 +103,6 @@ pub use tail_segments::{
 };
 pub use witness_emission::{emit_witness_e_planes, emit_witness_t_planes, WitnessCoefficientSink};
 
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
 use akita_params::EXTENSION_OPENING_REDUCTION_DEGREE;
 use akita_serialization::{AkitaDeserialize, AkitaSerialize};
@@ -112,5 +111,6 @@ use akita_serialization::{Valid, Validate};
 use akita_sumcheck::uniform_sumcheck_shape;
 #[cfg(test)]
 use jolt_field::CanonicalEncoding;
+use jolt_field::CyclotomicRing;
 use jolt_field::Field;
 use std::io::{Read, Write};

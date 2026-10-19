@@ -13,7 +13,7 @@ mod utils;
 use crate::opaque::OperationBinding;
 use crate::opaque::{CpuBackend, OpaqueStage3Kernel, Stage3Request};
 use akita_algebra::eq_poly::EqPolynomial;
-use akita_algebra::ring::scalar_powers;
+use jolt_field::ring::scalar_powers;
 use jolt_poly::UnivariatePoly;
 
 use akita_error::AkitaError;

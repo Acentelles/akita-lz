@@ -5,11 +5,11 @@ use crate::opaque::*;
 use crate::opaque::{
     FoldRelationKernel, FoldRelationOutput, OpeningBatchKernel, RelationQuotientRow,
 };
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
 use akita_params::gadget_row_scalars;
 use akita_types::RingMultiplierOpeningPoint;
 use jolt_field::solinas::parallel::*;
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field};
 use std::marker::PhantomData;
 

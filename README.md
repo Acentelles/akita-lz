@@ -8,7 +8,7 @@ The codebase is being decomposed into a focused `akita-*` crate family rather th
 The current workspace exposes the main ownership boundaries under `crates/`:
 
 - `akita-error` owns the shared protocol error and reusable checked integer formulas for exact sizes, offsets, and ranges.
-- Jolt's `jolt-field` package owns shared field arithmetic; `akita-serialization` and `akita-algebra` own Akita encoding, NTT, ring, and polynomial utilities.
+- Jolt's `jolt-field` package owns shared field, cyclotomic ring, NTT, and FFT arithmetic; `akita-serialization` and `akita-algebra` own Akita encoding and polynomial utilities.
 - `akita-challenges` and `akita-sumcheck` own challenge sampling and generic sumcheck machinery; Fiat-Shamir runs on the caller-supplied `jolt-transcript` proof channel.
 - `akita-types` owns shared proof, setup, schedule, layout, SIS, and commitment data shapes used by both roles.
 - `akita-planner` is the `Cfg`-free offline schedule engine: candidate expansion, schedule-search DP, and external artifact emitter. It sits *below* `akita-config`.

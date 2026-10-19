@@ -7,12 +7,12 @@ use super::poly::DensePoly;
 use crate::opaque::DecomposeFoldWitness;
 use crate::sources::block_digits::{CachedDigits, DigitShape, LiveRings};
 use crate::sources::poly_helpers::{element_partitioned_decompose_fold, SignedDigitBasis};
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
-use akita_algebra::CyclotomicRing;
 use akita_challenges::SparseChallenge;
 use akita_error::AkitaError;
 use akita_types::SubfieldMultiplierOpeningPoint;
+use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
 use jolt_field::solinas::parallel::*;
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field};
 
 /// Reject a digit shape the dense fold kernels cannot run, before any cache

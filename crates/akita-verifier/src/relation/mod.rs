@@ -1,7 +1,6 @@
 //! Prepared ring-switch relation evaluator and its public replay inputs.
 
 use akita_algebra::eq_poly::EqPolynomial;
-use akita_algebra::ring::scalar_powers;
 use akita_challenges::Challenges;
 use akita_error::AkitaError;
 use akita_params::{
@@ -14,6 +13,7 @@ use akita_types::{
     RingRelationGroupOpeningView, RingRelationInstance, SetupContributionGroupInputs,
     SetupContributionPlan,
 };
+use jolt_field::ring::scalar_powers;
 use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
 use std::sync::Arc;
 

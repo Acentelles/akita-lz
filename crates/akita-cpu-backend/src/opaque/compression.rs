@@ -100,8 +100,8 @@ struct WorkItem<Id, F> {
 }
 
 fn quotient_from_products<F: Field, const D: usize>(
-    cyclic: &[akita_algebra::CyclotomicRing<F, D>],
-    negacyclic: &[akita_algebra::CyclotomicRing<F, D>],
+    cyclic: &[jolt_field::CyclotomicRing<F, D>],
+    negacyclic: &[jolt_field::CyclotomicRing<F, D>],
 ) -> Result<RingVec<F>, AkitaError> {
     if cyclic.len() != negacyclic.len() {
         return Err(AkitaError::Internal(

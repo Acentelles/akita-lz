@@ -1,4 +1,4 @@
-use akita_algebra::CyclotomicRing;
+use jolt_field::CyclotomicRing;
 use jolt_field::{Fp32, Fp64, One, Ring, Zero};
 
 #[test]

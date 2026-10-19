@@ -1,7 +1,7 @@
 //! Exact negacyclic NTT kernels for terminal verifier matrix relations.
 
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field};
 
 use crate::prepared_cache::{TerminalNttCache, TERMINAL_I16_LOG_BASIS};
@@ -36,14 +36,14 @@ mod tests {
     use crate::prepared_cache::{
         terminal_ntt_cache_requirement, TerminalNttCacheRequirement, TERMINAL_I16_ABS_BOUND,
     };
-    use akita_algebra::ntt::ifma52::ifma52_enabled;
-    use akita_algebra::ntt::tables::{Q128_NUM_PRIMES, Q32_NUM_PRIMES};
     use akita_config::proof_optimized::fp128::OneHot;
     use akita_params::{FlatMatrix, PolynomialGroupLayout, ScheduleLookupKey};
     use akita_types::{
         ntt_cache_requires_exactness_tail, prepare_ntt_cache, AkitaExpandedSetup,
         AkitaSetupDescriptor, AkitaVerifierSetup, NttCacheMode, SetupPrefixVerifierRegistry,
     };
+    use jolt_field::ntt::ifma52::ifma52_enabled;
+    use jolt_field::ntt::tables::{Q128_NUM_PRIMES, Q32_NUM_PRIMES};
     use jolt_field::Ring;
     use jolt_field::{Prime128Offset275 as F, Prime32Offset99 as F32, Prime64Offset59 as F64};
     use std::sync::Arc;

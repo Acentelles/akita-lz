@@ -1,8 +1,8 @@
 use super::poly::DensePoly;
 use crate::commitment::CommitmentSource;
 use crate::opaque::RootPolyMeta;
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
+use jolt_field::CyclotomicRing;
 use jolt_field::Prime128OffsetA7F7 as F;
 use jolt_field::{CanonicalEncoding, Ring, Zero};
 

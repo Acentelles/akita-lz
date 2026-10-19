@@ -1,6 +1,6 @@
 use super::*;
 
-use akita_algebra::{poly::multilinear_eval, CyclotomicRing};
+use akita_algebra::poly::multilinear_eval;
 use akita_config::proof_optimized::fp128;
 use akita_params::{
     basis_weights_prefix, r_decomp_levels, ring_opening_point_from_field, BasisMode,
@@ -10,6 +10,7 @@ use akita_params::{
 use akita_types::{
     FpExtEncoding, PreparedOpeningPoint, RelationRangeImagePlan, RingMultiplierOpeningPoint,
 };
+use jolt_field::CyclotomicRing;
 use jolt_field::{Ext2, ExtField, One, Ring, Zero};
 
 type F = fp128::Field;

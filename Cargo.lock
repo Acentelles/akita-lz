@@ -33,7 +33,6 @@ dependencies = [
  "jolt-field",
  "jolt-poly",
  "rand 0.8.8",
- "rand_core 0.6.4",
  "rayon",
  "tracing",
 ]
@@ -93,6 +92,7 @@ dependencies = [
 name = "akita-error"
 version = "0.1.0"
 dependencies = [
+ "jolt-field",
  "jolt-transcript",
  "thiserror",
 ]
@@ -166,6 +166,7 @@ dependencies = [
  "akita-params",
  "akita-schedules",
  "akita-sis-estimator",
+ "jolt-field",
  "libm",
 ]
 
@@ -173,7 +174,6 @@ dependencies = [
 name = "akita-prover"
 version = "0.1.0"
 dependencies = [
- "akita-algebra",
  "akita-challenges",
  "akita-config",
  "akita-error",

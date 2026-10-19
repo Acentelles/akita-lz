@@ -24,7 +24,6 @@ pub(crate) enum RelationWeightDescription<E: Field> {
 use std::ops::Range;
 
 use akita_algebra::eq_poly::SplitEqEvals;
-use akita_algebra::ring::{eval_flat_ring_at_pows_fast, scalar_powers};
 use akita_error::AkitaError;
 use akita_params::{
     gadget_row_scalars, r_decomp_levels, CommittedGroupParams, OpeningClaimsLayout, OpeningMethod,
@@ -36,6 +35,7 @@ use akita_types::{
     RelationRangeImagePlan, RingRelationInstance,
 };
 use compiler::RelationWeightCompilation;
+use jolt_field::ring::{eval_flat_ring_at_pows_fast, scalar_powers};
 use jolt_field::solinas::parallel::*;
 use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
 use setup_columns::{
@@ -336,7 +336,7 @@ where
         let challenges = group_source.challenges;
         let total_blocks = challenges.len();
         let challenge_lanes = {
-            let lane_count = akita_error::checked::product([total_blocks, lane_alpha_powers.len()])
+            let lane_count = jolt_field::checked::product([total_blocks, lane_alpha_powers.len()])
                 .ok_or_else(|| {
                     AkitaError::Internal("relation challenge lane count overflow".into())
                 })?;

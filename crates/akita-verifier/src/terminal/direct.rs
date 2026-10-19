@@ -1,6 +1,5 @@
 //! Deterministic terminal checks over the revealed terminal response.
 
-use akita_algebra::CyclotomicRing;
 use akita_challenges::{Challenges, SparseChallenge};
 use akita_error::AkitaError;
 use akita_params::{dispatch_for_field, TerminalFoldParams};
@@ -9,6 +8,7 @@ use akita_types::{
     PreparedOpeningPoint, RingMultiplierOpeningPoint, TerminalResponse,
 };
 use jolt_field::solinas::parallel::*;
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, ExtField, Field, Ring};
 
 use crate::prepared_cache::TerminalNttCache;

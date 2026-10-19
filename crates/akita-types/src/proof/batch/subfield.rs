@@ -1,8 +1,8 @@
 //! Validated compact coordinates for ring-subfield opening multipliers.
 
 use crate::{embed_subfield, FpExtEncoding, SubfieldParams};
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
+use jolt_field::CyclotomicRing;
 use jolt_field::{ExtField, Field};
 
 /// A validated pair of compact ring-subfield multiplier vectors.

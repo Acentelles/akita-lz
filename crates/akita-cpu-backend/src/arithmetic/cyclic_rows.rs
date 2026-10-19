@@ -2,9 +2,9 @@ use super::prepared::validate_digit_row_request;
 use super::CpuBackend;
 use crate::kernels::linear::mat_vec_mul_ntt_single_i8_cyclic;
 use crate::opaque::CyclicRowsComputeBackend;
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
 use akita_types::{NttCacheKey, NttTransformDomain};
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field};
 
 impl<F, E> CyclicRowsComputeBackend<F> for CpuBackend<F, E>

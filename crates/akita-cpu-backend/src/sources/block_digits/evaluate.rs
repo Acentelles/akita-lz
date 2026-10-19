@@ -2,9 +2,10 @@ use super::{RingValueSource, RingValues};
 use crate::sources::poly_helpers::{
     fused_evaluate_and_fold_base, fused_evaluate_and_fold_materialized,
 };
-use akita_algebra::CyclotomicRing;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
+use jolt_field::checked;
 use jolt_field::solinas::parallel::*;
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field};
 
 pub(crate) fn evaluate_and_fold_base<F, S, const D: usize>(

@@ -319,7 +319,7 @@ fn multi_group_packed_direct_matches_row_fallback_with_nested_role_dims() {
     let got = scan.evaluate_direct::<F>(&setup).unwrap();
     assert_eq!(got, expected);
 
-    let a_functional: std::sync::Arc<[F]> = akita_algebra::ring::terminal_residue_kernel(
+    let a_functional: std::sync::Arc<[F]> = jolt_field::ring::terminal_residue_kernel(
         &(0..D_A)
             .map(|index| test_scalar(601 + index as u128))
             .collect::<Vec<_>>(),
@@ -327,7 +327,7 @@ fn multi_group_packed_direct_matches_row_fallback_with_nested_role_dims() {
     )
     .unwrap()
     .into();
-    let projected_functional: std::sync::Arc<[F]> = akita_algebra::ring::terminal_residue_kernel(
+    let projected_functional: std::sync::Arc<[F]> = jolt_field::ring::terminal_residue_kernel(
         &(0..D_B)
             .map(|index| test_scalar(809 + index as u128))
             .collect::<Vec<_>>(),

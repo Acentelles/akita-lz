@@ -6,10 +6,11 @@ use crate::commitment::{
 };
 use crate::kernels::linear::decompose_commit_blocks_into;
 use crate::opaque::{CommitInnerPlan, DigitRowsComputeBackend};
-use akita_algebra::ring::CyclotomicRing;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_params::dispatch_for_field;
 use akita_types::{DigitBlocks, RingVec};
+use jolt_field::checked;
+use jolt_field::ring::CyclotomicRing;
 use jolt_field::solinas::parallel::*;
 use jolt_field::{CanonicalEncoding, Field, Unreduced, WithCommitAccumulator};
 use std::mem::size_of;

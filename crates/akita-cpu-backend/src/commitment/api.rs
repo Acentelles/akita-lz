@@ -6,10 +6,7 @@ use crate::commitment::{
     CommitmentExecutionPlan, CommitmentExecutor, CommitmentStatePolicy, PortableCommitmentHandle,
 };
 use crate::validation::{signed_digit_kernel_for_setup, validate_i8_setup_log_basis};
-use akita_algebra::ring::cyclotomic::decompose_centering_threshold;
 use akita_config::{ensure_prover_schedule_fits_setup, CommitmentConfig, TrustedScheduleCatalog};
-#[cfg(test)]
-use akita_error::checked;
 use akita_error::AkitaError;
 use akita_params::sis::CommittedSourceContract;
 #[cfg(test)]
@@ -21,6 +18,9 @@ use akita_params::{
 use akita_types::AkitaExpandedSetup;
 #[cfg(test)]
 use akita_types::{Commitment, CommittedGroup, FpExtEncoding};
+#[cfg(test)]
+use jolt_field::checked;
+use jolt_field::ring::cyclotomic::decompose_centering_threshold;
 use jolt_field::{CanonicalEncoding, Field};
 #[cfg(test)]
 use jolt_field::{Ring, Unreduced};

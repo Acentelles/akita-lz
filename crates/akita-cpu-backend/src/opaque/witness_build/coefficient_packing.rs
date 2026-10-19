@@ -5,8 +5,6 @@ use crate::arithmetic::coefficient_packing_fold::{
 };
 use crate::opaque::SubringCoefficientPackingPartials;
 use crate::validation::validate_i8_setup_log_basis;
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
-use akita_algebra::CyclotomicRing;
 use akita_challenges::Challenges;
 use akita_error::AkitaError;
 use akita_params::{
@@ -14,6 +12,8 @@ use akita_params::{
     SubringCoefficientPackingGeometry,
 };
 use akita_types::DigitBlocks;
+use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field};
 
 /// Fold one group's canonical partials with its single sampled subring challenge batch.

@@ -1,7 +1,8 @@
 //! Checked subring coefficient packing geometry.
 
 use akita_challenges::SparseChallengeConfig;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
+use jolt_field::checked;
 
 /// Canonical geometry for one subring coefficient packing opening.
 ///

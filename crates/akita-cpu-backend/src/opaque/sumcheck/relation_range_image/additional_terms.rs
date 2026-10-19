@@ -2,7 +2,7 @@
 
 use akita_algebra::{eq_poly::EqPolynomial, offset_eq::OffsetEqWindow};
 use akita_error::AkitaError;
-use akita_sumcheck::reduce_signed_accum;
+use jolt_field::reduce_signed_accum;
 use jolt_field::solinas::parallel::*;
 use jolt_field::Unreduced;
 use jolt_field::{Field, Ring, Zero};

@@ -7,12 +7,13 @@ use crate::sources::block_digits::evaluate::{evaluate_and_fold_base, evaluate_an
 use crate::sources::block_digits::{DigitShape, PackedDigits};
 use crate::sources::packed_digits::{PackedSignedDigitView, PackedSignedDigits};
 use crate::sources::poly_helpers::element_partitioned_decompose_fold;
-use akita_algebra::CyclotomicRing;
 use akita_challenges::SparseChallenge;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_params::WitnessLayout;
+use jolt_field::checked;
 #[cfg(test)]
 use jolt_field::solinas::parallel::*;
+use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, ExtField, Field};
 use std::marker::PhantomData;
 
@@ -294,7 +295,7 @@ impl<'a, F: Field, const D: usize> SuffixWitnessView<'a, F, D> {
                 AkitaError::Internal("recursive witness ring extent overflows usize".into())
             })?
             .max(1);
-        let total = akita_error::checked::product([padded_ring_elems, D]).ok_or_else(|| {
+        let total = jolt_field::checked::product([padded_ring_elems, D]).ok_or_else(|| {
             AkitaError::Internal("recursive witness ring elems times D overflow".into())
         })?;
         Ok(Self {
