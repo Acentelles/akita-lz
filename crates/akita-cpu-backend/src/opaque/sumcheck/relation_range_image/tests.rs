@@ -409,7 +409,8 @@ fn stage2_compact_fold_lookup_matches_direct_formula() {
 
     let w_dense = vec![1, 2, 3, 1, 2, 3];
     let packed_dense = packed(&w_dense);
-    let dense_lut = RelationRoundState::<F>::build_compact_w_fold_lut(packed_dense.view(), r);
+    let dense_lut =
+        RelationRoundState::<F>::build_compact_w_fold_lut(packed_dense.view(), r).unwrap();
     assert_eq!(
         RelationRoundState::<F>::materialize_compact_witness(packed_dense.view(), &dense_lut),
         materialize_compact_witness_reference(&w_dense, r)

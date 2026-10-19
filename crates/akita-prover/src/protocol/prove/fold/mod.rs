@@ -829,5 +829,9 @@ where
     })
 }
 
+#[cfg_attr(
+    not(test),
+    deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)
+)]
 mod sumcheck;
 use sumcheck::{prove_stage1, prove_stage2, prove_stage3};

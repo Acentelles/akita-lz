@@ -763,7 +763,7 @@ impl<E: Field + Ring + Unreduced> CompactQuotientPrefix<E> {
             1 => {
                 let r0 = self.challenges[0];
                 let half = (self.b / 2) as i16;
-                let lut = CompactPairFoldLut::from_contiguous_range(-half, half - 1, r0);
+                let lut = CompactPairFoldLut::from_contiguous_range(-half, half - 1, r0)?;
                 (
                     RelationRoundState::<E>::materialize_compact_witness(witness, &lut),
                     PrefixNormRound::Polynomial(self.norm_cache.round1_norm_poly(r0)),

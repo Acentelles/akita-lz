@@ -5,6 +5,11 @@
 //! stage provers, verifier instances, and two-round-prefix skip proofs stay in
 //! the PCS protocol crate until their role-specific APIs are split.
 
+#![cfg_attr(
+    not(test),
+    deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)
+)]
+
 mod accum;
 mod compact_fold;
 mod fused;
