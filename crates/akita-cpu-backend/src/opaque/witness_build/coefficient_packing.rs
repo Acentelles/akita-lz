@@ -5,13 +5,13 @@ use crate::arithmetic::coefficient_packing_fold::{
 };
 use crate::opaque::SubringCoefficientPackingPartials;
 use crate::validation::validate_i8_setup_log_basis;
-use akita_challenges::Challenges;
 use akita_error::AkitaError;
 use akita_params::{
     CommittedGroupParams, OpeningClaimsLayout, OpeningMethod, RelationWitnessGeometry,
     SubringCoefficientPackingGeometry,
 };
 use akita_types::DigitBlocks;
+use jolt_crypto::challenge::Challenges;
 use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
 use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field};
@@ -261,11 +261,11 @@ pub(crate) fn materialize_coefficient_packing_d_input<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use akita_challenges::{SparseChallenge, SparseChallengeConfig};
     use akita_params::{
         gadget_row_scalars, CommittedGroupParams, OpenCommitMatrixParams, OpeningClaimsLayout,
         PolynomialGroupLayout, SisModulusProfileId,
     };
+    use jolt_crypto::challenge::{SparseChallenge, SparseChallengeConfig};
     use jolt_field::{Prime128OffsetA7F7, Ring, Zero};
 
     type F = Prime128OffsetA7F7;

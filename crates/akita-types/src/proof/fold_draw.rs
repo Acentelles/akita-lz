@@ -1,8 +1,9 @@
 //! Fold-challenge draws from a fold-response fork, shared by both roles.
 
-use crate::sampler::MAX_STACK_RING_DIM;
-use crate::{Challenges, OperatorNormRejection, SparseChallengeConfig};
 use akita_error::AkitaError;
+use jolt_crypto::challenge::{
+    sample_indexed_challenges_from_seed, Challenges, OperatorNormRejection, SparseChallengeConfig,
+};
 use jolt_transcript::{Channel, Fork, Sponge};
 
 /// Byte length of every fold-challenge seed.
@@ -87,19 +88,6 @@ pub trait FoldDraw {
                 ));
             }
         }
-        if ring_d > MAX_STACK_RING_DIM {
-            return Err(AkitaError::InvalidInput(format!(
-                "ring dimension {ring_d} exceeds supported stack sampler limit ({MAX_STACK_RING_DIM})"
-            )));
-        }
-        cfg.validate_dyn(ring_d).map_err(|e| {
-            AkitaError::InvalidInput(format!("invalid sparse challenge config: {e}"))
-        })?;
-        if let Some(rejection) = rejection {
-            rejection
-                .validate(ring_d, cfg)
-                .map_err(|error| AkitaError::InvalidInput(error.into()))?;
-        }
         if num_live_blocks == 0 || num_claims == 0 {
             return Err(AkitaError::InvalidInput(
                 "fold challenges require positive num_live_blocks and claims".to_string(),
@@ -126,10 +114,9 @@ pub trait FoldDraw {
             absorb_buf.extend_from_slice(&rejection.domain_separator_bytes());
         }
         let seed = self.absorb_and_squeeze(&absorb_buf);
-        let challenges = crate::sampler::sample_indexed_challenges_from_seed(
-            &seed, ring_d, total, cfg, rejection,
-        )?;
-        Challenges::from_sparse(challenges, num_live_blocks, num_claims)
+        // The sampler validates `ring_d`, `cfg`, and `rejection`.
+        let challenges = sample_indexed_challenges_from_seed(&seed, ring_d, total, cfg, rejection)?;
+        Challenges::from_sparse(challenges, num_live_blocks, num_claims).map_err(AkitaError::from)
     }
 }
 

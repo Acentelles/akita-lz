@@ -19,9 +19,9 @@
 //!     D-free; ring-shaped ops take the kernel dispatch dimension as a
 //!     method-level const generic.
 
-use akita_challenges::SparseChallenge;
 use akita_error::AkitaError;
 use akita_params::RingMatrixView;
+use jolt_crypto::challenge::SparseChallenge;
 use jolt_field::ring::cyclotomic::{NegacyclicShiftWindows, WideCyclotomicRing};
 use jolt_field::solinas::parallel::*;
 use jolt_field::CyclotomicRing;

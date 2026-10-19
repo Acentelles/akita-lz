@@ -2,7 +2,7 @@ use super::*;
 use crate::opaque::eor::ExtensionOpeningSession;
 use crate::opaque::{CpuBackend, RootOpeningSource, RootPolyShape};
 use crate::sources::packed_digits::PackedSignedDigits;
-use akita_challenges::SparseChallenge;
+use jolt_crypto::challenge::SparseChallenge;
 use jolt_field::CyclotomicRing;
 use jolt_field::{One, Prime128OffsetA7F7 as F, Ring, Zero};
 
@@ -11,8 +11,8 @@ fn suffix_batch_fold_rejects_mixed_extents_and_count_mismatch() {
     use crate::opaque::{
         CpuBackend, DecomposeFoldBatchPlan, OpeningBatchKernel, RootOpeningSource,
     };
-    use akita_challenges::SparseChallenge;
     use akita_error::AkitaError;
+    use jolt_crypto::challenge::SparseChallenge;
 
     const D: usize = 64;
     let witnesses = [

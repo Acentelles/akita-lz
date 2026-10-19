@@ -40,7 +40,7 @@ fn aggregate_witnesses<const D: usize>(witnesses: &[DecomposeFoldWitness]) -> De
 #[test]
 fn batch_fold_rejects_mixed_extents_and_count_mismatch() {
     use crate::opaque::{CpuBackend, DecomposeFoldBatchPlan, OpeningBatchKernel};
-    use akita_challenges::SparseChallenge;
+    use jolt_crypto::challenge::SparseChallenge;
 
     type F = Prime24Offset3;
     const D: usize = 64;
@@ -101,7 +101,7 @@ where
 #[test]
 fn scalar_fold_rejects_short_and_excess_challenges() {
     use crate::opaque::{CpuBackend, DecomposeFoldPlan, OpeningFoldKernel, RootOpeningSource};
-    use akita_challenges::SparseChallenge;
+    use jolt_crypto::challenge::SparseChallenge;
 
     type F = Prime24Offset3;
     const D: usize = 64;

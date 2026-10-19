@@ -329,8 +329,8 @@ impl CommitmentExecutionPlan {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use akita_challenges::SparseChallengeConfig;
     use akita_params::{CommitmentPayloadMode, SisModulusProfileId};
+    use jolt_crypto::challenge::SparseChallengeConfig;
 
     fn recursive_params(payload_mode: CommitmentPayloadMode) -> CommittedGroupParams {
         let mut params = CommittedGroupParams::params_only(

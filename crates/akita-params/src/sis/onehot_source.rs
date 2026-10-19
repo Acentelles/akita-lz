@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
 
-use akita_challenges::SparseChallengeConfig;
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 /// Number of nonzero canonical coefficients in one source ring.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

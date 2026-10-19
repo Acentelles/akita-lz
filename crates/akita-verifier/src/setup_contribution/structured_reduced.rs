@@ -1,5 +1,5 @@
 use super::*;
-use akita_challenges::{Challenges, SparseChallenge};
+use jolt_crypto::challenge::{Challenges, SparseChallenge};
 use jolt_field::ring::terminal_residue_kernel;
 
 struct ValidatedSparseChallenge<'a> {

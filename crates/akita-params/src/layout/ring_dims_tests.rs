@@ -3,7 +3,7 @@ use crate::{
     CommittedGroupParams, FoldParams, FoldSchedule, TailSegmentGroupLayout, TailSegmentLayout,
     TerminalFoldParams, TerminalResponseShape,
 };
-use akita_challenges::SparseChallengeConfig;
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 fn committed(ring_dimension: usize) -> CommittedGroupParams {
     CommittedGroupParams::params_only(

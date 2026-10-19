@@ -15,9 +15,9 @@ pub(crate) use windowed_accum::{I8DigitSpan, WindowedChallenge};
 
 #[cfg(target_arch = "aarch64")]
 use crate::kernels::neon_decompose_fold as decompose_fold_neon;
-use akita_challenges::SparseChallenge;
 use akita_error::AkitaError;
 use akita_types::SubfieldMultiplierOpeningPoint;
+use jolt_crypto::challenge::SparseChallenge;
 use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field};
 

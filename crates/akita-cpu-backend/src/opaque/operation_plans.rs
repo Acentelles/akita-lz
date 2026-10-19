@@ -1,4 +1,3 @@
-use akita_challenges::{Challenges, SparseChallenge};
 use akita_error::AkitaError;
 use akita_params::SubringCoefficientPackingGeometry;
 pub(super) use akita_prover::backend::*;
@@ -6,6 +5,7 @@ use akita_types::{
     PreparedSubringCoefficientPackingPoint, RingMultiplierOpeningPoint,
     SubfieldMultiplierOpeningPoint,
 };
+use jolt_crypto::challenge::{Challenges, SparseChallenge};
 use jolt_field::Field;
 use std::ops::Range;
 #[derive(Debug, Clone, Copy)]

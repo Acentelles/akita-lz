@@ -475,7 +475,6 @@ mod tests {
     use crate::coefficient_packing_relation::prepare_coefficient_packing_verifier_batch_semantics;
     use crate::coefficient_packing_relation::tests::materialize_stage2;
     use crate::relation::{FlatRelationContext, RelationMatrixEvaluator};
-    use akita_challenges::{Challenges, SparseChallenge, SparseChallengeConfig};
     use akita_params::{
         BasisMode, CommitmentPayloadMode, DigitRangePlan, FlatMatrix, OpenCommitMatrixParams,
         OpeningClaimsLayout, OpeningMethod, RelationAddressGeometry, RelationWitnessGeometry,
@@ -486,6 +485,7 @@ mod tests {
         CoefficientPackingBatchSemanticInputs, PreparedSubringCoefficientPackingPoint,
         RelationRangeImagePlan, RingRelationGroupOpening, RingRelationInstance, RingVec,
     };
+    use jolt_crypto::challenge::{Challenges, SparseChallenge, SparseChallengeConfig};
     use jolt_field::Zero;
     use jolt_field::{Ext2, Prime64Offset59};
     use std::sync::Arc;

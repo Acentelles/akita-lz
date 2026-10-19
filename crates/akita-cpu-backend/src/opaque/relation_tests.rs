@@ -18,7 +18,6 @@ use super::DecomposeFoldWitness;
 use crate::opaque::{RelationDQuotientWitness, RingRelationGroupWitness, RingRelationWitness};
 use crate::AkitaProverSetup;
 use akita_algebra::{poly::multilinear_eval, EqPolynomial};
-use akita_challenges::{Challenges, SparseChallenge, SparseChallengeConfig};
 use akita_params::{
     active_setup_field_len, CommitmentPayloadMode, CommittedGroupParams, CompressionWitnessSpan,
     DigitRangePlan, OpeningClaimsLayout, RelationAddressGeometry, RingOpeningPoint,
@@ -30,6 +29,7 @@ use akita_types::{
     RingRelationInstance, RingVec, SetupContributionGroupInputs, SetupContributionPlan,
 };
 use akita_verifier::{DirectScan, PreparedCoefficientFunctional};
+use jolt_crypto::challenge::{Challenges, SparseChallenge, SparseChallengeConfig};
 use jolt_field::CyclotomicRing;
 use jolt_field::{Prime128OffsetA7F7, Prime64Offset59, Ring, Zero};
 use std::array::from_fn;

@@ -32,7 +32,7 @@ pub(crate) fn response_model_diagnostics_enabled() -> bool {
 pub struct CpuAcceptedFold<F: Field> {
     global: DecomposeFoldWitness,
     chunks: Option<Vec<Vec<i32>>>,
-    challenges: akita_challenges::Challenges,
+    challenges: jolt_crypto::challenge::Challenges,
     manifest: AcceptedFoldManifest,
     binding: crate::opaque::OperationBinding,
     _field: PhantomData<F>,
@@ -150,7 +150,7 @@ where
 impl<F: Field> CpuAcceptedFold<F> {
     pub(crate) fn validate_challenges(
         &self,
-        challenges: &akita_challenges::Challenges,
+        challenges: &jolt_crypto::challenge::Challenges,
     ) -> Result<(), AkitaError> {
         if &self.challenges != challenges {
             return Err(AkitaError::InvalidInput(
@@ -620,7 +620,7 @@ where
         Self {
             global,
             chunks: None,
-            challenges: akita_challenges::Challenges::from_sparse(Vec::new(), 0, 0)
+            challenges: jolt_crypto::challenge::Challenges::from_sparse(Vec::new(), 0, 0)
                 .expect("test challenges"),
             manifest: AcceptedFoldManifest {
                 metadata: AcceptedFoldMetadata::try_new(D, response_coefficients, num_chunks)

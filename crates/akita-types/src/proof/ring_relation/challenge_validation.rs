@@ -1,5 +1,5 @@
-use akita_challenges::{Challenges, SparseChallenge, SparseChallengeConfig};
 use akita_error::AkitaError;
+use jolt_crypto::challenge::{Challenges, SparseChallenge, SparseChallengeConfig};
 #[cfg(feature = "parallel")]
 use jolt_field::solinas::parallel::*;
 

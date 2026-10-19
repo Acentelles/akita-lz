@@ -8,7 +8,7 @@ fn response_geometry_params(opening_method: akita_params::OpeningMethod) -> Comm
         2,
         2,
         2,
-        akita_challenges::SparseChallengeConfig::production_for_ring_dim(64)
+        jolt_crypto::challenge::SparseChallengeConfig::production_for_ring_dim(64)
             .expect("D64 challenge"),
     )
     .with_decomp(4, 8, 2, 2, 2)

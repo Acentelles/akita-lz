@@ -7,7 +7,7 @@ use crate::{
     CommittedGroupParams, GroupCommitPhaseParams, GroupOpenPhaseParams, OpeningClaimsLayout,
     OpeningMethod, OuterCommitMatrixParams, PolynomialGroupLayout, SisModulusProfileId,
 };
-use akita_challenges::SparseChallengeConfig;
+use jolt_crypto::challenge::SparseChallengeConfig;
 use std::collections::{BTreeSet, HashSet};
 
 fn precommitted_group(

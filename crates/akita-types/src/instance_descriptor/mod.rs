@@ -738,7 +738,7 @@ impl AkitaDeserialize for CallSection {
 }
 
 fn modulus_be_32<F: Field + CanonicalEncoding>() -> Result<[u8; 32], AkitaError> {
-    akita_params::field_modulus_be_bytes::<F>()
+    jolt_field::field_modulus_be_bytes::<F>().map_err(AkitaError::from)
 }
 
 fn read_digest<R: Read>(mut reader: R) -> Result<DescriptorDigest, SerializationError> {

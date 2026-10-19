@@ -1,9 +1,9 @@
 //! Recursive setup-offloading config adapter.
 
 use crate::CommitmentConfig;
-use akita_challenges::SparseChallengeConfig;
 use akita_error::AkitaError;
 use akita_params::{DecompositionParams, SisModulusProfileId};
+use jolt_crypto::challenge::SparseChallengeConfig;
 use std::marker::PhantomData;
 
 /// Config adapter that enables recursion-aware setup offloading schedules.

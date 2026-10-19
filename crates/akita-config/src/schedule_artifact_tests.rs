@@ -1,6 +1,6 @@
-use akita_challenges::SparseChallengeConfig;
 use akita_error::AkitaError;
 use akita_params::{FoldSchedule, GroupOpenPhaseParams, InnerCommitSecurityRoute, OpeningMethod};
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 use crate::proof_optimized::fp128;
 use crate::{

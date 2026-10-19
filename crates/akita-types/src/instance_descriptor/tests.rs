@@ -1,10 +1,10 @@
 use super::*;
-use akita_challenges::SparseChallengeConfig;
 use akita_params::{
     ChallengeFieldOrder, CommittedGroupParams, FoldParams, FoldSchedule, GrindingPlan, GrindingRun,
     GrindingSite, InnerCommitMatrixParams, OpeningClaimsLayout, OpeningScheduleSelection,
     ScheduleRowDigest, TerminalFoldParams, TerminalResponseShape,
 };
+use jolt_crypto::challenge::SparseChallengeConfig;
 use jolt_field::Prime32Offset99;
 
 // `pm1_only(3)` prices the fixtures' response cap 127 below A bucket 4095.

@@ -1,7 +1,7 @@
 use super::*;
 use crate::opaque::CpuBackend;
 use crate::opaque::OpeningBatchKernel;
-use akita_challenges::{Challenges, SparseChallenge};
+use jolt_crypto::challenge::{Challenges, SparseChallenge};
 use jolt_field::{One, Ring};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;

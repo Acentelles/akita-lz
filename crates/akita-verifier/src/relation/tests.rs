@@ -1,5 +1,4 @@
 use super::*;
-use akita_challenges::{Challenges, SparseChallenge, SparseChallengeConfig};
 use akita_params::{
     CommitmentRingDims, FlatMatrix, OpenCommitMatrixParams, OpeningClaimsLayout,
     OuterCommitMatrixParams, RingOpeningPoint, SisModulusProfileId,
@@ -8,6 +7,7 @@ use akita_types::{
     relation_rhs_coeff_len, AkitaSetupDescriptor, PreparedRelationAddress,
     RingRelationGroupOpening, RingVec, SetupContributionGroupInputs, SetupContributionPlan,
 };
+use jolt_crypto::challenge::{Challenges, SparseChallenge, SparseChallengeConfig};
 use jolt_field::ring::scalar_powers;
 use jolt_field::{Fp32, One, Prime128OffsetA7F7, Zero};
 

@@ -7,7 +7,7 @@
 use super::precommitted::GroupOpenPhaseParams;
 use super::CommittedGroupParams;
 use crate::OpeningMethod;
-use akita_challenges::SparseChallengeConfig;
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 impl CommittedGroupParams {
     /// This fold's own new group: the last entry in `groups`.

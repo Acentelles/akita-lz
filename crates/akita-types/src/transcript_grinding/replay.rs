@@ -1,7 +1,7 @@
 //! Inline nonce replay for transcript grinding.
 
+use crate::FoldDrawRecord;
 use crate::FoldSite;
-use akita_challenges::FoldDrawRecord;
 use akita_error::AkitaError;
 use akita_params::transcript_site::{ProtocolSiteId, SITE_FAMILY_SUMCHECK};
 use akita_params::{GrindingPlan, GrindingQueryKind, GrindingSite};

@@ -10,7 +10,9 @@ readme = "../../README.md"
 
 [dependencies]
 akita-error = { version = "0.1.0", path = "../akita-error" }
-akita-challenges = { version = "0.1.0", path = "../akita-challenges", default-features = false }
+jolt-crypto = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false, features = [
+  "lattice",
+] }
 akita-config = { version = "0.1.0", path = "../akita-config", default-features = false }
 jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false, features = [
   "asm",
@@ -37,7 +39,7 @@ akita-types = { version = "0.1.0", path = "../akita-types", default-features = f
 [features]
 response-model-diagnostics = []
 parallel = [
-  "akita-challenges/parallel",
+  "jolt-crypto/parallel",
   "jolt-field/parallel",
   "akita-sumcheck/parallel",
   "akita-types/parallel",

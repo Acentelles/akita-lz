@@ -8,12 +8,12 @@ use crate::commitment::{
     UncompressedCommitmentOutput,
 };
 use crate::{AkitaProverSetup, DensePoly};
-use akita_challenges::SparseChallengeConfig;
 use akita_error::AkitaError;
 use akita_params::{
     CommittedGroupParams, RingRelationMode, SetupMatrixCapacity, SisModulusProfileId,
 };
 use akita_types::RingVec;
+use jolt_crypto::challenge::SparseChallengeConfig;
 use jolt_field::{Prime64Offset59, Ring};
 use std::sync::Arc;
 

@@ -1,12 +1,12 @@
 //! Deterministic terminal checks over the revealed terminal response.
 
-use akita_challenges::{Challenges, SparseChallenge};
 use akita_error::AkitaError;
 use akita_params::{dispatch_for_field, TerminalFoldParams};
 use akita_types::{
     decode_terminal_z_golomb_payload, recover_ring_subfield_inner_product, FpExtEncoding,
     PreparedOpeningPoint, RingMultiplierOpeningPoint, TerminalResponse,
 };
+use jolt_crypto::challenge::{Challenges, SparseChallenge};
 use jolt_field::solinas::parallel::*;
 use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, ExtField, Field, Ring};

@@ -4,13 +4,13 @@ mod support;
 use super::*;
 use crate::DigitBlocks;
 use crate::{emit_witness_e_planes, emit_witness_t_planes, relation_rhs_coeff_len};
-use akita_challenges::{SparseChallenge, SparseChallengeConfig};
 use akita_params::layout::GroupOpenPhaseParams;
 use akita_params::r_decomp_levels;
 use akita_params::{
     InnerCommitMatrixParams, OpenCommitMatrixParams, OuterCommitMatrixParams,
     PolynomialGroupLayout, RingOpeningPoint,
 };
+use jolt_crypto::challenge::{SparseChallenge, SparseChallengeConfig};
 use jolt_field::CyclotomicRing;
 use jolt_field::{Fp32, One, Zero};
 use support::{flatten_markers, marker};

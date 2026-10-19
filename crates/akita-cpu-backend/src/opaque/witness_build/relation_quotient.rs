@@ -10,10 +10,10 @@ use crate::opaque::{
     RuntimeRingSwitchProveBackend,
 };
 use crate::validation::validate_i8_setup_log_basis;
-use akita_challenges::{Challenges, SparseChallenge};
 use akita_error::AkitaError;
 use akita_params::{CommittedGroupParams, RelationRowGeometry};
 use akita_types::{OpeningFamily, RingRelationGroupOpening, RingVec};
+use jolt_crypto::challenge::{Challenges, SparseChallenge};
 use jolt_field::solinas::parallel::*;
 use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Field, Ring};

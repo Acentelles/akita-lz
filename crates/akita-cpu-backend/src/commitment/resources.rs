@@ -485,8 +485,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use akita_challenges::SparseChallengeConfig;
     use akita_params::{CommittedGroupParams, SisModulusProfileId};
+    use jolt_crypto::challenge::SparseChallengeConfig;
 
     fn full_plan() -> CommitmentExecutionPlan {
         let params = CommittedGroupParams::params_only(

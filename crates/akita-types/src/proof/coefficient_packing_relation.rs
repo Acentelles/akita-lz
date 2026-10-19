@@ -6,8 +6,8 @@ use std::ops::Range;
 use akita_algebra::offset_eq::{OffsetEqWindow, MAX_COMPACT_STRIDE_TERMS};
 #[cfg(test)]
 use akita_algebra::poly::multilinear_eval;
-use akita_challenges::Challenges;
 use akita_error::AkitaError;
+use jolt_crypto::challenge::Challenges;
 use jolt_field::checked;
 use jolt_field::ring::scalar_powers;
 use jolt_field::{canonical_extension_basis, CanonicalEncoding, ExtField, Field};
@@ -190,6 +190,7 @@ impl<'authority, 'output, F: Field, E: Field>
     {
         self.canonical_challenges
             .evals_at_pows::<F, E>(&self.alpha_powers)
+            .map_err(AkitaError::from)
     }
 
     #[must_use]

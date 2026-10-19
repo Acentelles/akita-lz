@@ -7,9 +7,9 @@ use crate::sources::block_digits::evaluate::{evaluate_and_fold_base, evaluate_an
 use crate::sources::block_digits::{DigitShape, PackedDigits};
 use crate::sources::packed_digits::{PackedSignedDigitView, PackedSignedDigits};
 use crate::sources::poly_helpers::element_partitioned_decompose_fold;
-use akita_challenges::SparseChallenge;
 use akita_error::AkitaError;
 use akita_params::WitnessLayout;
+use jolt_crypto::challenge::SparseChallenge;
 use jolt_field::checked;
 #[cfg(test)]
 use jolt_field::solinas::parallel::*;

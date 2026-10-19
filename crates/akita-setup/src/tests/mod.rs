@@ -41,7 +41,7 @@ impl CommitmentConfig for WrongModulusProfileConfig {
 
     fn ring_challenge_config(
         d: usize,
-    ) -> Result<akita_challenges::SparseChallengeConfig, AkitaError> {
+    ) -> Result<jolt_crypto::challenge::SparseChallengeConfig, AkitaError> {
         Cfg::ring_challenge_config(d)
     }
 

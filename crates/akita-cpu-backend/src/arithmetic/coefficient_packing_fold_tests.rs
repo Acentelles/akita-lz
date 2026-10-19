@@ -1,7 +1,7 @@
 use super::*;
-use akita_challenges::{SparseChallenge, PRODUCTION_FOLD_CHALLENGE_RING_DIMS};
 use akita_params::{basis_weights, BasisMode};
 use akita_types::PreparedSubringCoefficientPackingPoint;
+use jolt_crypto::challenge::{SparseChallenge, PRODUCTION_FOLD_CHALLENGE_RING_DIMS};
 use jolt_field::{
     Ext2, ExtField, FpExt4, One, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59, Zero,
 };

@@ -4,8 +4,8 @@
 //! block geometry, and digit depths into a single struct that fully
 //! describes one recursion level.
 
-use akita_challenges::SparseChallengeConfig;
 use akita_error::AkitaError;
+use jolt_crypto::challenge::SparseChallengeConfig;
 use jolt_field::CanonicalEncoding;
 
 use crate::descriptor_bytes::{push_u32, push_usize};

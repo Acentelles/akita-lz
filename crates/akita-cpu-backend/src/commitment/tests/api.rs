@@ -3,7 +3,6 @@ use crate::commitment::PortableStatePolicy;
 use crate::opaque::CpuBackend;
 use crate::opaque::{ComputeBackendSetup, OperationCtx};
 use crate::{AkitaProverSetup, DensePoly};
-use akita_challenges::SparseChallengeConfig;
 use akita_params::sis::{
     rounded_up_collision_inf_norm, rounded_up_role_a_inf_norm, SisMatrixRole, SisTableDigest,
     SisTableKey, DEFAULT_SIS_SECURITY_POLICY,
@@ -14,6 +13,7 @@ use akita_params::{
     SetupMatrixCapacity, SisModulusProfileId,
 };
 use akita_types::RingVec;
+use jolt_crypto::challenge::SparseChallengeConfig;
 use jolt_field::Fp64;
 
 type F = Fp64<4294967197>;

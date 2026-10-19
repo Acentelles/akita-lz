@@ -1,7 +1,7 @@
 //! Checked subring coefficient packing geometry.
 
-use akita_challenges::SparseChallengeConfig;
 use akita_error::AkitaError;
+use jolt_crypto::challenge::SparseChallengeConfig;
 use jolt_field::checked;
 
 /// Canonical geometry for one subring coefficient packing opening.
@@ -229,7 +229,7 @@ impl SubringCoefficientPackingGeometry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use akita_challenges::PRODUCTION_FOLD_CHALLENGE_RING_DIMS;
+    use jolt_crypto::challenge::PRODUCTION_FOLD_CHALLENGE_RING_DIMS;
 
     #[test]
     fn derives_every_production_subring_packing_geometry() {

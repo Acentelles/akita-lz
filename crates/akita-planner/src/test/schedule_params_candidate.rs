@@ -3,8 +3,8 @@ use super::recursive::{
     RecursiveSplitLowerBoundInput,
 };
 use super::*;
-use akita_challenges::SparseChallengeConfig;
 use akita_params::{PolynomialGroupLayout, SisModulusProfileId};
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 fn synthetic_profile(
     group: PolynomialGroupLayout,

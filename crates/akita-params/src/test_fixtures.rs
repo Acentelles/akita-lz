@@ -5,7 +5,7 @@ use crate::{
     OpenCommitMatrixParams, OpeningClaimsLayout, OuterCommitMatrixParams, PolynomialGroupLayout,
     SisModulusProfileId,
 };
-use akita_challenges::SparseChallengeConfig;
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 pub fn sample_level_params() -> CommittedGroupParams {
     CommittedGroupParams::params_only(

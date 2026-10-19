@@ -401,7 +401,7 @@ fn append_claim_batch(
 mod tests {
     use super::*;
     use crate::SisModulusProfileId;
-    use akita_challenges::SparseChallengeConfig;
+    use jolt_crypto::challenge::SparseChallengeConfig;
 
     // Pre-PR 56 per-round construction retained as an independent parity oracle.
     fn append_sumcheck(

@@ -18,7 +18,6 @@ orchestration lives in `akita-pcs`.
 | `akita-serialization` | Serialization, validation, compression traits |
 | `akita-algebra` | Multilinear, equality, split-equality, and offset-equality polynomial utilities |
 | `jolt-transcript` (external) | Fiat-Shamir proof channel (NARG prover/verifier transcripts, sponges, grinding) |
-| `akita-challenges` | Challenge sampling helpers |
 | `akita-sumcheck` | Sumcheck proofs, drivers, folding, batching |
 | `akita-params` | Parameter geometry, sizing, SIS tables, schedules, compression plans, witness layout, dispatch, and grinding plans |
 | `akita-types` | Proof, setup, and claim wire values, shared protocol math, and native transcript replay |
@@ -41,7 +40,7 @@ graph TD
   Field["jolt-field (external)"]
   Algebra["akita-algebra"]
   Transcript["jolt-transcript (external)"]
-  Challenges["akita-challenges"]
+  Crypto["jolt-crypto"]
   Sumcheck["akita-sumcheck"]
   Params["akita-params"]
   Types["akita-types"]
@@ -60,9 +59,7 @@ graph TD
   Algebra --> Ser
   Transcript --> Field
   Error --> Transcript
-  Challenges --> Error
-  Challenges --> Field
-  Challenges --> Transcript
+  Crypto --> Field
   Sumcheck --> Error
   Sumcheck --> Algebra
   Sumcheck --> Field
@@ -70,7 +67,7 @@ graph TD
   Sumcheck --> Transcript
   Params --> Error
   Params --> Algebra
-  Params --> Challenges
+  Params --> Crypto
   Params --> Field
   Params --> Ser
   Params --> Sumcheck
@@ -78,31 +75,31 @@ graph TD
   Types --> Params
   Types --> Error
   Types --> Algebra
-  Types --> Challenges
+  Types --> Crypto
   Types --> Field
   Types --> Ser
   Types --> Sumcheck
   Types --> Transcript
   SisEstimator --> Params
   Planner --> Error
-  Planner --> Challenges
+  Planner --> Crypto
   Planner --> Schedules
   Planner --> Params
   Planner -. catalog-gen .-> Config
   Planner -. catalog-security .-> SisEstimator
   Schedules --> Error
-  Schedules --> Challenges
+  Schedules --> Crypto
   Schedules --> Params
   Config --> Params
   Config --> Error
-  Config --> Challenges
+  Config --> Crypto
   Config --> Field
   Config --> Types
   Config --> Schedules
   Verifier --> Params
   Verifier --> Error
   Verifier --> Algebra
-  Verifier --> Challenges
+  Verifier --> Crypto
   Verifier --> Config
   Verifier --> Field
   Verifier --> Ser
@@ -112,7 +109,7 @@ graph TD
   Prover --> Params
   Prover --> Error
   Prover --> Algebra
-  Prover --> Challenges
+  Prover --> Crypto
   Prover --> Config
   Prover --> Field
   Prover --> Ser
@@ -123,7 +120,7 @@ graph TD
   Cpu --> Params
   Cpu --> Error
   Cpu --> Algebra
-  Cpu --> Challenges
+  Cpu --> Crypto
   Cpu --> Config
   Cpu --> Field
   Cpu --> Ser
@@ -140,7 +137,7 @@ graph TD
   Pcs --> Params
   Pcs --> Error
   Pcs --> Algebra
-  Pcs --> Challenges
+  Pcs --> Crypto
   Pcs --> Config
   Pcs --> Field
   Pcs --> Prover
@@ -161,7 +158,7 @@ graph TD
   is known. Generic checked helpers must not be redefined in downstream crates.
 - `akita-planner` is the offline schedule search and artifact emission engine.
   Normal planner search is `Cfg`-free and depends on `akita-params`,
-  `akita-challenges`, `akita-error`, and `akita-schedules`. The optional
+  `jolt-crypto`, `akita-error`, and `akita-schedules`. The optional
   `catalog-gen` feature also enables `akita-config`, allowing artifact-emission
   binaries to name concrete `CommitmentConfig` presets.
 - `akita-sis-estimator` owns the offline scalar SIS cost model and table
@@ -173,7 +170,7 @@ graph TD
   row audit, and the immutable `ValidatedScheduleCatalog` indexes used at runtime.
   Tracked `.aks` family files are deterministic planner output but are never
   linked into the crate. It depends only on `akita-error`, `akita-params`, and
-  `akita-challenges`.
+  `jolt-crypto`.
 - `akita-config` owns concrete runtime presets, the single `CommitmentConfig`
   policy trait, and the `TrustedScheduleCatalog<Cfg>` capability that binds a
   validated catalog to one exact preset. Applications load artifact bytes and

@@ -510,8 +510,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use akita_challenges::SparseChallengeConfig;
     use akita_params::{CommitmentPayloadMode, CompressionMapPlan, RingRelationMode};
+    use jolt_crypto::challenge::SparseChallengeConfig;
     use jolt_field::{One, Prime128OffsetA7F7 as F, Ring, Zero};
 
     #[test]

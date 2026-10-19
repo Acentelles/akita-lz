@@ -477,7 +477,7 @@ pub struct CandidateFoldStep {
 /// Fully priced terminal response awaiting schedule materialization.
 pub struct CandidateTerminalResponse {
     pub params: akita_params::TerminalFoldParams,
-    pub sparse_challenge_config: akita_challenges::SparseChallengeConfig,
+    pub sparse_challenge_config: jolt_crypto::challenge::SparseChallengeConfig,
     pub input_witness_len: usize,
     pub estimated_direct_payload_bytes: usize,
     pub response_shape: TerminalResponseShape,

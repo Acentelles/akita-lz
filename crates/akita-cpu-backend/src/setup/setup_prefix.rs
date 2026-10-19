@@ -184,13 +184,13 @@ mod tests {
         CpuOuterCommitOperation, NttExecutionRequirements,
     };
     use crate::AkitaProverSetup;
-    use akita_challenges::SparseChallengeConfig;
     use akita_params::{
         active_setup_field_len, setup_prefix_precommitted_params, CommittedGroupParams,
         CompressionChainPlan, InnerCommitMatrixParams, OpeningClaimsLayout,
         OuterCommitMatrixParams, SetupMatrixCapacity, SisModulusProfileId, SisTableKey,
     };
     use akita_serialization::AkitaSerialize;
+    use jolt_crypto::challenge::SparseChallengeConfig;
     use jolt_field::Prime128OffsetA7F7 as F;
     use std::sync::Arc;
 

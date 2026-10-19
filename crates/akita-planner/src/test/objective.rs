@@ -192,7 +192,7 @@ fn complete_candidate(
     setup_field_elements: usize,
     output_witness_len: usize,
 ) -> super::ScheduleCandidate {
-    let challenge = akita_challenges::SparseChallengeConfig::pm1_only(3);
+    let challenge = jolt_crypto::challenge::SparseChallengeConfig::pm1_only(3);
     let mut params = akita_params::CommittedGroupParams::params_only(
         akita_params::SisModulusProfileId::Q128OffsetA7F7,
         64,

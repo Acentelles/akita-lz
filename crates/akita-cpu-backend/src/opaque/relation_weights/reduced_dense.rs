@@ -7,9 +7,9 @@
 //! stream.
 
 use super::*;
-use akita_challenges::Challenges;
 use akita_params::dispatch_for_field;
 use akita_types::RingMultiplierOpeningPoint;
+use jolt_crypto::challenge::Challenges;
 use jolt_field::ring::ResidueKernelPoint;
 use jolt_field::{ExtField, MulBaseUnreduced};
 

@@ -531,9 +531,9 @@ The implementation evidence for this result is:
 
 | Source | What it establishes |
 |---|---|
-| `crates/akita-challenges/src/fold_draw.rs` | Method, group, dimensions, family, and counts bound before the group root; packing rejects operator filtering |
-| `crates/akita-challenges/src/challenges.rs` and `sampler/xof.rs` in that crate | Claim-major addressing and independent indexed XOF inputs |
-| `crates/akita-challenges/src/config.rs` and `sampler/mod.rs` in that crate | Production support ladder, fixed operator policies, bounded coordinate rejection, runtime certificate containment |
+| `crates/akita-types/src/proof/fold_draw.rs` | Method, group, dimensions, family, and counts bound before the group root; packing rejects operator filtering |
+| `jolt-crypto/src/challenge/challenges.rs` and `sampler/xof.rs` in that crate | Claim-major addressing and independent indexed XOF inputs |
+| `jolt-crypto/src/challenge/config.rs` and `sampler/mod.rs` in that crate | Production support ladder, fixed operator policies, bounded coordinate rejection, runtime certificate containment |
 | `crates/akita-params/src/transcript_grinding/plan.rs` and `crates/akita-params/src/transcript_grinding.rs` | Geometry-derived runs, root-plus-coordinate multiplicity, structural count, response nonce width, and zero fold work bits |
 | `crates/akita-prover/src/protocol/fold_grind.rs` | Joint response-admission search across groups |
 | `crates/akita-verifier/src/stages/stage1.rs` | Nonterminal range and physical-L2 claims tied into the recursive relation |
@@ -608,7 +608,7 @@ allocate from a proof-controlled length.
 | `akita-config` | Derive and descriptor-bind the public plan |
 | `akita-prover` | Fold-response candidate computation and honest bounded search |
 | `akita-verifier` | Nonce ranges, predicates, response equations, plan completion |
-| `akita-challenges` | Indexed sparse expansion and distribution checks |
+| `jolt-crypto::challenge` | Indexed sparse expansion and distribution checks |
 | `akita-planner` | Query accounting and maximum schedule objective |
 
 There is one production proof path. A separate packed nonce codec, nonce prefix,

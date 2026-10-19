@@ -11,8 +11,8 @@ use crate::sources::block_digits::evaluate::{evaluate_and_fold_base, evaluate_an
 use crate::sources::block_digits::{DigitShape, RingValues};
 use crate::sources::dense::seam_packing_partials;
 use crate::sources::poly_helpers::{element_partitioned_decompose_fold, SignedDigitBasis};
-use akita_challenges::SparseChallenge;
 use akita_error::AkitaError;
+use jolt_crypto::challenge::SparseChallenge;
 use jolt_field::checked;
 use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced};
 use std::ops::Range;

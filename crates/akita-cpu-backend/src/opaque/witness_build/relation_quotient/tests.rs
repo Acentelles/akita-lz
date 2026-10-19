@@ -1,5 +1,5 @@
 use super::*;
-use akita_challenges::SparseChallenge;
+use jolt_crypto::challenge::SparseChallenge;
 use jolt_field::Prime128OffsetA7F7 as F;
 use jolt_field::Zero;
 

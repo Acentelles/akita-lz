@@ -6,7 +6,6 @@ use crate::backend::{
     FoldProbeDiagnostics, FoldProbeGeometry, FoldProbeOutcome, ValidatedFoldAcceptancePlan,
     ValidatedFoldProbePlan, ValidatedTerminalFoldProbePlan,
 };
-use akita_challenges::{FoldDraw, ForkFoldDraw};
 use akita_error::AkitaError;
 #[cfg(test)]
 use akita_params::OpeningMethod;
@@ -18,6 +17,7 @@ use akita_types::draw_group_fold_challenges;
 use akita_types::GroupFoldChallenges;
 #[cfg(test)]
 use akita_types::OpeningFamily;
+use akita_types::{FoldDraw, ForkFoldDraw};
 use jolt_field::Unreduced;
 use jolt_field::{CanonicalEncoding, Field, Ring};
 use jolt_transcript::Sponge;
@@ -51,7 +51,7 @@ pub(crate) struct FoldProbeOutput<FoldHandle> {
     pub(crate) challenges: GroupFoldChallenges,
     pub(crate) diagnostics: FoldProbeDiagnostics,
     /// The group's fork draws, logged once the fork is accepted.
-    pub(crate) draws: akita_challenges::FoldDrawRecord,
+    pub(crate) draws: akita_types::FoldDrawRecord,
 }
 
 pub(crate) struct TerminalFoldGrindOutput {
@@ -67,7 +67,7 @@ pub(crate) fn sample_terminal_fold_response<F, E, H, B, const D: usize, S: Spong
     grinding: &mut akita_types::ProverGrinding<'_, S>,
     level: u32,
     params: &TerminalFoldParams,
-    sparse: &akita_challenges::SparseChallengeConfig,
+    sparse: &jolt_crypto::challenge::SparseChallengeConfig,
     witness: &H,
     shape: &TerminalResponseShape,
 ) -> Result<TerminalFoldGrindOutput, AkitaError>
@@ -99,7 +99,7 @@ where
     let response_l2_sq_cap = params.response_l2_sq_cap();
     let operator_rejection = if response_l2_sq_cap.is_some() {
         Some(
-            akita_challenges::selective_l2_operator_norm_rejection(params.d_a(), sparse)
+            jolt_crypto::challenge::selective_l2_operator_norm_rejection(params.d_a(), sparse)
                 .ok_or_else(|| {
                     AkitaError::InvalidSetup("unsupported terminal L2 challenge policy".into())
                 })?,
@@ -115,7 +115,7 @@ where
             let mut fork = grinding.fold_response_fork(site, nonce)?;
             let mut draw = ForkFoldDraw::new(&mut fork);
             let challenges = draw.draw_folding_challenges_with_rejection(
-                akita_challenges::FoldChallengeDrawDomain::EvaluationTrace,
+                akita_types::FoldChallengeDrawDomain::EvaluationTrace,
                 params.d_a(),
                 0,
                 params.blocks.live_blocks,
@@ -457,8 +457,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use akita_challenges::SparseChallengeConfig;
     use akita_params::SisModulusProfileId;
+    use jolt_crypto::challenge::SparseChallengeConfig;
 
     type F = jolt_field::Prime128Offset275;
 
@@ -470,7 +470,7 @@ mod tests {
     impl FoldDraw for FixedDraw {
         fn absorb_and_squeeze(&mut self, _payload: &[u8]) -> [u8; 32] {
             self.draws += 1;
-            [11; akita_challenges::FOLD_CHALLENGE_SEED_LEN]
+            [11; akita_types::FOLD_CHALLENGE_SEED_LEN]
         }
     }
 

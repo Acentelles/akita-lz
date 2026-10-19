@@ -1,9 +1,9 @@
 use super::*;
-use akita_challenges::SparseChallengeConfig;
 use akita_params::golomb_rice::golomb_rice_encode_vec;
 use akita_params::tail_golomb_rice_low_bits::wire_rice_low_bits;
 use akita_params::test_fixtures::test_lp;
 use akita_params::CommittedGroupParams;
+use jolt_crypto::challenge::SparseChallengeConfig;
 use jolt_field::CanonicalEncoding;
 use jolt_field::{Prime128OffsetA7F7, Zero};
 

@@ -14,13 +14,13 @@ use crate::opaque::{
     CpuOuterCommitOperation, NttCacheOwnerId,
 };
 use crate::{AkitaProverSetup, DensePoly};
-use akita_challenges::SparseChallengeConfig;
 use akita_error::AkitaError;
 use akita_params::{
     CommittedGroupParams, CompressionChainPlan, RingRelationMode, SetupMatrixCapacity,
     SisModulusProfileId,
 };
 use akita_types::RingVec;
+use jolt_crypto::challenge::SparseChallengeConfig;
 use jolt_field::Prime64Offset59;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;

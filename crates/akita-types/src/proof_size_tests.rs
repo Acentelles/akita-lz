@@ -7,10 +7,10 @@ mod tests {
     use akita_params::proof_size::*;
     use akita_params::{CommittedGroupParams, DigitRangePlan};
 
-    use akita_challenges::SparseChallengeConfig;
     use akita_error::AkitaError;
     use akita_serialization::{AkitaSerialize, Compress};
     use akita_sumcheck::{EqFactoredSumcheckProof, SumcheckProof};
+    use jolt_crypto::challenge::SparseChallengeConfig;
     use jolt_field::{
         CanonicalEncoding, Ext2, ExtField, Field, FpExt4, Prime128OffsetA7F7, Prime32Offset99,
         Prime64Offset59, Zero,

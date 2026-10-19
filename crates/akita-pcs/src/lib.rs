@@ -20,7 +20,6 @@
 //! - `jolt-field` - Shared field traits, concrete fields, and packing
 //! - `akita-serialization` - Serialization abstractions
 //! - `akita-algebra` - Modules, rings, NTTs, and polynomial helpers
-//! - `akita-challenges` - Fiat-Shamir challenge sampling helpers
 //! - `akita-sumcheck` - Generic sumcheck proof types, traits, and drivers
 //! - `akita-verifier` - Verifier replay without prover-only polynomial backends
 //! - `akita-prover` - Generic protocol sequencing and opaque backend contracts

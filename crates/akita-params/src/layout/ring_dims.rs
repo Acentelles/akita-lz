@@ -11,7 +11,7 @@ pub const MAX_FOLD_LEVELS: usize = 16;
 
 /// Ring dimensions valid for A-role (`d_a`) sparse fold challenges.
 pub const SUPPORTED_CHALLENGE_RING_DIMS: &[usize] =
-    akita_challenges::PRODUCTION_FOLD_CHALLENGE_RING_DIMS;
+    jolt_crypto::challenge::PRODUCTION_FOLD_CHALLENGE_RING_DIMS;
 
 /// Ring dimensions admitted for A/B/D commitment matrices.
 ///

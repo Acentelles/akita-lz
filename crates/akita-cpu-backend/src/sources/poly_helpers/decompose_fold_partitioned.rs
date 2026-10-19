@@ -11,8 +11,8 @@ use super::{
     fill_rotated_challenge, sparse_mul_acc, sparse_mul_acc_i16, sparse_mul_acc_i16_pm1,
     sparse_mul_acc_pm1, SignedDigitBasis, ValidatedSparseChallenge, ValidatedSparseChallenges,
 };
-use akita_challenges::SparseChallenge;
 use akita_error::AkitaError;
+use jolt_crypto::challenge::SparseChallenge;
 use jolt_field::checked;
 use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
 use jolt_field::solinas::parallel::*;

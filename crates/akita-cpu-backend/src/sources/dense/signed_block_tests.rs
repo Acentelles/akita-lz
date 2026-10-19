@@ -6,7 +6,7 @@ use crate::opaque::{
 };
 use crate::sources::block_digits::{BlockDigits, DigitShape, I16Rows, I8Rows, RingValues};
 use crate::sources::signed_blocks::{Decoded, I16Slice, I8Slice, SignedBlockDigits, SignedStorage};
-use akita_challenges::SparseChallenge;
+use jolt_crypto::challenge::SparseChallenge;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 struct Decoder<'a> {

@@ -6,9 +6,9 @@ use super::{
     ValidatedSparseChallenges,
 };
 use crate::sources::block_digits::{CachedDigits, DigitShape};
-use akita_challenges::SparseChallenge;
 use akita_error::AkitaError;
 use akita_params::sis::compute_num_digits_field_width;
+use jolt_crypto::challenge::SparseChallenge;
 use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
 use jolt_field::CyclotomicRing;
 use jolt_field::{CanonicalEncoding, Fp64, Prime128Offset275, Ring, Zero};

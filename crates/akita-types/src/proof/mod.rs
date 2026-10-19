@@ -12,6 +12,7 @@ mod coefficient_packing_relation;
 pub mod commitment;
 pub mod compression_relation_weights;
 mod fold_challenges;
+mod fold_draw;
 pub mod relation;
 pub mod relation_range_image;
 mod relation_weight_event;
@@ -64,6 +65,10 @@ pub use compression_relation_weights::{
 };
 pub use containers::{DigitBlockIter, DigitBlocks, RingVec, RingView};
 pub use fold_challenges::{draw_group_fold_challenges, GroupFoldChallenges, OpeningFamily};
+pub use fold_draw::{
+    fold_challenge_sample_label, FoldChallengeDrawDomain, FoldDraw, FoldDrawRecord, ForkFoldDraw,
+    FOLD_CHALLENGE_SEED_LEN,
+};
 
 #[cfg(test)]
 pub(crate) use levels::{
@@ -88,9 +93,9 @@ pub use ring_relation::{
 };
 pub use scheme::OpeningPoints;
 pub use setup::{
-    derive_public_matrix_prefix, sample_akita_setup_seed, validate_public_matrix_matches_seed,
-    AkitaExpandedSetup, AkitaSetupDescriptor, AkitaSetupSeed, AkitaVerifierSetup,
-    PublicMatrixDerivation, MAX_GENERIC_SETUP_DECODE_FIELD_ELEMENTS,
+    sample_akita_setup_seed, validate_public_matrix_matches_seed, AkitaExpandedSetup,
+    AkitaSetupDescriptor, AkitaSetupSeed, AkitaVerifierSetup,
+    MAX_GENERIC_SETUP_DECODE_FIELD_ELEMENTS,
 };
 pub use setup_prefix::{
     setup_prefix_coverage_eval_len, SetupPrefixPublicCommitment, SetupPrefixVerifierRegistry,

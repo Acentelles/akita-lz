@@ -38,28 +38,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "akita-challenges"
-version = "0.1.0"
-dependencies = [
- "akita-error",
- "jolt-field",
- "jolt-transcript",
- "keccak 0.1.6",
- "serde",
- "shake",
- "smallvec",
-]
-
-[[package]]
 name = "akita-config"
 version = "0.1.0"
 dependencies = [
- "akita-challenges",
  "akita-error",
  "akita-params",
  "akita-schedules",
  "akita-serialization",
  "akita-types",
+ "jolt-crypto",
  "jolt-field",
  "rand_core 0.6.4",
  "serde_json",
@@ -70,7 +57,6 @@ name = "akita-cpu-backend"
 version = "0.1.0"
 dependencies = [
  "akita-algebra",
- "akita-challenges",
  "akita-config",
  "akita-error",
  "akita-params",
@@ -80,6 +66,7 @@ dependencies = [
  "akita-types",
  "akita-verifier",
  "criterion",
+ "jolt-crypto",
  "jolt-field",
  "jolt-poly",
  "jolt-transcript",
@@ -92,6 +79,7 @@ dependencies = [
 name = "akita-error"
 version = "0.1.0"
 dependencies = [
+ "jolt-crypto",
  "jolt-field",
  "jolt-transcript",
  "thiserror",
@@ -102,11 +90,11 @@ name = "akita-params"
 version = "0.1.0"
 dependencies = [
  "akita-algebra",
- "akita-challenges",
  "akita-error",
  "akita-serialization",
  "akita-sumcheck",
  "blake2",
+ "jolt-crypto",
  "jolt-field",
  "jolt-transcript",
  "num-bigint 0.5.1",
@@ -120,7 +108,6 @@ name = "akita-pcs"
 version = "0.1.0"
 dependencies = [
  "akita-algebra",
- "akita-challenges",
  "akita-config",
  "akita-cpu-backend",
  "akita-error",
@@ -135,6 +122,7 @@ dependencies = [
  "ark-bn254 0.6.0",
  "ark-ff 0.6.0",
  "criterion",
+ "jolt-crypto",
  "jolt-field",
  "jolt-poly",
  "jolt-transcript",
@@ -160,12 +148,12 @@ dependencies = [
 name = "akita-planner"
 version = "0.1.0"
 dependencies = [
- "akita-challenges",
  "akita-config",
  "akita-error",
  "akita-params",
  "akita-schedules",
  "akita-sis-estimator",
+ "jolt-crypto",
  "jolt-field",
  "libm",
 ]
@@ -174,13 +162,13 @@ dependencies = [
 name = "akita-prover"
 version = "0.1.0"
 dependencies = [
- "akita-challenges",
  "akita-config",
  "akita-error",
  "akita-params",
  "akita-serialization",
  "akita-sumcheck",
  "akita-types",
+ "jolt-crypto",
  "jolt-field",
  "jolt-poly",
  "jolt-transcript",
@@ -191,9 +179,9 @@ dependencies = [
 name = "akita-schedules"
 version = "0.1.0"
 dependencies = [
- "akita-challenges",
  "akita-error",
  "akita-params",
+ "jolt-crypto",
  "serde",
  "serde_json",
 ]
@@ -203,6 +191,7 @@ name = "akita-serialization"
 version = "0.1.0"
 dependencies = [
  "getrandom 0.2.17",
+ "jolt-crypto",
  "jolt-field",
  "jolt-poly",
  "proptest",
@@ -213,13 +202,13 @@ dependencies = [
 name = "akita-setup"
 version = "0.1.0"
 dependencies = [
- "akita-challenges",
  "akita-config",
  "akita-cpu-backend",
  "akita-error",
  "akita-params",
  "akita-serialization",
  "akita-types",
+ "jolt-crypto",
  "jolt-field",
  "tracing",
 ]
@@ -256,18 +245,16 @@ name = "akita-types"
 version = "0.1.0"
 dependencies = [
  "akita-algebra",
- "akita-challenges",
  "akita-error",
  "akita-params",
  "akita-serialization",
  "akita-sumcheck",
  "criterion",
+ "jolt-crypto",
  "jolt-field",
  "jolt-poly",
  "jolt-transcript",
  "rand 0.8.8",
- "rand_core 0.6.4",
- "shake",
  "tracing",
 ]
 
@@ -276,7 +263,6 @@ name = "akita-verifier"
 version = "0.1.0"
 dependencies = [
  "akita-algebra",
- "akita-challenges",
  "akita-config",
  "akita-error",
  "akita-params",
@@ -284,6 +270,7 @@ dependencies = [
  "akita-sumcheck",
  "akita-types",
  "criterion",
+ "jolt-crypto",
  "jolt-field",
  "jolt-poly",
  "jolt-transcript",
@@ -1047,6 +1034,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "jolt-crypto"
+version = "0.1.0"
+dependencies = [
+ "jolt-field",
+ "jolt-poly",
+ "keccak 0.1.6",
+ "num-bigint 0.4.8",
+ "rand_core 0.6.4",
+ "rayon",
+ "serde",
+ "shake",
+ "smallvec",
+ "spongefish",
+ "subtle",
+ "thiserror",
+]
+
+[[package]]
 name = "jolt-field"
 version = "0.1.0"
 dependencies = [
@@ -1061,6 +1066,7 @@ dependencies = [
  "jolt-utils",
  "num-traits",
  "rand_core 0.6.4",
+ "rayon",
  "serde",
  "thiserror",
  "tracing",
@@ -2042,6 +2048,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "subtle"
+version = "2.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
+
+[[package]]
 name = "syn"
 version = "2.0.119"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2521,10 +2533,6 @@ name = "zmij"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
-
-[[patch.unused]]
-name = "jolt-crypto"
-version = "0.1.0"
 
 [[patch.unused]]
 name = "jolt-sumcheck"

@@ -1,9 +1,9 @@
 //! Build one fully sized successor, including its setup-prefix group and D input.
 use super::geometry::{rebuild_group_output_matrices, universal_fold_digit_depth, FoldDigitInputs};
-use akita_challenges::SparseChallengeConfig;
 use akita_error::AkitaError;
 use akita_params::{FoldParams, OpeningClaimsLayout};
 use akita_schedules::PlannerPolicy;
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 pub(super) fn build_successor(
     template: &FoldParams,

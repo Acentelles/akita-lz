@@ -1349,7 +1349,7 @@ ratio. It also does not show duplicate verifier-core wrapper timings.
 
 | Concern | Canonical owner |
 |---|---|
-| Sparse challenge shells and operator norm rejection | `akita-challenges` |
+| Sparse challenge shells and operator norm rejection | `jolt-crypto::challenge` |
 | Collision formulas and SIS table keys | `akita-types::sis` |
 | Physical response and witness geometry | `akita-types::layout` |
 | L2 proof values and schedule-driven shapes | `akita-types::proof` |
@@ -1480,8 +1480,8 @@ fully folded into the Book.
 * `crates/akita-params/src/sis/norm_bound.rs`.
 * `crates/akita-params/src/sis/physical_l2.rs`.
 * `crates/akita-params/src/schedule/profiles.rs`.
-* `crates/akita-challenges/src/config.rs`.
-* `crates/akita-challenges/src/sampler/mod.rs`.
+* `jolt-crypto/src/challenge/config.rs`.
+* `jolt-crypto/src/challenge/sampler/mod.rs`.
 * `crates/akita-planner/src/response_model.rs`.
 * `crates/akita-planner/src/schedule_params/candidate/recursive.rs`.
 * `crates/akita-planner/src/schedule_params/suffix_dp/terminal.rs`.

@@ -3,8 +3,8 @@
 //! These policies select an exact gadget depth for schedule generation. They
 //! are not runtime protocol metadata and are never evaluated by the verifier.
 
-use akita_challenges::SparseChallengeConfig;
 use akita_error::AkitaError;
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 #[cfg(test)]
 use super::onehot_source::{canonical_source_classes, SourceClass};

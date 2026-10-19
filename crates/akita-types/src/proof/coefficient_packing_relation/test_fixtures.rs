@@ -1,7 +1,7 @@
 //! Coefficient-packing relation fixtures shared by the akita-types tests and
 //! the verifier's compact-factor tests.
 
-use akita_challenges::{Challenges, SparseChallenge, SparseChallengeConfig};
+use jolt_crypto::challenge::{Challenges, SparseChallenge, SparseChallengeConfig};
 use jolt_field::{CanonicalEncoding, Ext2, ExtField, Field, Prime64Offset59, Ring, Zero};
 
 use crate::{

@@ -128,7 +128,7 @@ fn inner_bound_supported(
 }
 
 const INNER_RING_DIMENSION_COUNT: usize =
-    akita_challenges::PRODUCTION_FOLD_CHALLENGE_RING_DIMS.len();
+    jolt_crypto::challenge::PRODUCTION_FOLD_CHALLENGE_RING_DIMS.len();
 static Q32_INNER_COEFF_LINF_BOUNDS: [OnceLock<Vec<u128>>; INNER_RING_DIMENSION_COUNT] =
     [const { OnceLock::new() }; INNER_RING_DIMENSION_COUNT];
 static Q64_INNER_COEFF_LINF_BOUNDS: [OnceLock<Vec<u128>>; INNER_RING_DIMENSION_COUNT] =
@@ -141,7 +141,7 @@ pub(super) fn cached_inner_coeff_linf_bounds(
     ring_dimension: u32,
 ) -> Option<&'static [u128]> {
     let ring_dimension_usize = usize::try_from(ring_dimension).ok()?;
-    let index = akita_challenges::PRODUCTION_FOLD_CHALLENGE_RING_DIMS
+    let index = jolt_crypto::challenge::PRODUCTION_FOLD_CHALLENGE_RING_DIMS
         .iter()
         .position(|&dimension| dimension == ring_dimension_usize)?;
     let cache = match modulus_profile {
@@ -174,13 +174,13 @@ fn derive_inner_coeff_linf_bounds(
     ring_dimension: u32,
 ) -> Vec<u128> {
     let mut bounds = Vec::new();
-    for &challenge_dimension in akita_challenges::PRODUCTION_FOLD_CHALLENGE_RING_DIMS {
+    for &challenge_dimension in jolt_crypto::challenge::PRODUCTION_FOLD_CHALLENGE_RING_DIMS {
         if !inner_challenge_mass_supported(modulus_profile, ring_dimension, challenge_dimension) {
             continue;
         }
-        let Some(config) =
-            akita_challenges::SparseChallengeConfig::production_for_ring_dim(challenge_dimension)
-        else {
+        let Some(config) = jolt_crypto::challenge::SparseChallengeConfig::production_for_ring_dim(
+            challenge_dimension,
+        ) else {
             continue;
         };
         bounds.extend(
@@ -197,7 +197,7 @@ fn derive_inner_coeff_linf_bounds(
                 .iter()
                 .filter_map(|&exponent| {
                     exact_inner_collision_bound(
-                        akita_challenges::D64_SELECTIVE_L2_CHALLENGE_CONFIG.l1_norm() as u128,
+                        jolt_crypto::challenge::D64_SELECTIVE_L2_CHALLENGE_CONFIG.l1_norm() as u128,
                         exponent,
                     )
                 }),
@@ -312,13 +312,13 @@ mod tests {
 
     /// Every production challenge L1 norm reachable by an A-role cell.
     fn production_challenge_l1_norms() -> Vec<u128> {
-        let mut norms = akita_challenges::PRODUCTION_FOLD_CHALLENGE_RING_DIMS
+        let mut norms = jolt_crypto::challenge::PRODUCTION_FOLD_CHALLENGE_RING_DIMS
             .iter()
             .filter_map(|&dim| {
-                akita_challenges::SparseChallengeConfig::production_for_ring_dim(dim)
+                jolt_crypto::challenge::SparseChallengeConfig::production_for_ring_dim(dim)
             })
             .chain(core::iter::once(
-                akita_challenges::D64_SELECTIVE_L2_CHALLENGE_CONFIG,
+                jolt_crypto::challenge::D64_SELECTIVE_L2_CHALLENGE_CONFIG,
             ))
             .map(|config| config.l1_norm() as u128)
             .collect::<Vec<_>>();

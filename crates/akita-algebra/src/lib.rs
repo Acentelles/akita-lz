@@ -5,7 +5,7 @@
 //!
 //! Concrete fields, field packing, the cyclotomic ring, NTT/CRT arithmetic,
 //! and the smooth FFT live in `jolt-field`. Sparse Fiat–Shamir challenge
-//! representations and samplers live in `akita-challenges`.
+//! representations and samplers live in `jolt-crypto`.
 
 #![warn(missing_docs)]
 #![warn(unreachable_pub)]

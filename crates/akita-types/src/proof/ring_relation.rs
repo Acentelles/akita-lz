@@ -2,13 +2,13 @@
 
 use crate::FpExtEncoding;
 use crate::{embed_ring_subfield_scalar, OpeningFamily, RingMultiplierOpeningPoint, RingVec};
-use akita_challenges::Challenges;
 use akita_error::AkitaError;
 use akita_params::layout::opening_layout::OpeningClaimsLayout;
 use akita_params::layout::CommitmentRingDims;
 use akita_params::witness::WitnessLayout;
 use akita_params::{CommittedGroupParams, SubringCoefficientPackingGeometry};
 use challenge_validation::validate_packing_challenge_weights;
+use jolt_crypto::challenge::Challenges;
 use jolt_field::Field;
 use jolt_field::{CanonicalEncoding, ExtField, Ring};
 
