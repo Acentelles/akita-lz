@@ -3,7 +3,6 @@ use crate::backend::OperationCtx;
 use crate::backend::{EvaluationTraceDescription, Stage2OpeningDescription};
 use akita_types::GrindingReplay;
 use jolt_field::AdditiveGroup;
-use jolt_transcript::PrivateChannel;
 
 use akita_params::{InnerCommitSecurityRoute, OpeningClaimsLayout};
 use akita_types::{
@@ -540,9 +539,7 @@ where
                     .id()?
                     .into(),
             );
-            grinding
-                .state_mut()
-                .exchange_private_base::<F>(&mut public_commitment.coeffs().to_vec())?;
+            grinding.state_mut().send_all(public_commitment.coeffs());
             NextWitnessState::OuterPayload(public_commitment)
         }
         (

@@ -30,7 +30,7 @@ use akita_types::GrindingReplay;
 use akita_types::{AkitaVerifierSetup, FpExtEncoding, RingVec};
 use challenges::derive_multi_group_stage1_challenges;
 use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
-use jolt_transcript::{Channel, PrivateChannel, Sponge};
+use jolt_transcript::{Channel, Sponge};
 use relation_instance::{assemble_relation_instance, validate_fold_payloads};
 
 pub(crate) type SetupPrefixOpening<E> = (Vec<E>, E);
@@ -191,7 +191,6 @@ where
                     "native successor payload disagrees with the level grammar".into(),
                 ));
             }
-            let mut payload = akita_types::extension_slots::<F>(coefficient_count)?;
             let state = grinding.state_mut();
             state.site(
                 akita_types::FoldSite::NextWitnessPayload {
@@ -200,9 +199,7 @@ where
                 .id()?
                 .into(),
             );
-            state
-                .exchange_private_base::<F>(&mut payload)
-                .map(|_| payload)
+            state.receive_n::<F>(coefficient_count)
         }
         NextWitnessPlan::TerminalT { coefficient_count } => {
             let state = grinding.state_mut();
