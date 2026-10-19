@@ -195,18 +195,23 @@ impl<Cfg: CommitmentConfig> TrustedScheduleCatalog<Cfg> {
 
     /// Load a selected-row verifier view (see
     /// [`ValidatedScheduleCatalog::to_verifier_view`]) from the application's
-    /// trusted setup path and bind it to this config.
+    /// trusted setup path and bind it to this config and caller-selected
+    /// chunking, as for [`Self::from_artifact_bytes`].
     ///
     /// # Errors
     ///
     /// Returns [`AkitaError::InvalidSetup`] when the config policy is invalid
     /// or the view is rejected by [`ValidatedScheduleCatalog::from_verifier_view`].
-    pub fn from_verifier_view(bytes: &[u8]) -> Result<Self, AkitaError> {
-        validate_config_policy::<Cfg>()?;
+    pub fn from_verifier_view(
+        bytes: &[u8],
+        chunking: ChunkedWitnessCfg,
+    ) -> Result<Self, AkitaError> {
+        validate_config_policy::<Cfg>(chunking)?;
+        let policy = policy_of::<Cfg>(chunking);
         let catalog = ValidatedScheduleCatalog::from_verifier_view(
             bytes,
             Cfg::schedule_family_name(),
-            &policy_of::<Cfg>(),
+            &policy,
             Cfg::ring_challenge_config,
         )?;
         Ok(Self::from_validated(catalog))
