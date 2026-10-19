@@ -261,6 +261,10 @@ impl RingRelationProver {
             .id()?
             .into(),
         );
+        // WARNING: exchanged in place. This relies on `PrivateChannel`'s
+        // contract that the prover leaves values unchanged; a masked prover
+        // that wrote masked values back would corrupt `opening_payload`, which
+        // the relation below still reads.
         grinding
             .state_mut()
             .exchange_private_base::<F>(opening_payload.coeffs_mut())?;
