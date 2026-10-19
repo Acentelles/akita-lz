@@ -159,7 +159,9 @@ impl<'a, W: PrimeWidth, const K: usize, const D: usize> CenteredI16NttConverter<
             .zip(self.params.twiddles.iter())
         {
             let state = limb.as_mut_ptr().cast::<u64>();
-            if state as usize & 7 == 0 {
+            // The packed words assume little-endian order; big-endian test
+            // hosts take the element-wise path.
+            if cfg!(target_endian = "little") && state as usize & 7 == 0 {
                 // SAFETY: the sealed width and checked degree make the limb 64
                 // contiguous i32 residues, 256 bytes at this aligned address.
                 unsafe { state.cast::<[u64; 32]>().write(words) };
