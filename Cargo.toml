@@ -108,6 +108,7 @@ overflow-checks = true
 # worktree. Never extracted into an upstream PR; extraction pins upstream revs.
 [patch."https://github.com/a16z/jolt"]
 jolt-field = { path = "../jolt/.claude/worktrees/whiteout-dev/crates/jolt-field" }
+jolt-algebra = { path = "../jolt/.claude/worktrees/whiteout-dev/crates/jolt-algebra" }
 jolt-poly = { path = "../jolt/.claude/worktrees/whiteout-dev/crates/jolt-poly" }
 jolt-transcript = { path = "../jolt/.claude/worktrees/whiteout-dev/crates/jolt-transcript" }
 jolt-sumcheck = { path = "../jolt/.claude/worktrees/whiteout-dev/crates/jolt-sumcheck" }
