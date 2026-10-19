@@ -742,12 +742,23 @@ commitment that completed before the proof call.
 The cache MUST support covering-prefix lookup: a slot of length `m` covers any
 request `n <= m` with the same keys. Growth SHOULD transform only the missing
 suffix. Replacement by a larger immutable snapshot is acceptable; an existing
-borrower may finish on the older covering snapshot. Concurrent first use or
-growth MUST be single-flight per cache key.
-Failed initialization is not resident cache state. A failed cell MUST be
-removed only when it is still the map entry for that key; callers that waited
-on a failed covering cell retry their own exact request. Thus an oversized or
-otherwise rejected warm cannot poison a later valid smaller prefix.
+borrower may finish on the older covering snapshot.
+
+The map holds only finished values; no caller waits on another caller's
+in-flight build. A build MUST run outside the cache lock, because it may
+re-enter the cache (directly, or through a Rayon task it steals while joining)
+for the same or an overlapping key. Overlapping cold acquisitions of one key
+may therefore build duplicate candidates. Publication happens under the lock
+after a second lookup: the first successful covering value wins, and a caller
+whose candidate lost, or whose smaller build finished after a larger covering
+value was published, returns the published value and drops its own after the
+lock is released. Every candidate is a pure function of the prepared setup and
+the key, so the winner is indistinguishable from the losers.
+
+Failed initialization is not resident cache state. A build that returns an
+error or panics publishes nothing and leaves the key retriable. Thus an
+oversized or otherwise rejected warm cannot poison a later valid smaller
+prefix.
 
 #### Operation clusters
 

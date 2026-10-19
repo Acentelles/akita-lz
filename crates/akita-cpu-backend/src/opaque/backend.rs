@@ -12,30 +12,10 @@ use akita_types::AkitaExpandedSetup;
 use core::marker::PhantomData;
 use jolt_field::{CanonicalEncoding, Field};
 use std::collections::BTreeMap;
-use std::sync::{Arc, Condvar, Mutex, PoisonError};
-
-enum SetupPrefixCacheState<T> {
-    Computing,
-    Ready(Arc<T>),
-    Failed,
-}
-
-struct SetupPrefixCacheCell<T> {
-    state: Mutex<SetupPrefixCacheState<T>>,
-    ready: Condvar,
-}
-
-impl<T> SetupPrefixCacheCell<T> {
-    fn computing() -> Self {
-        Self {
-            state: Mutex::new(SetupPrefixCacheState::Computing),
-            ready: Condvar::new(),
-        }
-    }
-}
+use std::sync::{Arc, Mutex};
 
 pub(super) struct SetupPrefixCache<T> {
-    entries: Mutex<BTreeMap<SetupPrefixSlotId, Arc<SetupPrefixCacheCell<T>>>>,
+    entries: Mutex<BTreeMap<SetupPrefixSlotId, Arc<T>>>,
 }
 
 impl<T> Default for SetupPrefixCache<T> {
@@ -46,108 +26,21 @@ impl<T> Default for SetupPrefixCache<T> {
     }
 }
 
-/// Owns a `Computing` slot while its derivation runs.
-///
-/// Dropping it without publishing a value, whether by an error return or by
-/// unwinding out of `derive`, marks the slot failed, evicts it, and wakes every
-/// waiter so one of them retries. Without this, a panic in `derive` would leave
-/// the slot `Computing` and block every later caller for that id forever.
-struct PendingSetupPrefix<'a, T> {
-    cache: &'a SetupPrefixCache<T>,
-    id: &'a SetupPrefixSlotId,
-    cell: &'a Arc<SetupPrefixCacheCell<T>>,
-}
-
-impl<T> Drop for PendingSetupPrefix<'_, T> {
-    fn drop(&mut self) {
-        // Neither lock is held across `derive`, so poisoning can only come from
-        // an unrelated panic; recover the guard rather than skip the cleanup.
-        let mut state = self
-            .cell
-            .state
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner);
-        *state = SetupPrefixCacheState::Failed;
-        let mut cache = self
-            .cache
-            .entries
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner);
-        if cache
-            .get(self.id)
-            .is_some_and(|current| Arc::ptr_eq(current, self.cell))
-        {
-            cache.remove(self.id);
-        }
-        self.cell.ready.notify_all();
-    }
-}
-
-impl<T: Send + Sync> SetupPrefixCache<T> {
-    pub(super) fn memoized<Derive>(
+impl<T> SetupPrefixCache<T> {
+    pub(super) fn get_or_build(
         &self,
         id: &SetupPrefixSlotId,
-        derive: Derive,
-    ) -> Result<Arc<T>, AkitaError>
-    where
-        Derive: FnOnce() -> Result<T, AkitaError>,
-    {
-        let mut derive = Some(derive);
-        loop {
-            let (cell, derive_here) = {
-                let mut cache = self
-                    .entries
-                    .lock()
-                    .map_err(|_| AkitaError::Internal("setup prefix cache lock poisoned".into()))?;
-                match cache.get(id) {
-                    Some(cell) => (Arc::clone(cell), false),
-                    None => {
-                        let cell = Arc::new(SetupPrefixCacheCell::computing());
-                        cache.insert(id.clone(), Arc::clone(&cell));
-                        (cell, true)
-                    }
-                }
-            };
-
-            if derive_here {
-                let derive = derive.take().ok_or_else(|| {
-                    AkitaError::Internal(
-                        "setup prefix cache derivation was already consumed".into(),
-                    )
-                })?;
-                let pending = PendingSetupPrefix {
-                    cache: self,
-                    id,
-                    cell: &cell,
-                };
-                let value = Arc::new(derive()?);
-                let mut state = cell
-                    .state
-                    .lock()
-                    .map_err(|_| AkitaError::Internal("setup prefix slot lock poisoned".into()))?;
-                *state = SetupPrefixCacheState::Ready(Arc::clone(&value));
-                cell.ready.notify_all();
-                drop(state);
-                core::mem::forget(pending);
-                return Ok(value);
-            }
-
-            let mut state = cell
-                .state
-                .lock()
-                .map_err(|_| AkitaError::Internal("setup prefix slot lock poisoned".into()))?;
-            loop {
-                match &*state {
-                    SetupPrefixCacheState::Computing => {
-                        state = cell.ready.wait(state).map_err(|_| {
-                            AkitaError::Internal("setup prefix slot lock poisoned".into())
-                        })?;
-                    }
-                    SetupPrefixCacheState::Ready(value) => return Ok(Arc::clone(value)),
-                    SetupPrefixCacheState::Failed => break,
-                }
-            }
-        }
+        derive: impl FnOnce() -> Result<T, AkitaError>,
+    ) -> Result<Arc<T>, AkitaError> {
+        crate::cache::get_or_build(
+            &self.entries,
+            "setup prefix cache lock poisoned",
+            |cache| cache.get(id).cloned(),
+            derive,
+            |cache, value| {
+                cache.insert(id.clone(), value);
+            },
+        )
     }
 
     #[cfg(test)]
@@ -188,12 +81,9 @@ pub struct CpuBackend<F: Field, E> {
     identity: Arc<BackendIdentity>,
     prepared: Option<CpuPreparedSetup<F>>,
     max_cached_ring_switch_elements: usize,
-    /// Derived setup-prefix material, memoized for the life of this backend.
-    ///
-    /// A prefix commitment is a pure function of the owned setup and the slot
-    /// id, both of which are fixed here, so deriving it more than once is
-    /// wasted work.
-    setup_prefix_cache: SetupPrefixCache<CachedSetupPrefix<F>>,
+    /// One setup-prefix value is retained per slot for the life of this backend.
+    /// Overlapping cold acquisitions may derive duplicate candidates without waiting.
+    pub(super) setup_prefix_cache: SetupPrefixCache<CachedSetupPrefix<F>>,
     extension: PhantomData<fn() -> E>,
 }
 
@@ -241,18 +131,6 @@ impl<F: Field, E> CpuBackend<F, E> {
             setup_prefix_cache: SetupPrefixCache::default(),
             extension: PhantomData,
         })
-    }
-
-    /// Return memoized setup-prefix material, deriving it once per slot.
-    pub(super) fn memoized_setup_prefix<Derive>(
-        &self,
-        id: &SetupPrefixSlotId,
-        derive: Derive,
-    ) -> Result<Arc<CachedSetupPrefix<F>>, AkitaError>
-    where
-        Derive: FnOnce() -> Result<CachedSetupPrefix<F>, AkitaError>,
-    {
-        self.setup_prefix_cache.memoized(id, derive)
     }
 
     #[cfg(test)]
