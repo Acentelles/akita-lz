@@ -8,8 +8,8 @@ use akita_params::{GrindingPlan, GrindingQueryKind, GrindingSite};
 use jolt_field::{CanonicalEncoding, ExtField, Field};
 use jolt_sumcheck::{ProverRoundContext, SumcheckSite, VerifierRoundContext};
 use jolt_transcript::{
-    Channel, Fork, ProverTranscript, SiteId, Sponge, TranscriptError, VerifierTranscript,
-    FORK_SEED_LEN,
+    Channel, Fork, PrivateChannel, ProverTranscript, SiteId, Sponge, TranscriptError,
+    VerifierTranscript, FORK_SEED_LEN,
 };
 use std::marker::PhantomData;
 
@@ -126,8 +126,9 @@ fn fold_response_site(site: GrindingSite, nonce_bits: u8) -> SiteId {
 /// transcript, so it leaves the replay unusable and `finish` fails even if the
 /// caller drops the error.
 pub trait GrindingReplay {
-    /// The role-specific transcript.
-    type State: Channel;
+    /// The role-specific transcript. Witness-dependent field messages go
+    /// through its [`PrivateChannel`] seam.
+    type State: Channel + PrivateChannel<Error = TranscriptError>;
 
     /// Borrow the transcript for ordinary protocol messages and challenges.
     ///

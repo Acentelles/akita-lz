@@ -4,7 +4,7 @@ use crate::GrindingReplay;
 use akita_error::AkitaError;
 use akita_params::transcript_site::{ProtocolSiteId, SITE_FAMILY_PHYSICAL_L2};
 use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field};
-use jolt_transcript::Channel;
+use jolt_transcript::{Channel, PrivateChannel};
 
 const ROLE_INTEGER: u32 = 1;
 const ROLE_SUBCLAIMS: u32 = 2;
@@ -41,7 +41,7 @@ where
     state.exchange(&mut integer)?;
     let integer = u128::from_le_bytes(integer);
     state.site(site(level, ROLE_SUBCLAIMS).into());
-    state.exchange_all(subclaims)?;
+    state.exchange_private::<F, E>(subclaims)?;
     Ok(integer)
 }
 
@@ -58,7 +58,8 @@ where
 {
     let state = grinding.state_mut();
     state.site(site(level, ROLE_VIRTUAL_EVALUATIONS).into());
-    Ok(state.exchange_all(evaluations)?)
+    state.exchange_private::<F, E>(evaluations)?;
+    Ok(())
 }
 
 #[cfg(test)]

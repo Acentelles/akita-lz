@@ -16,7 +16,7 @@ use akita_types::{
     AkitaVerifierSetup, FpExtEncoding, OpeningClaims, PolynomialGroupClaims, RingVec,
 };
 use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, PseudoMersenne, Ring};
-use jolt_transcript::{Channel, Sponge};
+use jolt_transcript::{Channel, PrivateChannel, Sponge};
 
 pub(super) struct SuffixVerifierState<F: Field, E: Field> {
     pub opening_point: Vec<E>,
@@ -195,6 +195,8 @@ where
     let relation_geometry = RelationWitnessGeometry::for_level(lp, &opening_batch, E::DEGREE)?;
     let opening_geometry = relation_geometry.rhs_layout().opening_payload_geometry()?;
     let opening_payload = {
+        let mut payload =
+            akita_types::extension_slots::<F>(opening_geometry.transmitted_coefficients())?;
         let state = grinding.state_mut();
         state.site(
             akita_types::FoldSite::OpeningPayload {
@@ -204,9 +206,9 @@ where
             .id()?
             .into(),
         );
-        state.receive_n::<F>(opening_geometry.transmitted_coefficients())
-    }
-    .map(RingVec::from_coeffs)?;
+        state.exchange_private_base::<F>(&mut payload)?;
+        RingVec::from_coeffs(payload)
+    };
     let prefix = finalize_claims::<F, E, _>(&opening_batch, material, grinding, level)?;
     let commitment_payloads =
         suffix_commitment_payloads::<F, E>(setup, lp, &opening_batch, &current_state.witness)?;

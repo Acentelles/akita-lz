@@ -15,7 +15,7 @@ use akita_types::RingVec;
 use akita_types::{OpeningFamily, RingRelationInstance};
 use jolt_field::Unreduced;
 use jolt_field::{CanonicalEncoding, Field, Ring};
-use jolt_transcript::{Channel, Sponge};
+use jolt_transcript::{Channel, PrivateChannel, Sponge};
 
 use super::fold_grind;
 use super::prove::PreparedGroupOpening;
@@ -261,7 +261,9 @@ impl RingRelationProver {
             .id()?
             .into(),
         );
-        grinding.state_mut().send_all(opening_payload.coeffs());
+        grinding
+            .state_mut()
+            .exchange_private_base::<F>(&mut opening_payload.coeffs().to_vec())?;
         drop(opening_rows_span);
 
         // Public claim batching is intentionally delayed until every
