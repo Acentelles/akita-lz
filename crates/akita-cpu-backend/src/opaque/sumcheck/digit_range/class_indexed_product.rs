@@ -17,8 +17,8 @@ use akita_algebra::split_eq::GruenSplitEq;
 use akita_error::AkitaError;
 use akita_params::DigitRangePlan;
 use akita_sumcheck::EqFactoredSumcheckKernel;
-use jolt_field::{Field, Ring};
-use jolt_field::{Fold, Unreduced};
+use jolt_algebra::{Field, Ring};
+use jolt_algebra::{Fold, Unreduced};
 use jolt_poly::OmittedConstantPoly;
 
 struct CompactProductState<E: Field, const LANES: usize> {
@@ -743,7 +743,7 @@ impl<E: Field + Ring + Fold + Unreduced, const LANES: usize> EqFactoredSumcheckK
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::{Ext2, Prime128Offset275, Prime64Offset59};
+    use jolt_algebra::{Ext2, Prime128Offset275, Prime64Offset59};
 
     #[test]
     fn final_child_claims_reject_every_unfinished_storage_phase() {

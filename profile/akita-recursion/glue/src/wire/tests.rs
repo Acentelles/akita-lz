@@ -1,17 +1,18 @@
 use super::*;
-use akita_challenges::SparseChallengeConfig;
 use akita_config::proof_optimized::{fp128, fp32};
 use akita_params::sis::sis_table_key_for_linf_bound;
 use akita_params::{
-    scheduled_setup_prefix, CompressionChainPlan, GroupCommitPhaseParams, GroupOpenPhaseParams,
-    GroupOpeningPlan, InnerCommitMatrixParams, OuterCommitMatrixParams, PolynomialGroupLayout,
-    SisMatrixRole, SisModulusProfileId, SisTableDigest, SisTableKey, DEFAULT_SIS_SECURITY_POLICY,
+    scheduled_setup_prefix, CompressionChainPlan, FlatMatrix, GroupCommitPhaseParams,
+    GroupOpenPhaseParams, GroupOpeningPlan, InnerCommitMatrixParams, OuterCommitMatrixParams,
+    PolynomialGroupLayout, SisMatrixRole, SisModulusProfileId, SisTableDigest, SisTableKey,
+    DEFAULT_SIS_SECURITY_POLICY,
 };
 use akita_types::{
-    derive_public_matrix_prefix, sample_akita_setup_seed, RingVec, SetupPrefixPublicCommitment,
-    SetupPrefixVerifierSlot,
+    sample_akita_setup_seed, RingVec, SetupPrefixPublicCommitment, SetupPrefixVerifierSlot,
 };
-use jolt_field::Zero;
+use jolt_crypto::challenge::SparseChallengeConfig;
+use jolt_crypto::lattice::derive_public_matrix_prefix;
+use jolt_algebra::Zero;
 
 type TestCfg = fp128::OneHot;
 type TestF = fp128::Field;
@@ -316,7 +317,9 @@ fn strict_setup_decoder_preserves_prefix_slots() {
         num_field_elements: 2 * TEST_D,
         setup_seed: setup_seed.clone(),
     };
-    let shared_matrix = derive_public_matrix_prefix::<TestF>(2 * TEST_D, &setup_seed);
+    let shared_matrix = FlatMatrix::from_flat_data(
+        derive_public_matrix_prefix::<TestF>(2 * TEST_D, &setup_seed).unwrap(),
+    );
     let commitment_params = prefix_commitment_params();
     let matrix = &commitment_params.profile.outer.matrix;
     let payload_coefficients = CompressionChainPlan::for_complete_source(

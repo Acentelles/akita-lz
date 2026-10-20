@@ -1,7 +1,6 @@
 //! Shared candidate-construction helpers.
 
 use crate::runtime::PlannerPolicy;
-use akita_challenges::SparseChallengeConfig;
 use akita_error::AkitaError;
 use akita_params::sis::{
     min_secure_l2_rank, projected_role_ring_count, role_a_collision_l2_sq_for_response_bound,
@@ -9,6 +8,7 @@ use akita_params::sis::{
     SisTableKey,
 };
 use akita_params::{InnerCommitMatrixParams, PhysicalL2NormProofShape, SisMatrixRole};
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 /// Exact public geometry that may admit one selective physical-L2 A matrix.
 #[derive(Clone, Copy, Debug)]
@@ -60,7 +60,7 @@ pub fn selective_l2_inner_matrix(
             geometry.fold_digit_count,
         )?,
     };
-    let challenge_mass = akita_challenges::selective_l2_operator_norm_rejection(
+    let challenge_mass = jolt_crypto::challenge::selective_l2_operator_norm_rejection(
         geometry.ring_dimension,
         geometry.fold_challenge_config,
     )
@@ -185,7 +185,7 @@ mod tests {
             witness_chunk: ChunkedWitnessCfg::default(),
             recursive_setup_planning: false,
         };
-        let challenge = akita_challenges::D64_SELECTIVE_L2_CHALLENGE_CONFIG;
+        let challenge = jolt_crypto::challenge::D64_SELECTIVE_L2_CHALLENGE_CONFIG;
 
         let candidate = selective_l2_inner_matrix(
             &policy,
@@ -243,7 +243,7 @@ mod tests {
             witness_chunk: ChunkedWitnessCfg::default(),
             recursive_setup_planning: false,
         };
-        let challenge = akita_challenges::D128_SELECTIVE_L2_CHALLENGE_CONFIG;
+        let challenge = jolt_crypto::challenge::D128_SELECTIVE_L2_CHALLENGE_CONFIG;
         let basis_eight = selective_l2_inner_matrix(
             &policy,
             SelectiveL2CandidateGeometry {
@@ -288,7 +288,7 @@ mod tests {
             panic!("expected L2 route")
         };
         let exact_collision = role_a_collision_l2_sq_for_response_bound(
-            u128::from(akita_challenges::OperatorNormRejection::D128_SELECTIVE_L2.threshold),
+            u128::from(jolt_crypto::challenge::OperatorNormRejection::D128_SELECTIVE_L2.threshold),
             RESPONSE_CAP,
         )
         .expect("collision bound");

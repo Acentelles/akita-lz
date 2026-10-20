@@ -6,12 +6,13 @@ use crate::commitment::{
     IntoPortableCommitmentState,
 };
 use crate::opaque::DensePoly;
-#[cfg(test)]
-use akita_algebra::CyclotomicRing;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_params::SetupPrefixSlotId;
 use akita_types::{AkitaExpandedSetup, RingVec, SetupPrefixPublicCommitment};
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::checked;
+#[cfg(test)]
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{CanonicalEncoding, Field};
 
 pub(crate) struct ValidatedSetupPrefixCommitment<'a> {
     id: &'a SetupPrefixSlotId,
@@ -183,14 +184,14 @@ mod tests {
         CpuOuterCommitOperation, NttExecutionRequirements,
     };
     use crate::AkitaProverSetup;
-    use akita_challenges::SparseChallengeConfig;
     use akita_params::{
         active_setup_field_len, setup_prefix_precommitted_params, CommittedGroupParams,
         CompressionChainPlan, InnerCommitMatrixParams, OpeningClaimsLayout,
         OuterCommitMatrixParams, SetupMatrixCapacity, SisModulusProfileId, SisTableKey,
     };
     use akita_serialization::AkitaSerialize;
-    use jolt_field::Prime128OffsetA7F7 as F;
+    use jolt_algebra::Prime128OffsetA7F7 as F;
+    use jolt_crypto::challenge::SparseChallengeConfig;
     use std::sync::Arc;
 
     type MissingExportExecutor<'a> = (

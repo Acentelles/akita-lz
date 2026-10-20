@@ -182,7 +182,7 @@ fn accepts_single_chunk_level_two_packing() {
             challenge_subring_dimension: 64,
         };
     recursive.own_group_mut().opening.fold_challenge_config =
-        akita_challenges::SparseChallengeConfig::production_for_ring_dim(64).unwrap();
+        jolt_crypto::challenge::SparseChallengeConfig::production_for_ring_dim(64).unwrap();
     use_expected_producer_encodings(&mut schedule, 2);
     schedule
         .validate_nonterminal_opening_execution(2)
@@ -211,7 +211,7 @@ fn rejects_unaudited_recursive_packing_family() {
         .params
         .own_group_mut()
         .opening
-        .fold_challenge_config = akita_challenges::SparseChallengeConfig::pm1_only(1);
+        .fold_challenge_config = jolt_crypto::challenge::SparseChallengeConfig::pm1_only(1);
     assert!(schedule.validate_nonterminal_opening_execution(1).is_err());
 }
 

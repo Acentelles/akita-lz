@@ -8,10 +8,8 @@ use crate::{
     GrindingSite, OpeningClaimsLayout, PolynomialGroupLayout, SumcheckProtocol,
     TranscriptGrindingCost,
 };
-use akita_error::{
-    narrowing::{usize_to_u32, usize_to_u64},
-    AkitaError,
-};
+use akita_error::AkitaError;
+use jolt_algebra::narrowing::{usize_to_u32, usize_to_u64};
 
 fn validate_claim_extension_degree(extension_degree: usize) -> Result<(), AkitaError> {
     if extension_degree == 0 || !extension_degree.is_power_of_two() {
@@ -403,7 +401,7 @@ fn append_claim_batch(
 mod tests {
     use super::*;
     use crate::SisModulusProfileId;
-    use akita_challenges::SparseChallengeConfig;
+    use jolt_crypto::challenge::SparseChallengeConfig;
 
     // Pre-PR 56 per-round construction retained as an independent parity oracle.
     fn append_sumcheck(

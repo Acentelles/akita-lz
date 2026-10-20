@@ -15,10 +15,11 @@ pub(crate) mod sources;
 mod validation;
 pub use portable_witness::{CompressionWitnessFragment, PortableWitnessPatch};
 
-use akita_algebra::CyclotomicRing;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_types::RingVec;
-use jolt_field::Field;
+use jolt_algebra::checked;
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::Field;
 
 pub(crate) use akita_prover::protocol;
 pub use commitment::{

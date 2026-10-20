@@ -30,7 +30,6 @@ use crate::{
     ExtensionOpeningReductionProof, FoldLevelProof, NextWitnessBinding, RingVec,
     TerminalLevelProof, TerminalResponse,
 };
-use akita_challenges::SparseChallengeConfig;
 use akita_error::AkitaError;
 use akita_params::golomb_rice::golomb_rice_encode_vec;
 use akita_params::nonterminal_level_layout;
@@ -41,8 +40,9 @@ use akita_params::{
     TailSegmentLayout, TerminalResponseShape, EXTENSION_OPENING_REDUCTION_DEGREE,
 };
 use akita_serialization::{AkitaSerialize, Compress};
+use jolt_crypto::challenge::SparseChallengeConfig;
 
-use jolt_field::{CanonicalEncoding, Field, Prime128OffsetA7F7, Zero};
+use jolt_algebra::{CanonicalEncoding, Field, Prime128OffsetA7F7, Zero};
 
 #[path = "schedule_tests/descriptor.rs"]
 mod descriptor;
@@ -1342,7 +1342,7 @@ fn schedule_row_identity_binds_main_opening_method() {
             challenge_subring_dimension: 64,
         };
     successor.own_group_mut().opening.fold_challenge_config =
-        akita_challenges::SparseChallengeConfig::production_for_ring_dim(64).unwrap();
+        jolt_crypto::challenge::SparseChallengeConfig::production_for_ring_dim(64).unwrap();
     let profiles = CommittedGroupBatchProfile {
         final_group: GroupCommitPhaseParams::from_params_unchecked_for_test(
             PolynomialGroupLayout::singleton(8),
@@ -1362,7 +1362,7 @@ fn schedule_row_identity_binds_main_opening_method() {
         .own_group_mut()
         .opening
         .fold_challenge_config =
-        akita_challenges::SparseChallengeConfig::production_for_ring_dim(64).unwrap();
+        jolt_crypto::challenge::SparseChallengeConfig::production_for_ring_dim(64).unwrap();
     assert_ne!(
         digest,
         akita_params::schedule_row_digest(&profiles, &changed)

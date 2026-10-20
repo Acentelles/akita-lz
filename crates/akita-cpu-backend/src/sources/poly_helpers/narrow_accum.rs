@@ -1,6 +1,6 @@
 //! Proven-safe i16 partial accumulators for sparse negacyclic products.
 
-use akita_challenges::SparseChallenge;
+use jolt_crypto::challenge::SparseChallenge;
 
 #[inline(always)]
 fn accumulate_i8_segment(src: &[i8], dst: &mut [i16], scale: i16) {

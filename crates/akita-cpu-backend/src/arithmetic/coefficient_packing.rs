@@ -1,10 +1,11 @@
 //! Shared checked construction for coefficient-packing backend kernels.
 
 use crate::opaque::SubringCoefficientPackingPlan;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_types::FpExtEncoding;
-use jolt_field::solinas::parallel::*;
-use jolt_field::{AdditiveGroup, ExtField, Field, MulBaseUnreduced, Unreduced};
+use jolt_algebra::checked;
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::{AdditiveGroup, ExtField, Field, MulBaseUnreduced, Unreduced};
 
 fn zero_vec<T: AdditiveGroup>(len: usize) -> Result<Vec<T>, AkitaError> {
     let mut values = Vec::new();
@@ -265,11 +266,11 @@ mod tests {
         SubringCoefficientPackingPlan,
     };
     use crate::opaque::{DensePoly, OneHotPoly, RecursiveWitnessFlat};
-    use akita_algebra::CyclotomicRing;
     use akita_error::AkitaError;
     use akita_params::{BasisMode, SubringCoefficientPackingGeometry};
     use akita_types::{FpExtEncoding, PreparedSubringCoefficientPackingPoint};
-    use jolt_field::{
+    use jolt_algebra::CyclotomicRing;
+    use jolt_algebra::{
         CanonicalEncoding, Ext2, ExtField, Field, FpExt4, One, Prime128OffsetA7F7, Prime32Offset99,
         Prime64Offset59, Ring,
     };
@@ -290,7 +291,7 @@ mod tests {
     fn assert_dense_matches_reference<T, U, const RING_D: usize>(s: usize)
     where
         T: Field + CanonicalEncoding + Ring,
-        U: ExtField<T> + FpExtEncoding<T> + Ring + jolt_field::MulBaseUnreduced<T>,
+        U: ExtField<T> + FpExtEncoding<T> + Ring + jolt_algebra::MulBaseUnreduced<T>,
     {
         let geometry = SubringCoefficientPackingGeometry::try_new(U::DEGREE, RING_D, s).unwrap();
         let point_len = (2 * RING_D).next_power_of_two().trailing_zeros() as usize;

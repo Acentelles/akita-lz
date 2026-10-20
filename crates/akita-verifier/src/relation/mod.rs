@@ -1,8 +1,6 @@
 //! Prepared ring-switch relation evaluator and its public replay inputs.
 
 use akita_algebra::eq_poly::EqPolynomial;
-use akita_algebra::ring::scalar_powers;
-use akita_challenges::Challenges;
 use akita_error::AkitaError;
 use akita_params::{
     dispatch_for_field, CommittedGroupParams, OpeningClaimsLayout, RelationAddressGeometry,
@@ -14,7 +12,9 @@ use akita_types::{
     RingRelationGroupOpeningView, RingRelationInstance, SetupContributionGroupInputs,
     SetupContributionPlan,
 };
-use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
+use jolt_algebra::ring::scalar_powers;
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
+use jolt_crypto::challenge::Challenges;
 use std::sync::Arc;
 
 pub(crate) mod evaluation;
@@ -383,7 +383,9 @@ where
             actual: challenges.num_live_blocks_per_claim(),
         });
     }
-    challenges.evals_at_pows::<F, E>(alpha_pows)
+    challenges
+        .evals_at_pows::<F, E>(alpha_pows)
+        .map_err(AkitaError::from)
 }
 
 pub(crate) fn setup_contribution_group_inputs<F: Field>(

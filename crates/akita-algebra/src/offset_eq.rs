@@ -5,10 +5,11 @@
 //! carries from arbitrary physical offsets. [`eq_eval_at_index`] is the scalar
 //! equality primitive shared by the kernel and direct callers.
 
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
+use jolt_algebra::checked;
 
-use crate::Field;
-use jolt_field::solinas::parallel::*;
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::Field;
 
 mod tensor_pair;
 pub use tensor_pair::{
@@ -1452,7 +1453,7 @@ mod tests;
 #[cfg(test)]
 mod amortization_tests {
     use super::*;
-    use jolt_field::{Fp64, Ring};
+    use jolt_algebra::{Fp64, Ring};
 
     type F = Fp64<4294967197>;
 

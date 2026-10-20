@@ -18,8 +18,8 @@ use akita_types::{
     AkitaExpandedSetup, CompressionRelationWeights, FpExtEncoding, NegativeBinarySupport,
     OpeningFamily, ReducedCompressionRelationWeights,
 };
-use jolt_field::solinas::parallel::*;
-use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::{CanonicalDecode, CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
 use jolt_sumcheck::{verify_single, SingleFormat, SingleInstance};
 use jolt_transcript::Sponge;
 
@@ -484,7 +484,6 @@ mod tests {
     use crate::coefficient_packing_relation::prepare_coefficient_packing_verifier_batch_semantics;
     use crate::coefficient_packing_relation::tests::materialize_stage2;
     use crate::relation::{FlatRelationContext, RelationMatrixEvaluator};
-    use akita_challenges::{Challenges, SparseChallenge, SparseChallengeConfig};
     use akita_params::{
         BasisMode, CommitmentPayloadMode, DigitRangePlan, FlatMatrix, OpenCommitMatrixParams,
         OpeningClaimsLayout, OpeningMethod, RelationAddressGeometry, RelationWitnessGeometry,
@@ -495,8 +494,9 @@ mod tests {
         CoefficientPackingBatchSemanticInputs, PreparedSubringCoefficientPackingPoint,
         RelationRangeImagePlan, RingRelationGroupOpening, RingRelationInstance, RingVec,
     };
-    use jolt_field::Zero;
-    use jolt_field::{Ext2, Prime64Offset59};
+    use jolt_algebra::Zero;
+    use jolt_algebra::{Ext2, Prime64Offset59};
+    use jolt_crypto::challenge::{Challenges, SparseChallenge, SparseChallengeConfig};
     use std::sync::Arc;
 
     type F = Prime64Offset59;

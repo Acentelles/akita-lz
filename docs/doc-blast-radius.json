@@ -47,7 +47,7 @@
     {
       "id": "sis-security",
       "description": "SIS floors, norm bounds, challenge sampling",
-      "code": ["crates/akita-params/src/sis/**", "crates/akita-challenges/**"],
+      "code": ["crates/akita-params/src/sis/**", "crates/akita-types/src/proof/fold_draw.rs"],
       "consider_updating": [
         "book/src/how/security.md",
         "book/src/foundations/lattices-sis.md",

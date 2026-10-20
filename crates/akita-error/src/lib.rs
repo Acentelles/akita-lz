@@ -1,13 +1,10 @@
-//! Protocol errors and checked integer arithmetic shared by Akita crates.
+//! Protocol errors shared by Akita crates.
 
 #![deny(missing_docs)]
 #![warn(unreachable_pub)]
 
-/// Checked integer formulas shared by Akita's layout and validation code.
-pub mod checked;
-
-/// Checked narrowing conversions from `usize` into fixed-width integers.
-pub mod narrowing;
+use jolt_algebra::AlgebraError;
+use jolt_crypto::CryptoError;
 
 /// Errors that can occur in Akita PCS operations.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -82,7 +79,7 @@ impl From<jolt_transcript::TranscriptError> for AkitaError {
 /// does. A malformed public shape is a setup error. Every other variant,
 /// including a failed prover self-check (a kernel bug), is a failed internal
 /// invariant.
-impl<F: jolt_field::Field> From<jolt_sumcheck::SumcheckError<F>> for AkitaError {
+impl<F: jolt_algebra::Field> From<jolt_sumcheck::SumcheckError<F>> for AkitaError {
     fn from(error: jolt_sumcheck::SumcheckError<F>) -> Self {
         use jolt_sumcheck::SumcheckError;
         match error {
@@ -117,6 +114,34 @@ impl<F: jolt_field::Field> From<jolt_sumcheck::SumcheckError<F>> for AkitaError 
             // `SumcheckError` is `#[non_exhaustive]`. A variant added upstream
             // must be classified above when Akita bumps jolt-sumcheck.
             _ => Self::Internal(error.to_string()),
+        }
+    }
+}
+
+/// Algebra errors keep their classification: every [`AlgebraError`] variant
+/// reports a rejected argument, so each maps to the same-named variant.
+impl From<AlgebraError> for AkitaError {
+    fn from(error: AlgebraError) -> Self {
+        match error {
+            AlgebraError::InvalidInput(message) => Self::InvalidInput(message),
+            AlgebraError::InvalidSize { expected, actual } => {
+                Self::InvalidSize { expected, actual }
+            }
+            AlgebraError::InvalidSetup(message) => Self::InvalidSetup(message),
+        }
+    }
+}
+
+/// Lattice-primitive errors keep their classification: each [`CryptoError`]
+/// variant maps to its namesake, and a wrapped [`AlgebraError`] maps as above.
+impl From<CryptoError> for AkitaError {
+    fn from(error: CryptoError) -> Self {
+        match error {
+            CryptoError::InvalidInput(message) => Self::InvalidInput(message),
+            CryptoError::InvalidSize { expected, actual } => Self::InvalidSize { expected, actual },
+            CryptoError::InvalidSetup(message) => Self::InvalidSetup(message),
+            CryptoError::Internal(message) => Self::Internal(message),
+            CryptoError::Algebra(error) => error.into(),
         }
     }
 }

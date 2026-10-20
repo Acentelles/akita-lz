@@ -1,10 +1,10 @@
 use super::*;
-use akita_challenges::{SparseChallenge, PRODUCTION_FOLD_CHALLENGE_RING_DIMS};
 use akita_params::{basis_weights, BasisMode};
 use akita_types::PreparedSubringCoefficientPackingPoint;
-use jolt_field::{
+use jolt_algebra::{
     Ext2, ExtField, FpExt4, One, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59, Zero,
 };
+use jolt_crypto::challenge::{SparseChallenge, PRODUCTION_FOLD_CHALLENGE_RING_DIMS};
 
 fn field_value<T: Ring>(seed: usize) -> T {
     T::from_u64(((seed * 17 + 11) % 97 + 1) as u64)
@@ -679,10 +679,10 @@ fn malformed_reference_inputs_reject_without_panicking() {
 
 mod packing_relation {
     use super::*;
-    use akita_algebra::ring::scalar_powers;
     use akita_params::SisModulusProfileId;
     use akita_types::{coefficient_packing_fixture, RingRelationGroupOpeningView};
-    use jolt_field::canonical_extension_basis;
+    use jolt_algebra::canonical_extension_basis;
+    use jolt_algebra::ring::scalar_powers;
 
     #[test]
     fn every_extension_plane_is_bound_by_the_packing_divisibility_identity() {

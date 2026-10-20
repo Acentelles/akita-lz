@@ -3,7 +3,7 @@ use super::super::test_oracle_weights::{
 };
 use super::*;
 use akita_algebra::offset_eq::OffsetEqWindow;
-use jolt_field::{ExtField, MulBaseUnreduced, Ring};
+use jolt_algebra::{ExtField, MulBaseUnreduced, Ring};
 
 fn literal_terminal_functional<E: Field>(point: &[E], dimension: usize, alpha: E) -> Vec<E> {
     assert_eq!(point.len(), dimension.trailing_zeros() as usize);
@@ -319,7 +319,7 @@ fn multi_group_packed_direct_matches_row_fallback_with_nested_role_dims() {
     let got = scan.evaluate_direct::<F>(&setup).unwrap();
     assert_eq!(got, expected);
 
-    let a_functional: std::sync::Arc<[F]> = akita_algebra::ring::terminal_residue_kernel(
+    let a_functional: std::sync::Arc<[F]> = jolt_algebra::ring::terminal_residue_kernel(
         &(0..D_A)
             .map(|index| test_scalar(601 + index as u128))
             .collect::<Vec<_>>(),
@@ -327,7 +327,7 @@ fn multi_group_packed_direct_matches_row_fallback_with_nested_role_dims() {
     )
     .unwrap()
     .into();
-    let projected_functional: std::sync::Arc<[F]> = akita_algebra::ring::terminal_residue_kernel(
+    let projected_functional: std::sync::Arc<[F]> = jolt_algebra::ring::terminal_residue_kernel(
         &(0..D_B)
             .map(|index| test_scalar(809 + index as u128))
             .collect::<Vec<_>>(),
@@ -533,7 +533,7 @@ fn reduced_fused_scan_matches_independent_heterogeneous_two_group_oracle() {
 
 #[test]
 fn reduced_fused_scan_matches_independent_oracle_over_extension_field() {
-    type X = jolt_field::Ext2<F>;
+    type X = jolt_algebra::Ext2<F>;
     let role_dims = CommitmentRingDims {
         inner: 128,
         outer: 64,

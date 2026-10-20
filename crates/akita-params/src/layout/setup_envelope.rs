@@ -386,7 +386,7 @@ fn include_matrix_field_elements(
 mod tests {
     use super::*;
     use crate::SisModulusProfileId;
-    use akita_challenges::SparseChallengeConfig;
+    use jolt_crypto::challenge::SparseChallengeConfig;
 
     #[test]
     fn commit_only_envelope_prices_complete_sliced_b_image() {

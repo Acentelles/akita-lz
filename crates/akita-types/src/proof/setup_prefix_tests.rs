@@ -1,5 +1,4 @@
 use super::*;
-use akita_challenges::SparseChallengeConfig;
 use akita_params::layout::setup_prefix_slots::{
     active_setup_field_len, scheduled_setup_prefix, setup_prefix_precommitted_params,
 };
@@ -10,6 +9,7 @@ use akita_params::test_fixtures::{
 use akita_params::{
     CommittedGroupParams, OpeningClaimsLayout, OuterCommitMatrixParams, SisModulusProfileId,
 };
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 #[test]
 fn setup_prefix_profile_must_commit_every_ring_in_the_full_domain() {
@@ -150,7 +150,7 @@ fn setup_prefix_params_project_b_width_for_smaller_outer_dimension() {
 
 #[test]
 fn setup_prefix_coverage_eval_len_uses_exact_registry_match() {
-    use jolt_field::Prime32Offset99 as F;
+    use jolt_algebra::Prime32Offset99 as F;
 
     let mut level_params = prefix_eligible_level_params();
     retarget_group_role_dims_wide(&mut level_params, 64, 64, 1024);
@@ -256,7 +256,7 @@ fn setup_prefix_coverage_eval_len_rejects_unplanned_level_params() {
 
 #[test]
 fn verifier_registry_duplicate_insert_does_not_replace_existing_slot() {
-    use jolt_field::Prime32Offset99 as F;
+    use jolt_algebra::Prime32Offset99 as F;
 
     let natural_len = 64;
     let mut level_params = sample_level_params();

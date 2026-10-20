@@ -15,8 +15,8 @@ use akita_params::{BasisMode, FoldSchedule, PolynomialGroupLayout, SetupContribu
 use akita_pcs::{AkitaSponge, PROOF_STREAM_PROTOCOL};
 use akita_serialization::{AkitaDeserialize, AkitaSerialize, Valid};
 use akita_types::{FpExtEncoding, GroupBatchStatement, OpeningClaims, PolynomialGroupClaims};
-use jolt_field::{CanonicalBytes, CanonicalEncoding, ExtField, Field, PseudoMersenne, Ring};
-use jolt_field::{Fold, Unreduced, WithCommitAccumulator};
+use jolt_algebra::{CanonicalBytes, CanonicalEncoding, ExtField, Field, PseudoMersenne, Ring};
+use jolt_algebra::{Fold, Unreduced, WithCommitAccumulator};
 use jolt_transcript::ProverTranscript;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
@@ -81,8 +81,8 @@ pub(crate) fn run_recursive_multi_group_onehot<FF, const D: usize, Cfg>(
         + AkitaDeserialize<Context = ()>
         + AkitaSerialize
         + 'static,
-    <FF as Unreduced>::Wide: From<FF> + jolt_field::AdditiveGroup,
-    Cfg::ExtField: jolt_field::MulBaseUnreduced<FF>
+    <FF as Unreduced>::Wide: From<FF> + jolt_algebra::AdditiveGroup,
+    Cfg::ExtField: jolt_algebra::MulBaseUnreduced<FF>
         + ExtField<FF>
         + FpExtEncoding<FF>
         + Unreduced
@@ -150,8 +150,8 @@ fn run_recursive_multi_group_onehot_with_proof_cfg<FF, const D: usize, Cfg, Proo
         + AkitaDeserialize<Context = ()>
         + AkitaSerialize
         + 'static,
-    <FF as Unreduced>::Wide: From<FF> + jolt_field::AdditiveGroup,
-    Cfg::ExtField: jolt_field::MulBaseUnreduced<FF>
+    <FF as Unreduced>::Wide: From<FF> + jolt_algebra::AdditiveGroup,
+    Cfg::ExtField: jolt_algebra::MulBaseUnreduced<FF>
         + ExtField<FF>
         + FpExtEncoding<FF>
         + Unreduced

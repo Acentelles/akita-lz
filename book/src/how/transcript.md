@@ -136,17 +136,17 @@ security route and reject an operator-norm policy.
 
 Implementation:
 
-- `crates/akita-challenges/src/fold_draw.rs` binds the group context into the
+- `crates/akita-types/src/proof/fold_draw.rs` binds the group context into the
   fold-response fork and squeezes each group root from it.
 - `crates/akita-types/src/transcript_grinding/replay.rs` squeezes the fork seed,
   sends or receives the counter, and builds the fork for both roles.
-- `crates/akita-challenges/src/sampler/xof.rs` defines the indexed SHAKE256
+- `jolt-crypto/src/challenge/sampler/xof.rs` defines the indexed SHAKE256
   stream and unbiased bounded draws.
-- `crates/akita-challenges/src/sampler/position_sample.rs` implements the
+- `jolt-crypto/src/challenge/sampler/position_sample.rs` implements the
   partial Fisher--Yates paths.
-- `crates/akita-challenges/src/sampler/signed_sparse.rs` assigns magnitudes and
+- `jolt-crypto/src/challenge/sampler/signed_sparse.rs` assigns magnitudes and
   signs.
-- `crates/akita-challenges/src/sampler/op_norm.rs` checks the certified
+- `jolt-crypto/src/challenge/sampler/op_norm.rs` checks the certified
   operator-norm predicate.
 
 ## AkitaInstanceDescriptor
@@ -411,7 +411,7 @@ nonce encoding are documented in
 - `crates/akita-params/src/transcript_grinding/plan.rs` defines the ordered
   plan; `crates/akita-types/src/transcript_grinding/replay.rs` couples
   nonce transport, predicate checks, challenges, and plan progress.
-- `crates/akita-challenges/src/sampler/xof.rs` derives the indexed sparse
+- `jolt-crypto/src/challenge/sampler/xof.rs` derives the indexed sparse
   challenge streams.
 - `crates/akita-verifier/src/fold/mod.rs` and
   `crates/akita-verifier/src/fold/terminal.rs` enforce fold and

@@ -1,8 +1,9 @@
 //! Canonical method-aware fold-challenge dispatch shared by prover and verifier.
 
-use akita_challenges::{Challenges, FoldChallengeDrawDomain, FoldDraw};
+use crate::{FoldChallengeDrawDomain, FoldDraw};
 use akita_error::AkitaError;
-use jolt_field::{ExtField, Field};
+use jolt_algebra::{ExtField, Field};
+use jolt_crypto::challenge::Challenges;
 
 use crate::CoefficientPackingChallenges;
 use akita_params::{InnerCommitSecurityRoute, OpeningMethod, SubringCoefficientPackingGeometry};
@@ -54,7 +55,7 @@ where
                 params.inner_commit_matrix_params().security_route(),
                 InnerCommitSecurityRoute::L2 { .. }
             )
-            .then(|| akita_challenges::selective_l2_operator_norm_rejection(d_a, &config))
+            .then(|| jolt_crypto::challenge::selective_l2_operator_norm_rejection(d_a, &config))
             .flatten();
             draw.draw_folding_challenges_with_rejection(
                 FoldChallengeDrawDomain::EvaluationTrace,

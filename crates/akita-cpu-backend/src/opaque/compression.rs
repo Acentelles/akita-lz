@@ -7,7 +7,7 @@ use akita_params::{
     CompressionTerminalPayload, PackedNegativeBinary, RingRelationMode,
 };
 use akita_types::RingVec;
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::{CanonicalEncoding, Field};
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
@@ -100,8 +100,8 @@ struct WorkItem<Id, F> {
 }
 
 fn quotient_from_products<F: Field, const D: usize>(
-    cyclic: &[akita_algebra::CyclotomicRing<F, D>],
-    negacyclic: &[akita_algebra::CyclotomicRing<F, D>],
+    cyclic: &[jolt_algebra::CyclotomicRing<F, D>],
+    negacyclic: &[jolt_algebra::CyclotomicRing<F, D>],
 ) -> Result<RingVec<F>, AkitaError> {
     if cyclic.len() != negacyclic.len() {
         return Err(AkitaError::Internal(
@@ -499,7 +499,7 @@ mod tests {
     use crate::opaque::{ComputeBackendSetup, CpuBackend};
     use crate::AkitaProverSetup;
     use akita_params::{SetupMatrixCapacity, SisModulusProfileId};
-    use jolt_field::{Prime128OffsetA7F7, Ring};
+    use jolt_algebra::{Prime128OffsetA7F7, Ring};
 
     type F = Prime128OffsetA7F7;
 

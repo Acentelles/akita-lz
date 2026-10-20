@@ -9,7 +9,7 @@ use akita_params::{lagrange_weights, BasisMode};
 use akita_pcs::AkitaCommitmentScheme;
 use akita_prover::SelectedProverOpeningData;
 use akita_types::{GroupBatchStatement, OpeningClaims, PolynomialGroupClaims};
-use jolt_field::{Ring, Zero};
+use jolt_algebra::{Ring, Zero};
 use jolt_transcript::{
     Blake2b512, Channel, Keccak, ProtocolId, ProverTranscript, VerifierTranscript,
 };
@@ -113,7 +113,7 @@ macro_rules! onehot_roundtrip {
         assert_eq!((challenge, echoed), (post_akita, post_akita));
         assert_ne!(suffix, 0xC0FF_EE00);
         let mut corrupted_echo = proof;
-        let echo_start = corrupted_echo.len() - 4 - <E as jolt_field::CanonicalBytes>::NUM_BYTES;
+        let echo_start = corrupted_echo.len() - 4 - <E as jolt_algebra::CanonicalBytes>::NUM_BYTES;
         corrupted_echo[echo_start] ^= 1;
         assert!(verify(&corrupted_echo).map_or(true, |(challenge, echoed, _)| echoed != challenge));
     }};

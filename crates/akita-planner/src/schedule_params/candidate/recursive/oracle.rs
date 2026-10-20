@@ -64,7 +64,7 @@ fn independently_enumerated_l2_candidates(
         return Ok(Vec::new());
     };
     let Some(l2_challenge) =
-        akita_challenges::selective_l2_challenge_config(request.dimensions.d_a())
+        jolt_crypto::challenge::selective_l2_challenge_config(request.dimensions.d_a())
     else {
         return Ok(Vec::new());
     };

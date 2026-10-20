@@ -1,9 +1,9 @@
 //! Rebuild one root with the fixture's reduced-width packing geometry.
 use super::geometry::rebuild_group_output_matrices;
-use akita_challenges::SparseChallengeConfig;
 use akita_error::AkitaError;
 use akita_params::{FoldParams, ScheduleLookupKey};
 use akita_schedules::PlannerPolicy;
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 pub(super) fn build_root(
     template: &FoldParams,

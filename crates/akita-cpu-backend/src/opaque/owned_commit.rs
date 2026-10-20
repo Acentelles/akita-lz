@@ -6,7 +6,7 @@ use akita_config::{CommitmentConfig, TrustedScheduleCatalog};
 use akita_error::AkitaError;
 use akita_serialization::AkitaSerialize;
 use akita_types::FpExtEncoding;
-use jolt_field::{CanonicalEncoding, Field, Unreduced, WithCommitAccumulator};
+use jolt_algebra::{CanonicalEncoding, Field, Unreduced, WithCommitAccumulator};
 use std::sync::Arc;
 
 impl<F, E> CpuBackend<F, E>
@@ -14,16 +14,16 @@ where
     F: Field
         + CanonicalEncoding
         + AkitaSerialize
-        + jolt_field::Ring
+        + jolt_algebra::Ring
         + Unreduced
         + WithCommitAccumulator
         + 'static,
-    F::Wide: From<F> + jolt_field::AdditiveGroup,
-    E: jolt_field::ExtField<F>
+    F::Wide: From<F> + jolt_algebra::AdditiveGroup,
+    E: jolt_algebra::ExtField<F>
         + FpExtEncoding<F>
-        + jolt_field::MulBaseUnreduced<F>
+        + jolt_algebra::MulBaseUnreduced<F>
         + Unreduced
-        + jolt_field::Fold
+        + jolt_algebra::Fold
         + AkitaSerialize
         + 'static,
 {
@@ -123,7 +123,7 @@ where
             profile.inner.digits.num_digits,
         );
         let modulus = akita_params::field_modulus::<F>()?;
-        let centering_threshold = akita_algebra::ring::cyclotomic::decompose_centering_threshold(
+        let centering_threshold = jolt_algebra::ring::cyclotomic::decompose_centering_threshold(
             profile.inner.digits.num_digits,
             profile.inner.digits.log_basis,
             modulus,
@@ -162,7 +162,7 @@ mod tests {
     use akita_config::proof_optimized::fp64;
     use akita_params::{OpeningClaimsLayout, ScheduleLookupKey};
     use akita_prover::CommitmentHandleMetadata;
-    use jolt_field::Ring;
+    use jolt_algebra::Ring;
 
     type Cfg = fp64::Dense;
     type F = <Cfg as CommitmentConfig>::Field;

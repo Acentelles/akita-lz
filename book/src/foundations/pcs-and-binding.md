@@ -343,7 +343,7 @@ folding, ring-relation, sumcheck, and Fiat–Shamir bounds.
   Schedule validation checks the selected geometry against those parameters.
 - `crates/akita-prover/src/protocol/fold_grind.rs` performs bounded honest
   response search.
-- `crates/akita-challenges/src/sampler/xof.rs` gives sparse challenge
+- `jolt-crypto/src/challenge/sampler/xof.rs` gives sparse challenge
   coordinates distinct oracle inputs.
 - `crates/akita-types/src/instance_descriptor/` binds schedule identity and
   the protocol-wide grinding contract.

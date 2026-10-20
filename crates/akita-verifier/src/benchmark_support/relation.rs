@@ -4,7 +4,6 @@ use crate::relation::evaluation::PreparedDirectRelation;
 use crate::relation::{
     prepare_relation_matrix_evaluator, RelationMatrixEvaluator, RingSwitchReplay,
 };
-use akita_challenges::{Challenges, SparseChallenge, SparseChallengeConfig};
 use akita_error::AkitaError;
 use akita_params::{
     ChunkedWitnessCfg, CommitmentRingDims, CommittedGroupParams, FlatMatrix,
@@ -15,7 +14,8 @@ use akita_types::{
     relation_rhs_coeff_len, AkitaExpandedSetup, AkitaSetupDescriptor, RingMultiplierOpeningPoint,
     RingRelationGroupOpening, RingRelationInstance, RingVec,
 };
-use jolt_field::{CanonicalEncoding, Prime128OffsetA7F7};
+use jolt_algebra::{CanonicalEncoding, Prime128OffsetA7F7};
+use jolt_crypto::challenge::{Challenges, SparseChallenge, SparseChallengeConfig};
 
 /// Inputs for one exact production relation-evaluator benchmark cell.
 pub struct RelationEvaluatorBenchmarkCase {

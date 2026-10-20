@@ -4,7 +4,7 @@
 
 use akita_error::AkitaError;
 
-use jolt_field::Field;
+use jolt_algebra::Field;
 
 use crate::proof::AkitaExpandedSetup;
 
@@ -33,7 +33,7 @@ pub fn ensure_setup_envelope<F: Field>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::Prime128OffsetA7F7;
+    use jolt_algebra::Prime128OffsetA7F7;
 
     type F = Prime128OffsetA7F7;
 
@@ -45,7 +45,9 @@ mod tests {
             num_field_elements: 32,
             setup_seed: [1u8; 32].into(),
         };
-        let shared = crate::derive_public_matrix_prefix::<F>(32, &seed.setup_seed);
+        let shared = akita_params::FlatMatrix::from_flat_data(
+            jolt_crypto::lattice::derive_public_matrix_prefix::<F>(32, &seed.setup_seed).unwrap(),
+        );
         let expanded =
             crate::AkitaExpandedSetup::from_trusted_seed_derived_parts_unchecked(seed, shared);
         let err = ensure_setup_envelope(&expanded, 2, 32).expect_err("undersized");

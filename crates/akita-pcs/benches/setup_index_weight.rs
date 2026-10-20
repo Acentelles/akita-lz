@@ -15,7 +15,7 @@ use criterion::measurement::WallTime;
 use criterion::{
     criterion_group, criterion_main, BenchmarkGroup, BenchmarkId, Criterion, SamplingMode,
 };
-use jolt_field::{CanonicalEncoding, Prime128OffsetA7F7, Zero};
+use jolt_algebra::{CanonicalEncoding, Prime128OffsetA7F7, Zero};
 use std::time::Duration;
 
 type F = Prime128OffsetA7F7;
@@ -79,9 +79,9 @@ fn make_case_with_shape(
         n_b,
         n_d,
         if num_groups == 1 {
-            akita_challenges::SparseChallengeConfig::pm1_only(1)
+            jolt_crypto::challenge::SparseChallengeConfig::pm1_only(1)
         } else {
-            akita_challenges::SparseChallengeConfig::production_for_ring_dim(role_dims.d_a())
+            jolt_crypto::challenge::SparseChallengeConfig::production_for_ring_dim(role_dims.d_a())
                 .unwrap()
         },
     )

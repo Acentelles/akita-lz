@@ -4,7 +4,7 @@
 use akita_error::AkitaError;
 use akita_params::OpeningClaimsLayout;
 use akita_types::{OpeningFamily, PreparedOpeningPoint};
-use jolt_field::{CanonicalEncoding, ExtField, Field};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field};
 use jolt_transcript::Sponge;
 
 mod coefficient_packing;

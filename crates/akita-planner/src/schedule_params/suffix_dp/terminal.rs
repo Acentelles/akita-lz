@@ -82,7 +82,7 @@ pub(crate) fn terminal_direct_suffix_cost(
     let mut sparse_challenge_config = terminal_lp.fold_challenge_config();
     if route_guide != Some(CandidateInnerRoute::Linf) {
         if let Some(l2_challenge) =
-            akita_challenges::selective_l2_challenge_config(terminal_params.d_a())
+            jolt_crypto::challenge::selective_l2_challenge_config(terminal_params.d_a())
         {
             let fold_basis = 1usize
                 .checked_shl(terminal_lp.open().digits.log_basis)
@@ -172,7 +172,7 @@ mod tests {
         let policy = akita_config::policy_of::<akita_config::proof_optimized::fp128::Dense>(
             akita_params::ChunkedWitnessCfg::default_non_chunked(),
         );
-        let challenge = akita_challenges::SparseChallengeConfig::production_for_ring_dim(256)
+        let challenge = jolt_crypto::challenge::SparseChallengeConfig::production_for_ring_dim(256)
             .expect("D256 challenge");
         let params = CommittedGroupParams::params_only(
             akita_params::SisModulusProfileId::Q128OffsetA7F7,

@@ -1,6 +1,5 @@
-use akita_challenges::SparseChallengeConfig;
 use akita_cpu_backend::{PreparedCrtNttProfile, PreparedNttCacheMetric};
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_params::{
     sis::compute_num_digits_field_width, CommitmentPayloadMode, CommitmentSliceCount,
     CommittedGroupParams, CommittedSourceEncoding, FoldSchedule, GrindingPlan,
@@ -9,6 +8,8 @@ use akita_params::{
     SubringCoefficientPackingGeometry,
 };
 use akita_types::NttTransformDomain;
+use jolt_algebra::checked;
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 mod grinding;
 
@@ -335,7 +336,7 @@ fn reported_operator_norm_threshold(
     match security_route {
         InnerCommitSecurityRoute::Linf(_) => None,
         InnerCommitSecurityRoute::L2 { .. } => {
-            akita_challenges::selective_l2_operator_norm_rejection(ring_dimension, challenge)
+            jolt_crypto::challenge::selective_l2_operator_norm_rejection(ring_dimension, challenge)
                 .map(|policy| policy.threshold)
         }
     }

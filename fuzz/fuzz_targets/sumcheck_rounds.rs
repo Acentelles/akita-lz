@@ -1,7 +1,7 @@
 #![no_main]
 
 use akita_error::AkitaError;
-use jolt_field::{CanonicalBytes, Prime128Offset275 as F, Ring};
+use jolt_algebra::{CanonicalBytes, Prime128Offset275 as F, Ring};
 use jolt_sumcheck::{
     verify_single, SingleFormat, SingleInstance, SumcheckSite, VerifierRoundContext,
 };

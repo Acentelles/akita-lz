@@ -10,7 +10,6 @@ use crate::sources::packed_digits::PackedSignedDigitWriter;
 #[cfg(feature = "response-model-diagnostics")]
 use crate::sources::packed_digits::PackedSignedDigits;
 use crate::validation::validate_i8_setup_log_basis;
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
 use akita_error::AkitaError;
 use akita_params::{
     dispatch_for_field, r_decomp_levels, CommitmentRingDims, CommittedGroupParams, RingRole,
@@ -20,7 +19,8 @@ use akita_serialization::AkitaSerialize;
 use akita_types::{
     emit_witness_e_planes, emit_witness_t_planes, DigitBlocks, RingRelationInstance, RingVec,
 };
-use jolt_field::{CanonicalEncoding, Field, Ring};
+use jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_algebra::{CanonicalEncoding, Field, Ring};
 
 /// Consumer-owned per-group inputs retained for recursive witness construction.
 pub(crate) struct RingRelationGroupWitness<F: Field + CanonicalEncoding> {

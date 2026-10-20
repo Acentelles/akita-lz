@@ -16,7 +16,7 @@ use akita_params::{basis_weights, BasisMode};
 use akita_types::{
     prepare_evaluation_trace_group_parameters, EvaluationTraceInputs, FpExtEncoding,
 };
-use jolt_field::{CanonicalEncoding, ExtField, Field, Ring};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, Ring};
 
 /// One chunk's compact E-segment geometry, shared by every claim in its group.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -512,7 +512,6 @@ where
 mod tests {
     use super::*;
     use crate::benchmark_support::evaluation_trace_benchmark_case;
-    use akita_algebra::CyclotomicRing;
     use akita_config::proof_optimized::fp128;
     use akita_params::{
         basis_weights_prefix, ring_opening_point_from_field, BasisMode, CommittedGroupParams,
@@ -520,7 +519,8 @@ mod tests {
         WitnessLayout,
     };
     use akita_types::{PreparedOpeningPoint, RelationRangeImagePlan, RingMultiplierOpeningPoint};
-    use jolt_field::Zero;
+    use jolt_algebra::CyclotomicRing;
+    use jolt_algebra::Zero;
 
     #[test]
     fn unit_tensor_segments_match_separate_unit_contractions() {
@@ -644,7 +644,7 @@ mod tests {
 
     #[test]
     fn compact_trace_matches_dense_definition_across_coefficient_blocks() {
-        type F = jolt_field::Prime128OffsetA7F7;
+        type F = jolt_algebra::Prime128OffsetA7F7;
         type E = F;
         const D: usize = 128;
         const NUM_VARIABLES: usize = 16;
@@ -658,7 +658,7 @@ mod tests {
             2,
             4,
             3,
-            akita_challenges::SparseChallengeConfig::production_for_ring_dim(D)
+            jolt_crypto::challenge::SparseChallengeConfig::production_for_ring_dim(D)
                 .expect("D128 challenge"),
         )
         .with_decomp(64, (1usize << NUM_VARIABLES) / D, 2, 2, 2)

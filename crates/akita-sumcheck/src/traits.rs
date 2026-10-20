@@ -12,7 +12,7 @@
 //! claim and the instance's `τ`.
 
 use akita_error::AkitaError;
-use jolt_field::Field;
+use jolt_algebra::Field;
 use jolt_poly::{OmittedConstantPoly, UnivariatePoly};
 
 /// A standard sumcheck kernel, driven through [`crate::FusedRounds`].

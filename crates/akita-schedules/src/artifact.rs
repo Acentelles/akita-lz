@@ -1,12 +1,12 @@
 //! Versioned trusted JSON schedule catalog artifacts.
 
-use akita_challenges::SparseChallengeConfig;
 use akita_error::AkitaError;
 use akita_params::{
     digest_descriptor_bytes, CommittedGroupBatchProfile, FoldSchedule, OpeningScheduleSelection,
     AKITA_INSTANCE_DESCRIPTOR_VERSION,
 };
 use akita_params::{ScheduleLookupKey, ScheduleLookupOrderKey};
+use jolt_crypto::challenge::SparseChallengeConfig;
 use serde::de::{self, DeserializeSeed, SeqAccess, Visitor};
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -777,7 +777,7 @@ fn validate_schedule_challenge_hooks(
                     ))
                 })?,
             akita_params::OpeningMethod::EvaluationTrace if uses_l2 => {
-                akita_challenges::selective_l2_challenge_config(ring_dimension).ok_or_else(|| {
+                jolt_crypto::challenge::selective_l2_challenge_config(ring_dimension).ok_or_else(|| {
                     AkitaError::InvalidSetup(format!(
                         "{position} has no selective L2 challenge config for D={ring_dimension}"
                     ))

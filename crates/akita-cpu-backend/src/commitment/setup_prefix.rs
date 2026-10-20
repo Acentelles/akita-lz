@@ -5,8 +5,9 @@ use akita_params::{setup_prefix_compression_plan, SetupPrefixSlotId};
 use akita_serialization::{
     AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate,
 };
-use akita_types::{AkitaSetupSeed, SetupPrefixPublicCommitment, SetupPrefixVerifierSlot};
-use jolt_field::Field;
+use akita_types::{SetupPrefixPublicCommitment, SetupPrefixVerifierSlot};
+use jolt_algebra::Field;
+use jolt_crypto::lattice::PublicMatrixSeed;
 use std::{
     collections::BTreeMap,
     io::{Read, Write},
@@ -138,7 +139,7 @@ impl<F: Field> SetupPrefixSlot<F> {
 /// In-memory registry of prover-ready setup-prefix slots.
 #[derive(Debug, Clone)]
 pub struct SetupPrefixProverRegistry<F: Field> {
-    setup_seed: AkitaSetupSeed,
+    setup_seed: PublicMatrixSeed,
     slots: BTreeMap<SetupPrefixSlotId, SetupPrefixSlot<F>>,
     /// True only for artifacts produced and retained inside this process by a
     /// CPU backend. This capability is deliberately omitted from serialization.
@@ -155,7 +156,7 @@ impl<F: Field> Eq for SetupPrefixProverRegistry<F> {}
 
 impl<F: Field> SetupPrefixProverRegistry<F> {
     #[must_use]
-    pub fn new(setup_seed: AkitaSetupSeed) -> Self {
+    pub fn new(setup_seed: PublicMatrixSeed) -> Self {
         Self {
             setup_seed,
             slots: BTreeMap::new(),
@@ -173,7 +174,7 @@ impl<F: Field> SetupPrefixProverRegistry<F> {
 
     /// Public field stream to which every committed prefix belongs.
     #[must_use]
-    pub fn setup_seed(&self) -> &AkitaSetupSeed {
+    pub fn setup_seed(&self) -> &PublicMatrixSeed {
         &self.setup_seed
     }
 
@@ -284,7 +285,7 @@ where
         _ctx: &(),
     ) -> Result<Self, SerializationError> {
         let setup_seed =
-            AkitaSetupSeed::deserialize_with_mode(&mut reader, compress, validate, &())?;
+            PublicMatrixSeed::deserialize_with_mode(&mut reader, compress, validate, &())?;
         let slot_count =
             read_limited_usize(&mut reader, compress, validate, MAX_SETUP_PREFIX_SLOTS)?;
         let mut out = Self::new(setup_seed);

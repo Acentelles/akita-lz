@@ -5,9 +5,10 @@ use crate::arithmetic::requirements::{signed_commit_domain, SignedCommitSource};
 use crate::opaque::{
     CompressionComputeBackend, NttCacheOwnerId, NttOperationCluster, RoutedNttRequirement,
 };
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_types::{AkitaSetupDescriptor, NttCacheKey, NttTransformDomain};
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::checked;
+use jolt_algebra::{CanonicalEncoding, Field};
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -484,8 +485,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use akita_challenges::SparseChallengeConfig;
     use akita_params::{CommittedGroupParams, SisModulusProfileId};
+    use jolt_crypto::challenge::SparseChallengeConfig;
 
     fn full_plan() -> CommitmentExecutionPlan {
         let params = CommittedGroupParams::params_only(

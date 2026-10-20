@@ -156,10 +156,10 @@ The main implementation owners are:
 
 | Concept | Primary code owner |
 | --- | --- |
-| Prime fields, extension fields, packed values, and field kernels | external `jolt-field` |
-| Cyclotomic rings, NTTs, modules, and gadget decomposition | `akita-algebra` |
+| Prime fields, extension fields, packed values, and field kernels | external `jolt-algebra` |
+| Cyclotomic rings, NTTs, modules, and gadget decomposition | external `jolt-algebra` |
 | Sumcheck kernel traits and driver adapters | `akita-sumcheck` (driver: `jolt-sumcheck`) |
-| Transcript construction and challenge sampling | `jolt-transcript` (external) and `akita-challenges` |
+| Transcript construction and challenge sampling | `jolt-transcript` and `jolt-crypto` (external) |
 | SIS parameters, commitments, proof shapes, and schedules | `akita-types` |
 | Concrete configuration policy | `akita-config` |
 | Commitment and proof execution | `akita-prover` |

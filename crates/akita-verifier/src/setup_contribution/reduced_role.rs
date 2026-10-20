@@ -2,7 +2,7 @@
 
 use super::*;
 use akita_algebra::offset_eq::{materialize_eq_tensor_left, EqPairTensorFamily, OffsetEqWindow};
-use akita_algebra::ring::terminal_residue_kernel;
+use jolt_algebra::ring::terminal_residue_kernel;
 
 pub(super) fn materialize_reduced_role_tensor_weights<E: Field>(
     plan: &SetupContributionPlan<E>,

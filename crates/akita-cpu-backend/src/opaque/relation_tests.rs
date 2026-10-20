@@ -17,8 +17,7 @@ use crate::opaque::{
 use super::DecomposeFoldWitness;
 use crate::opaque::{RelationDQuotientWitness, RingRelationGroupWitness, RingRelationWitness};
 use crate::AkitaProverSetup;
-use akita_algebra::{poly::multilinear_eval, CyclotomicRing, EqPolynomial};
-use akita_challenges::{Challenges, SparseChallenge, SparseChallengeConfig};
+use akita_algebra::{poly::multilinear_eval, EqPolynomial};
 use akita_params::{
     active_setup_field_len, CommitmentPayloadMode, CommittedGroupParams, CompressionWitnessSpan,
     DigitRangePlan, OpeningClaimsLayout, RelationAddressGeometry, RingOpeningPoint,
@@ -30,7 +29,9 @@ use akita_types::{
     RingRelationInstance, RingVec, SetupContributionGroupInputs, SetupContributionPlan,
 };
 use akita_verifier::{DirectScan, PreparedCoefficientFunctional};
-use jolt_field::{Prime128OffsetA7F7, Prime64Offset59, Ring, Zero};
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{Prime128OffsetA7F7, Prime64Offset59, Ring, Zero};
+use jolt_crypto::challenge::{Challenges, SparseChallenge, SparseChallengeConfig};
 use std::array::from_fn;
 
 type ReducedF = Prime64Offset59;
@@ -416,7 +417,7 @@ fn centered_i32_decompose_matches_ring_decompose() {
         let mut expected = vec![[0i8; D]; num_digits];
         ring.balanced_decompose_pow2_i8_into_with_params(
             &mut expected,
-            &akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params::new(
+            &jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params::new(
                 num_digits, log_basis,
             ),
         );

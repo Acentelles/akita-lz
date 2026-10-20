@@ -5,8 +5,9 @@ pub use evaluate::eval_boolean_pair_tensor_families;
 pub use materialize::materialize_eq_tensor_left;
 
 use super::MAX_COMPACT_STRIDE_TERMS;
-use crate::Field;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
+use jolt_algebra::checked;
+use jolt_algebra::Field;
 use std::sync::Arc;
 
 /// Weights carried by one affine tensor axis.

@@ -6,10 +6,11 @@ use crate::commitment::SetupPrefixProverRegistry;
 use akita_params::{FlatMatrix, SetupMatrixCapacity};
 use akita_serialization::{AkitaSerialize, SerializationError, Valid};
 use akita_types::{
-    derive_public_matrix_prefix, sample_akita_setup_seed, AkitaExpandedSetup, AkitaSetupDescriptor,
-    AkitaVerifierSetup, SetupPrefixVerifierRegistry,
+    sample_akita_setup_seed, AkitaExpandedSetup, AkitaSetupDescriptor, AkitaVerifierSetup,
+    SetupPrefixVerifierRegistry,
 };
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::{CanonicalEncoding, Field};
+use jolt_crypto::lattice::derive_public_matrix_prefix;
 use std::sync::Arc;
 
 /// Prover setup artifact.
@@ -59,8 +60,10 @@ impl<F: Field> AkitaProverSetup<F> {
             AkitaError::InvalidSetup(format!("setup seed validation failed: {err}"))
         })?;
 
-        let shared_flat =
-            derive_public_matrix_prefix::<F>(setup_capacity.num_field_elements, &setup_seed);
+        let shared_flat = FlatMatrix::from_flat_data(derive_public_matrix_prefix::<F>(
+            setup_capacity.num_field_elements,
+            &setup_seed,
+        )?);
         let expanded = Arc::new(
             AkitaExpandedSetup::from_trusted_seed_derived_parts_unchecked(seed, shared_flat),
         );
@@ -147,7 +150,7 @@ impl<F: Field + CanonicalEncoding + Valid + AkitaSerialize> Valid for AkitaProve
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::Prime128Offset275;
+    use jolt_algebra::Prime128Offset275;
 
     #[test]
     fn generate_with_capacity_rejects_zero_setup_len() {
@@ -239,7 +242,7 @@ mod tests {
             SisModulusProfileId::Q128OffsetA7F7,
             PREFIX_D,
             3,
-            &akita_challenges::SparseChallengeConfig::production_for_ring_dim(PREFIX_D)
+            &jolt_crypto::challenge::SparseChallengeConfig::production_for_ring_dim(PREFIX_D)
                 .expect("D=64 has a production challenge configuration"),
             1,
             1,
@@ -318,7 +321,7 @@ mod tests {
                 ),
             },
             opening: akita_params::GroupOpeningPlan::evaluation_trace(
-                akita_challenges::SparseChallengeConfig::pm1_only(0),
+                jolt_crypto::challenge::SparseChallengeConfig::pm1_only(0),
                 1,
                 1,
                 1,

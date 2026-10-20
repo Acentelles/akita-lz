@@ -7,13 +7,13 @@ mod tests {
     use akita_params::proof_size::*;
     use akita_params::{CommittedGroupParams, DigitRangePlan};
 
-    use akita_challenges::SparseChallengeConfig;
     use akita_error::AkitaError;
     use akita_serialization::{AkitaSerialize, Compress};
-    use jolt_field::{
+    use jolt_algebra::{
         CanonicalEncoding, Ext2, ExtField, Field, FpExt4, Prime128OffsetA7F7, Prime32Offset99,
         Prime64Offset59, Zero,
     };
+    use jolt_crypto::challenge::SparseChallengeConfig;
     use jolt_poly::{CompressedPoly, OmittedConstantPoly};
 
     use crate::{

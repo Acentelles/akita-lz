@@ -11,8 +11,8 @@ use akita_algebra::poly::fold_evals_in_place;
 
 use akita_error::AkitaError;
 use akita_sumcheck::SumcheckKernel;
-use jolt_field::{Field, Zero};
-use jolt_field::{Fold, Unreduced};
+use jolt_algebra::{Field, Zero};
+use jolt_algebra::{Fold, Unreduced};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 

@@ -2,7 +2,6 @@ use super::compact::{CoefficientPackingAffineRelationFamily, CoefficientPackingC
 use super::*;
 use akita_algebra::offset_eq::eq_eval_at_index;
 use akita_algebra::poly::multilinear_eval;
-use akita_algebra::ring::scalar_powers;
 use akita_params::{BasisMode, SisModulusProfileId};
 use akita_types::{
     coefficient_packing_fixture, coefficient_packing_multigroup_fixture,
@@ -10,7 +9,8 @@ use akita_types::{
     CoefficientPackingFixture, CoefficientPackingGroupSemantics,
     PreparedSubringCoefficientPackingPoint, RelationWeightEvent,
 };
-use jolt_field::{
+use jolt_algebra::ring::scalar_powers;
+use jolt_algebra::{
     Ext2, FpExt4, One, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59, Ring, Zero,
 };
 use std::sync::Arc;

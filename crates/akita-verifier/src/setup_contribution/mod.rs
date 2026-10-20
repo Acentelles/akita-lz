@@ -48,7 +48,7 @@ pub(crate) use direct_scan::{
 pub use setup_index_weight::SetupIndexWeightMle;
 pub(crate) use structured::evaluate_structured_group;
 
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_params::{
     dispatch_for_field, RelationAddressGeometry, RingMatrixView, SetupProjectionGeometry,
 };
@@ -57,8 +57,9 @@ use akita_types::{
     role_tensors_are_aligned, AkitaExpandedSetup, PhysicalBWeightSegment, PhysicalBWeightTerm,
     SetupContributionGroupPlan, SetupContributionPlan,
 };
-use jolt_field::solinas::parallel::*;
-use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced};
+use jolt_algebra::checked;
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced};
 use std::sync::Arc;
 
 fn extension_gadget<F, E>(depth: usize, log_basis: u32) -> Vec<E>

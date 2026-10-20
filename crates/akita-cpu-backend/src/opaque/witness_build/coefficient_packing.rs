@@ -5,19 +5,19 @@ use crate::arithmetic::coefficient_packing_fold::{
 };
 use crate::opaque::SubringCoefficientPackingPartials;
 use crate::validation::validate_i8_setup_log_basis;
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
-use akita_algebra::CyclotomicRing;
-use akita_challenges::Challenges;
 use akita_error::AkitaError;
 use akita_params::{
     CommittedGroupParams, OpeningClaimsLayout, OpeningMethod, RelationWitnessGeometry,
     SubringCoefficientPackingGeometry,
 };
 use akita_types::DigitBlocks;
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{CanonicalEncoding, Field};
+use jolt_crypto::challenge::Challenges;
 
 /// Fold one group's canonical partials with its single sampled subring challenge batch.
-pub(crate) fn fold_coefficient_packing_group<F: Field + jolt_field::Ring>(
+pub(crate) fn fold_coefficient_packing_group<F: Field + jolt_algebra::Ring>(
     geometry: SubringCoefficientPackingGeometry,
     partials_by_claim: &[SubringCoefficientPackingPartials<F>],
     challenges: &Challenges,
@@ -261,12 +261,12 @@ pub(crate) fn materialize_coefficient_packing_d_input<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use akita_challenges::{SparseChallenge, SparseChallengeConfig};
     use akita_params::{
         gadget_row_scalars, CommittedGroupParams, OpenCommitMatrixParams, OpeningClaimsLayout,
         PolynomialGroupLayout, SisModulusProfileId,
     };
-    use jolt_field::{Prime128OffsetA7F7, Ring, Zero};
+    use jolt_algebra::{Prime128OffsetA7F7, Ring, Zero};
+    use jolt_crypto::challenge::{SparseChallenge, SparseChallengeConfig};
 
     type F = Prime128OffsetA7F7;
 

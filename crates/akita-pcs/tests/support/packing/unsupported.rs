@@ -1,9 +1,9 @@
 //! Deliberately unsupported evaluation-trace rows for admission regressions.
 use super::{RootCoefficientPackingConfig, UnsupportedEvaluationTraceConfig};
-use akita_challenges::SparseChallengeConfig;
 use akita_config::CommitmentConfig;
 use akita_error::AkitaError;
 use akita_params::{CommittedGroupBatchProfile, ScheduleLookupKey};
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 impl<Base, const LEVEL: usize> UnsupportedEvaluationTraceConfig<Base, LEVEL>
 where

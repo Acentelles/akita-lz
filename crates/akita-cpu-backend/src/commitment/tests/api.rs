@@ -3,7 +3,6 @@ use crate::commitment::PortableStatePolicy;
 use crate::opaque::CpuBackend;
 use crate::opaque::{ComputeBackendSetup, OperationCtx};
 use crate::{AkitaProverSetup, DensePoly};
-use akita_challenges::SparseChallengeConfig;
 use akita_params::sis::{
     rounded_up_collision_inf_norm, rounded_up_role_a_inf_norm, SisMatrixRole, SisTableDigest,
     SisTableKey, DEFAULT_SIS_SECURITY_POLICY,
@@ -14,7 +13,8 @@ use akita_params::{
     SetupMatrixCapacity, SisModulusProfileId,
 };
 use akita_types::RingVec;
-use jolt_field::Fp64;
+use jolt_algebra::Fp64;
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 type F = Fp64<4294967197>;
 const D: usize = 64;
@@ -461,10 +461,10 @@ fn commitment_bytes_ignore_opening_method_and_profiles_reject_tensor_sources() {
     {
         let digits = canonical.inner().digits;
         let mut planes = vec![[0i8; D]; digits.num_digits];
-        akita_algebra::CyclotomicRing::<F, D>::from_coefficients(coefficients.try_into().unwrap())
+        jolt_algebra::CyclotomicRing::<F, D>::from_coefficients(coefficients.try_into().unwrap())
             .balanced_decompose_pow2_i8_into_with_params(
                 &mut planes,
-                &akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params::new(
+                &jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params::new(
                     digits.num_digits,
                     digits.log_basis,
                 ),
@@ -482,10 +482,10 @@ fn commitment_bytes_ignore_opening_method_and_profiles_reject_tensor_sources() {
         .enumerate()
     {
         let expected = a_matrix.row(row).unwrap().iter().zip(&source_digits).fold(
-            akita_algebra::CyclotomicRing::zero(),
+            jolt_algebra::CyclotomicRing::zero(),
             |sum, (matrix, digits)| {
                 sum + *matrix
-                    * akita_algebra::CyclotomicRing::from_coefficients(std::array::from_fn(
+                    * jolt_algebra::CyclotomicRing::from_coefficients(std::array::from_fn(
                         |index| F::from_i8(digits[index]),
                     ))
             },

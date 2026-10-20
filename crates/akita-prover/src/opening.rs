@@ -7,7 +7,7 @@ use akita_params::{
 };
 use akita_types::GrindingReplay;
 use akita_types::{Commitment, CommittedGroup, OpeningClaims, PolynomialGroupClaims};
-use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field};
+use jolt_algebra::{CanonicalDecode, CanonicalEncoding, ExtField, Field};
 use jolt_transcript::{Channel, Sponge};
 
 pub struct SelectedProverOpeningData<'a, E: Clone, H, F: Field> {

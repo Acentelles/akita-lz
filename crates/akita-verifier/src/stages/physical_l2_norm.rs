@@ -6,7 +6,7 @@ use akita_params::{PhysicalL2NormProofShape, SisModulusProfileId};
 use akita_serialization::AkitaSerialize;
 use akita_types::GrindingReplay;
 use akita_types::{reconstruct_l2_sq_from_gram, FpExtEncoding, PhysicalResponsePlan};
-use jolt_field::{CanonicalEncoding, ExtField, Field, Ring};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, Ring};
 use jolt_sumcheck::{verify_single, SingleFormat, SingleInstance};
 use jolt_transcript::Sponge;
 
@@ -292,7 +292,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::Prime32Offset99;
+    use jolt_algebra::Prime32Offset99;
 
     #[test]
     fn centered_lift_accepts_both_boundary_representatives() {

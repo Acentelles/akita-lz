@@ -4,7 +4,7 @@ use akita_config::{CommitmentConfig, TrustedScheduleCatalog};
 use akita_params::SetupMatrixCapacity;
 use akita_serialization::{AkitaDeserialize, AkitaSerialize};
 #[cfg(feature = "disk-persistence")]
-use jolt_field::Zero;
+use jolt_algebra::Zero;
 
 type Cfg = fp128::Dense;
 type TestF = fp128::Field;
@@ -41,7 +41,7 @@ impl CommitmentConfig for WrongModulusProfileConfig {
 
     fn ring_challenge_config(
         d: usize,
-    ) -> Result<akita_challenges::SparseChallengeConfig, AkitaError> {
+    ) -> Result<jolt_crypto::challenge::SparseChallengeConfig, AkitaError> {
         Cfg::ring_challenge_config(d)
     }
 

@@ -11,12 +11,12 @@ orchestration lives in `akita-pcs`.
 
 | Crate | Role |
 |-------|------|
-| `akita-error` | Shared protocol error and reusable checked integer formulas for exact sizes, offsets, and ranges |
-| `jolt-field` (external) | Shared field traits, prime and extension fields, packed and unreduced kernels, parallel helpers |
+| `akita-error` | Shared protocol error |
+| `jolt-algebra` (external) | Shared field traits, prime and extension fields, packed and unreduced kernels, cyclotomic ring, NTT/CRT, smooth FFT, checked integer formulas, parallel helpers |
+| `jolt-crypto` (external, `lattice` feature) | Sparse fold challenges, operator-norm rejection, and public-matrix derivation |
 | `akita-serialization` | Serialization, validation, and compression traits |
-| `akita-algebra` | Modules, vectors, NTTs, cyclotomic rings, sparse challenges, polynomials |
+| `akita-algebra` | Multilinear, equality, split-equality, and offset-equality polynomial utilities |
 | `jolt-transcript` (external) | Fiat-Shamir proof channel: prover/verifier transcripts, sponges, grinding, event log |
-| `akita-challenges` | Fiat-Shamir challenge sampling helpers |
 | `akita-sumcheck` | Fallible sumcheck kernel traits, adapters to `jolt-sumcheck`'s single-instance driver, compact folding, accumulation |
 | `akita-params` | Parameter geometry, sizing, SIS tables, schedules, compression plans, witness layout, dispatch, and grinding plans |
 | `akita-types` | Proof, setup, and claim wire values, shared protocol math, and native transcript replay |
@@ -34,11 +34,11 @@ CI enforces one-way boundaries via `scripts/check-crate-deps.sh`.
 
 Key structural facts:
 
-- `akita-error` is the lowest shared failure layer. It owns `AkitaError` and
-  reusable exact `usize` formulas in `akita_error::checked`. These formulas
+- `akita-error` is the lowest shared failure layer. It owns `AkitaError`.
+  Reusable exact `usize` formulas live in `jolt_algebra::checked`. These formulas
   return `Option`; each caller maps failure to the `AkitaError` variant that
   describes its protocol boundary. Field arithmetic lives in the shared
-  external `jolt-field` crate.
+  external `jolt-algebra` crate.
 - `akita-planner` owns offline schedule search and artifact emission. Normal
   search is `Cfg`-free and is not on the verifier runtime dependency path. The
   optional `catalog-gen` feature enables `akita-config`, so artifact-emission
@@ -144,7 +144,7 @@ Mixed-dimension malformed proof rejection is covered by
 
 | Type | Role |
 |------|------|
-| `AkitaError`, `akita_error::checked` | Shared protocol failures and reusable checked formulas for sizes, offsets, ranges, alignment, and exact division |
+| `AkitaError`, `jolt_algebra::checked` | Shared protocol failures and reusable checked formulas for sizes, offsets, ranges, alignment, and exact division |
 | `AkitaCommitmentScheme<Cfg>` | Stateful top-level PCS orchestration that owns one trusted catalog for setup, commitment, proving, and verification (`akita-pcs`) |
 | `AkitaProverSetup<F>` | Prover setup wrapper around a materialized prefix of the dimension-free public field stream |
 | `Commitment<F>`, `RingVec<F>` | protocol commitment and field-vector storage |

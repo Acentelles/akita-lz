@@ -73,7 +73,7 @@ pub(crate) use eor_plans::{
 pub(crate) use fold_kernels::{FoldRelationKernel, FoldRelationOutput, RelationQuotientRow};
 pub use fold_kernels::{OpeningBatchKernel, OpeningFoldKernel, OpeningFoldOutput};
 pub(crate) use handles::{CpuWitnessBuildHandle, OperationBinding};
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::{CanonicalEncoding, Field};
 use jolt_poly::UnivariatePoly;
 pub(crate) use lifecycle::{BackendIdentity, CpuProofSessionHandle, ScopeLease};
 pub use operation_plans::{
@@ -127,20 +127,20 @@ where
     F: Field
         + CanonicalEncoding
         + akita_serialization::AkitaSerialize
-        + jolt_field::PseudoMersenne
-        + jolt_field::Ring
-        + jolt_field::Unreduced
+        + jolt_algebra::PseudoMersenne
+        + jolt_algebra::Ring
+        + jolt_algebra::Unreduced
         + Send
         + Sync
         + 'static,
-    <F as jolt_field::Unreduced>::Wide: From<F> + jolt_field::AdditiveGroup,
-    E: jolt_field::ExtField<F>
+    <F as jolt_algebra::Unreduced>::Wide: From<F> + jolt_algebra::AdditiveGroup,
+    E: jolt_algebra::ExtField<F>
         + akita_types::FpExtEncoding<F>
         + akita_serialization::AkitaSerialize
-        + jolt_field::Ring
-        + jolt_field::Unreduced
-        + jolt_field::Fold
-        + jolt_field::MulBaseUnreduced<F>
+        + jolt_algebra::Ring
+        + jolt_algebra::Unreduced
+        + jolt_algebra::Fold
+        + jolt_algebra::MulBaseUnreduced<F>
         + Send
         + Sync
         + 'static,
@@ -161,20 +161,20 @@ where
     F: Field
         + CanonicalEncoding
         + akita_serialization::AkitaSerialize
-        + jolt_field::PseudoMersenne
-        + jolt_field::Ring
-        + jolt_field::Unreduced
+        + jolt_algebra::PseudoMersenne
+        + jolt_algebra::Ring
+        + jolt_algebra::Unreduced
         + Send
         + Sync
         + 'static,
-    <F as jolt_field::Unreduced>::Wide: From<F> + jolt_field::AdditiveGroup,
-    E: jolt_field::ExtField<F>
+    <F as jolt_algebra::Unreduced>::Wide: From<F> + jolt_algebra::AdditiveGroup,
+    E: jolt_algebra::ExtField<F>
         + akita_types::FpExtEncoding<F>
         + akita_serialization::AkitaSerialize
-        + jolt_field::Ring
-        + jolt_field::Unreduced
-        + jolt_field::Fold
-        + jolt_field::MulBaseUnreduced<F>
+        + jolt_algebra::Ring
+        + jolt_algebra::Unreduced
+        + jolt_algebra::Fold
+        + jolt_algebra::MulBaseUnreduced<F>
         + Send
         + Sync
         + 'static,
@@ -325,20 +325,20 @@ where
     F: Field
         + CanonicalEncoding
         + akita_serialization::AkitaSerialize
-        + jolt_field::PseudoMersenne
-        + jolt_field::Ring
-        + jolt_field::Unreduced
+        + jolt_algebra::PseudoMersenne
+        + jolt_algebra::Ring
+        + jolt_algebra::Unreduced
         + Send
         + Sync
         + 'static,
-    <F as jolt_field::Unreduced>::Wide: From<F> + jolt_field::AdditiveGroup,
-    E: jolt_field::ExtField<F>
+    <F as jolt_algebra::Unreduced>::Wide: From<F> + jolt_algebra::AdditiveGroup,
+    E: jolt_algebra::ExtField<F>
         + akita_types::FpExtEncoding<F>
         + akita_serialization::AkitaSerialize
-        + jolt_field::Ring
-        + jolt_field::Unreduced
-        + jolt_field::Fold
-        + jolt_field::MulBaseUnreduced<F>
+        + jolt_algebra::Ring
+        + jolt_algebra::Unreduced
+        + jolt_algebra::Fold
+        + jolt_algebra::MulBaseUnreduced<F>
         + Send
         + Sync
         + 'static,
@@ -375,20 +375,20 @@ where
     F: Field
         + CanonicalEncoding
         + akita_serialization::AkitaSerialize
-        + jolt_field::PseudoMersenne
-        + jolt_field::Ring
-        + jolt_field::Unreduced
+        + jolt_algebra::PseudoMersenne
+        + jolt_algebra::Ring
+        + jolt_algebra::Unreduced
         + Send
         + Sync
         + 'static,
-    <F as jolt_field::Unreduced>::Wide: From<F> + jolt_field::AdditiveGroup,
-    E: jolt_field::ExtField<F>
+    <F as jolt_algebra::Unreduced>::Wide: From<F> + jolt_algebra::AdditiveGroup,
+    E: jolt_algebra::ExtField<F>
         + akita_types::FpExtEncoding<F>
         + akita_serialization::AkitaSerialize
-        + jolt_field::Ring
-        + jolt_field::Unreduced
-        + jolt_field::Fold
-        + jolt_field::MulBaseUnreduced<F>
+        + jolt_algebra::Ring
+        + jolt_algebra::Unreduced
+        + jolt_algebra::Fold
+        + jolt_algebra::MulBaseUnreduced<F>
         + Send
         + Sync
         + 'static,
@@ -512,20 +512,20 @@ where
     F: Field
         + CanonicalEncoding
         + akita_serialization::AkitaSerialize
-        + jolt_field::PseudoMersenne
-        + jolt_field::Ring
-        + jolt_field::Unreduced
+        + jolt_algebra::PseudoMersenne
+        + jolt_algebra::Ring
+        + jolt_algebra::Unreduced
         + Send
         + Sync
         + 'static,
-    <F as jolt_field::Unreduced>::Wide: From<F> + jolt_field::AdditiveGroup,
-    E: jolt_field::ExtField<F>
+    <F as jolt_algebra::Unreduced>::Wide: From<F> + jolt_algebra::AdditiveGroup,
+    E: jolt_algebra::ExtField<F>
         + akita_types::FpExtEncoding<F>
         + akita_serialization::AkitaSerialize
-        + jolt_field::Ring
-        + jolt_field::Unreduced
-        + jolt_field::Fold
-        + jolt_field::MulBaseUnreduced<F>
+        + jolt_algebra::Ring
+        + jolt_algebra::Unreduced
+        + jolt_algebra::Fold
+        + jolt_algebra::MulBaseUnreduced<F>
         + Send
         + Sync
         + 'static,
@@ -644,20 +644,20 @@ where
     F: Field
         + CanonicalEncoding
         + akita_serialization::AkitaSerialize
-        + jolt_field::PseudoMersenne
-        + jolt_field::Ring
-        + jolt_field::Unreduced
+        + jolt_algebra::PseudoMersenne
+        + jolt_algebra::Ring
+        + jolt_algebra::Unreduced
         + Send
         + Sync
         + 'static,
-    <F as jolt_field::Unreduced>::Wide: From<F> + jolt_field::AdditiveGroup,
-    E: jolt_field::ExtField<F>
+    <F as jolt_algebra::Unreduced>::Wide: From<F> + jolt_algebra::AdditiveGroup,
+    E: jolt_algebra::ExtField<F>
         + akita_types::FpExtEncoding<F>
         + akita_serialization::AkitaSerialize
-        + jolt_field::Ring
-        + jolt_field::Unreduced
-        + jolt_field::Fold
-        + jolt_field::MulBaseUnreduced<F>
+        + jolt_algebra::Ring
+        + jolt_algebra::Unreduced
+        + jolt_algebra::Fold
+        + jolt_algebra::MulBaseUnreduced<F>
         + Send
         + Sync
         + 'static,
@@ -732,20 +732,20 @@ where
     F: Field
         + CanonicalEncoding
         + akita_serialization::AkitaSerialize
-        + jolt_field::PseudoMersenne
-        + jolt_field::Ring
-        + jolt_field::Unreduced
+        + jolt_algebra::PseudoMersenne
+        + jolt_algebra::Ring
+        + jolt_algebra::Unreduced
         + Send
         + Sync
         + 'static,
-    <F as jolt_field::Unreduced>::Wide: From<F> + jolt_field::AdditiveGroup,
-    E: jolt_field::ExtField<F>
+    <F as jolt_algebra::Unreduced>::Wide: From<F> + jolt_algebra::AdditiveGroup,
+    E: jolt_algebra::ExtField<F>
         + akita_types::FpExtEncoding<F>
         + akita_serialization::AkitaSerialize
-        + jolt_field::Ring
-        + jolt_field::Unreduced
-        + jolt_field::Fold
-        + jolt_field::MulBaseUnreduced<F>
+        + jolt_algebra::Ring
+        + jolt_algebra::Unreduced
+        + jolt_algebra::Fold
+        + jolt_algebra::MulBaseUnreduced<F>
         + Send
         + Sync
         + 'static,

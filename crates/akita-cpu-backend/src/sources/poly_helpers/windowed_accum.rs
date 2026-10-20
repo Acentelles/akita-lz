@@ -16,7 +16,7 @@
 //! kernel widens the plane to `i16` once and reads subtracted windows from
 //! its negation.
 
-use akita_challenges::SparseChallenge;
+use jolt_crypto::challenge::SparseChallenge;
 
 /// Coefficients per gathered window: one 128-bit vector of `i8` digits.
 pub(super) const WINDOW: usize = 16;

@@ -13,12 +13,12 @@ orchestration lives in `akita-pcs`.
 
 | Crate | Role |
 |-------|------|
-| `akita-error` | Shared protocol error and reusable checked integer formulas |
-| `jolt-field` (external) | Shared field traits, prime and extension fields, packed and unreduced kernels, parallel helpers |
+| `akita-error` | Shared protocol error |
+| `jolt-algebra` (external) | Shared field traits, prime and extension fields, packed and unreduced kernels, cyclotomic ring, NTT/CRT, smooth FFT, checked integer formulas, parallel helpers |
+| `jolt-crypto` (external, `lattice` feature) | Sparse fold challenges, operator-norm rejection, and public-matrix derivation |
 | `akita-serialization` | Serialization, validation, compression traits |
-| `akita-algebra` | Modules, NTTs, cyclotomic rings, polynomials |
+| `akita-algebra` | Multilinear, equality, split-equality, and offset-equality polynomial utilities |
 | `jolt-transcript` (external) | Fiat-Shamir proof channel (NARG prover/verifier transcripts, sponges, grinding) |
-| `akita-challenges` | Challenge sampling helpers |
 | `akita-sumcheck` | Sumcheck kernel traits, driver adapters, folding |
 | `akita-params` | Parameter geometry, sizing, SIS tables, schedules, compression plans, witness layout, dispatch, and grinding plans |
 | `akita-types` | Proof, setup, and claim wire values, shared protocol math, and native transcript replay |
@@ -38,10 +38,10 @@ orchestration lives in `akita-pcs`.
 graph TD
   Error["akita-error"]
   Ser["akita-serialization"]
-  Field["jolt-field (external)"]
+  Field["jolt-algebra (external)"]
   Algebra["akita-algebra"]
   Transcript["jolt-transcript (external)"]
-  Challenges["akita-challenges"]
+  Crypto["jolt-crypto"]
   JoltSumcheck["jolt-sumcheck (external)"]
   Sumcheck["akita-sumcheck"]
   Params["akita-params"]
@@ -61,9 +61,7 @@ graph TD
   Algebra --> Ser
   Transcript --> Field
   Error --> Transcript
-  Challenges --> Error
-  Challenges --> Field
-  Challenges --> Transcript
+  Crypto --> Field
   Sumcheck --> Error
   Sumcheck --> Algebra
   Sumcheck --> Field
@@ -75,37 +73,37 @@ graph TD
   Prover --> JoltSumcheck
   Params --> Error
   Params --> Algebra
-  Params --> Challenges
+  Params --> Crypto
   Params --> Field
   Params --> Ser
   Params --> Transcript
   Types --> Params
   Types --> Error
   Types --> Algebra
-  Types --> Challenges
+  Types --> Crypto
   Types --> Field
   Types --> Ser
   Types --> Transcript
   SisEstimator --> Params
   Planner --> Error
-  Planner --> Challenges
+  Planner --> Crypto
   Planner --> Schedules
   Planner --> Params
   Planner -. catalog-gen .-> Config
   Planner -. catalog-security .-> SisEstimator
   Schedules --> Error
-  Schedules --> Challenges
+  Schedules --> Crypto
   Schedules --> Params
   Config --> Params
   Config --> Error
-  Config --> Challenges
+  Config --> Crypto
   Config --> Field
   Config --> Types
   Config --> Schedules
   Verifier --> Params
   Verifier --> Error
   Verifier --> Algebra
-  Verifier --> Challenges
+  Verifier --> Crypto
   Verifier --> Config
   Verifier --> Field
   Verifier --> Ser
@@ -114,7 +112,7 @@ graph TD
   Prover --> Params
   Prover --> Error
   Prover --> Algebra
-  Prover --> Challenges
+  Prover --> Crypto
   Prover --> Config
   Prover --> Field
   Prover --> Ser
@@ -125,7 +123,7 @@ graph TD
   Cpu --> Params
   Cpu --> Error
   Cpu --> Algebra
-  Cpu --> Challenges
+  Cpu --> Crypto
   Cpu --> Config
   Cpu --> Field
   Cpu --> Ser
@@ -142,7 +140,7 @@ graph TD
   Pcs --> Params
   Pcs --> Error
   Pcs --> Algebra
-  Pcs --> Challenges
+  Pcs --> Crypto
   Pcs --> Config
   Pcs --> Field
   Pcs --> Prover
@@ -157,13 +155,13 @@ graph TD
 
 ## Ownership Rules
 
-- `akita-error` owns `AkitaError` and the reusable exact `usize` formulas in
-  `akita_error::checked`. The formulas return `Option` and do not choose a
+- `akita-error` owns `AkitaError`. The reusable exact `usize` formulas live in
+  `jolt_algebra::checked`. The formulas return `Option` and do not choose a
   protocol error variant. Callers map failure at the boundary where its meaning
   is known. Generic checked helpers must not be redefined in downstream crates.
 - `akita-planner` is the offline schedule search and artifact emission engine.
   Normal planner search is `Cfg`-free and depends on `akita-params`,
-  `akita-challenges`, `akita-error`, and `akita-schedules`. The optional
+  `jolt-crypto`, `akita-error`, and `akita-schedules`. The optional
   `catalog-gen` feature also enables `akita-config`, allowing artifact-emission
   binaries to name concrete `CommitmentConfig` presets.
 - `akita-sis-estimator` owns the offline scalar SIS cost model and table
@@ -175,7 +173,7 @@ graph TD
   row audit, and the immutable `ValidatedScheduleCatalog` indexes used at runtime.
   Tracked `.aks` family files are deterministic planner output but are never
   linked into the crate. It depends only on `akita-error`, `akita-params`, and
-  `akita-challenges`.
+  `jolt-crypto`.
 - `akita-config` owns concrete runtime presets, the single `CommitmentConfig`
   policy trait, and the `TrustedScheduleCatalog<Cfg>` capability that binds a
   validated catalog to one exact preset. Applications load artifact bytes and

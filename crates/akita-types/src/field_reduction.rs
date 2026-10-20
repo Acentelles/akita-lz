@@ -4,10 +4,11 @@
 //! `F_{q^k}` to `R_q` reduction. They are intentionally standalone so the
 //! mathematical contract can be tested independently of the prover API.
 
-use akita_algebra::CyclotomicRing;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_serialization::Valid;
-use jolt_field::{CanonicalDecode, Ext2, ExtField, Field, FpExt4, FpExt8, PseudoMersenne, Ring};
+use jolt_algebra::checked;
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{CanonicalDecode, Ext2, ExtField, Field, FpExt4, FpExt8, PseudoMersenne, Ring};
 
 /// Extension fields whose `ExtField::to_base_vec` coordinates are the
 /// ring-subfield coordinates consumed by [`psi_embed`] and [`embed_subfield`].

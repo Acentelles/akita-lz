@@ -1,11 +1,11 @@
 //! Fold-challenge draw for every opening group of one recursive level.
 
-use akita_challenges::ForkFoldDraw;
 use akita_error::AkitaError;
 use akita_params::{CommittedGroupParams, OpeningClaimsLayout};
 use akita_serialization::AkitaSerialize;
+use akita_types::ForkFoldDraw;
 use akita_types::{draw_group_fold_challenges, GroupFoldChallenges};
-use jolt_field::{CanonicalEncoding, ExtField, Field};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field};
 use jolt_transcript::{Fork, Sponge};
 
 /// The sparse fold roots of every group of one recursive level, drawn in

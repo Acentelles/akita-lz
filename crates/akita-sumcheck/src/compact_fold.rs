@@ -3,8 +3,8 @@
 //! Used by Akita stage sumchecks for compact-witness folding.
 
 use akita_error::AkitaError;
-use jolt_field::Unreduced;
-use jolt_field::{Field, Ring};
+use jolt_algebra::Unreduced;
+use jolt_algebra::{Field, Ring};
 
 /// Precomputed lookup table for folding pairs of small integer values at a
 /// fixed challenge `r`.

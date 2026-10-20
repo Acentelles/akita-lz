@@ -1,11 +1,11 @@
 use super::*;
-use akita_challenges::SparseChallengeConfig;
 use akita_params::golomb_rice::golomb_rice_encode_vec;
 use akita_params::tail_golomb_rice_low_bits::wire_rice_low_bits;
 use akita_params::test_fixtures::test_lp;
 use akita_params::CommittedGroupParams;
-use jolt_field::CanonicalEncoding;
-use jolt_field::{Prime128OffsetA7F7, Zero};
+use jolt_algebra::CanonicalEncoding;
+use jolt_algebra::{Prime128OffsetA7F7, Zero};
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 type F = Prime128OffsetA7F7;
 const TEST_ADMISSION_CAP: u128 = 127;
@@ -147,7 +147,7 @@ fn direct_terminal_layout_contains_only_z_e_t_planes() {
 #[test]
 fn terminal_response_wire_round_trip_with_scheduled_z_budget() {
     use akita_serialization::{AkitaDeserialize, AkitaSerialize, Compress, Validate};
-    use jolt_field::CanonicalEncoding;
+    use jolt_algebra::CanonicalEncoding;
 
     let lp = test_lp();
     let field_bits = F::MODULUS_BITS;

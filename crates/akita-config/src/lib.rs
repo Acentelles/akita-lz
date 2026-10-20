@@ -5,14 +5,14 @@
 //! Runtime resolution is strict: missing catalog rows reject instead of invoking
 //! planner search.
 
-use akita_challenges::SparseChallengeConfig;
 use akita_error::AkitaError;
 use akita_params::{ChunkedWitnessCfg, DecompositionParams, SisModulusProfileId};
 #[cfg(test)]
 use akita_params::{OpeningClaimsLayout, PolynomialGroupLayout, ScheduleLookupKey};
 use akita_schedules::PlannerPolicy;
 use akita_serialization::Valid;
-use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
+use jolt_crypto::challenge::SparseChallengeConfig;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -35,7 +35,8 @@ macro_rules! impl_catalog_family {
             }
             fn ring_challenge_config(
                 d: usize,
-            ) -> Result<akita_challenges::SparseChallengeConfig, akita_error::AkitaError> {
+            ) -> Result<jolt_crypto::challenge::SparseChallengeConfig, akita_error::AkitaError>
+            {
                 <$base as $crate::CommitmentConfig>::ring_challenge_config(d)
             }
             fn sis_modulus_profile() -> akita_params::SisModulusProfileId {
@@ -462,7 +463,7 @@ pub trait CommitmentConfig: Clone + Send + Sync + 'static {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::{Fp32, FpExt4};
+    use jolt_algebra::{Fp32, FpExt4};
 
     type Base = Fp32<251>;
     type BaseExt = FpExt4<Base>;

@@ -4,28 +4,17 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.95"
 license = "Apache-2.0 OR MIT"
-description = "Challenge sampling for the Akita polynomial commitment scheme"
+description = "Compatibility re-export of jolt-crypto's sparse challenges for jolt-akita"
 repository = "https://github.com/LayerZero-Labs/akita"
 readme = "../../README.md"
 
 [dependencies]
-akita-error = { version = "0.1.0", path = "../akita-error" }
-serde = { version = "1", features = ["derive"] }
-jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false, features = [
-  "asm",
-  "solinas",
+jolt-crypto = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false, features = [
+  "lattice",
 ] }
-jolt-transcript = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false, features = [
-  "transcript-blake2b",
-] }
-keccak = { version = "0.1.6", features = ["asm"] }
-smallvec = { version = "1.15.2", features = ["const_generics"] }
-
-[dev-dependencies]
-shake = "0.1.0"
 
 [features]
-parallel = ["jolt-field/parallel"]
+parallel = ["jolt-crypto/parallel"]
 
 [lints]
 workspace = true

@@ -6,7 +6,7 @@ use crate::opaque::{
 };
 use crate::sources::block_digits::{BlockDigits, DigitShape, I16Rows, I8Rows, RingValues};
 use crate::sources::signed_blocks::{Decoded, I16Slice, I8Slice, SignedBlockDigits, SignedStorage};
-use akita_challenges::SparseChallenge;
+use jolt_crypto::challenge::SparseChallenge;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 struct Decoder<'a> {
@@ -257,7 +257,7 @@ fn signed_block_i16_carrier_boundaries_decompose_like_field_rows() {
     let fields = CyclotomicRing::<F, D>::from_coefficients(
         values.map(|value| F::from_i64(i64::from(value))),
     );
-    let params = akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params::new(
+    let params = jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params::new(
         shape.num_digits,
         shape.log_basis,
     );
@@ -331,7 +331,7 @@ where
     };
     let mut scratch = <_ as BlockDigits<D>>::scratch(&source, shape, 2);
     let params =
-        akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params::<F>::new(1, log_basis);
+        jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params::<F>::new(1, log_basis);
     let mut fields = [F::zero(); 16];
     for (dst, &value) in fields.iter_mut().zip(values) {
         *dst = F::from_i64(i64::from(value));

@@ -33,8 +33,8 @@ use akita_types::{
     AkitaExpandedSetup, AkitaVerifierSetup, GroupBatchStatement, SetupPrefixVerifierRegistry,
 };
 pub(super) use akita_types::{CommittedGroup, OpeningClaims, PolynomialGroupClaims};
-pub(super) use jolt_field::CanonicalEncoding;
-use jolt_field::One;
+pub(super) use jolt_algebra::CanonicalEncoding;
+use jolt_algebra::One;
 pub(super) use rand::rngs::StdRng;
 pub(super) use rand::{Rng, SeedableRng};
 use std::sync::{Arc, Once};

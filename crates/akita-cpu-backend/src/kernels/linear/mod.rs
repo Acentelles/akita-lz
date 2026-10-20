@@ -3,15 +3,15 @@
 #[cfg(test)]
 use crate::sources::block_digits::LiveRings;
 use crate::sources::block_digits::{DigitRows, DigitShape, I8Rows};
-use akita_algebra::ntt::{MontCoeff, PrimeWidth, I32_LAZY_DOT_BATCH};
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
-use akita_algebra::{
+use akita_error::AkitaError;
+use jolt_algebra::ntt::{MontCoeff, PrimeWidth, I32_LAZY_DOT_BATCH};
+use jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::{
     cyclic_ntt_with_i16_tail_to_ring, ntt_with_i16_tail_to_ring, CenteredMontLut, CrtNttParamSet,
     CyclotomicCrtNtt, CyclotomicRing, DigitMontLut, I16TailParams,
 };
-use akita_error::AkitaError;
-use jolt_field::solinas::parallel::*;
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::{CanonicalEncoding, Field};
 use std::array::from_fn;
 use std::mem::size_of;
 use std::ops::Range;

@@ -6,8 +6,8 @@
 //! [`super::decomposition_digits::balanced_digit_interval_diameter`] at the
 //! resulting `δ_fold` depth (see [`super::norm_bound::rounded_up_role_a_inf_norm`]).
 
-use akita_challenges::SparseChallengeConfig;
 use akita_error::AkitaError;
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 /// Per-challenge **grind** acceptance target `p_grind = NUM / DEN` used in the union-bound
 /// sizing for `t*` (`specs/fold-linf-rejection.md`).

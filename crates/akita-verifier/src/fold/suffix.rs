@@ -15,7 +15,7 @@ use akita_types::GrindingReplay;
 use akita_types::{
     AkitaVerifierSetup, FpExtEncoding, OpeningClaims, PolynomialGroupClaims, RingVec,
 };
-use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, PseudoMersenne, Ring};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, PseudoMersenne, Ring};
 use jolt_transcript::{Channel, PrivateChannel, Sponge};
 
 pub(super) struct SuffixVerifierState<F: Field, E: Field> {

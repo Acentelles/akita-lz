@@ -213,7 +213,7 @@ basis and multiplication relations.
 
 ## Implementation and review map
 
-The field code is supplied by Akita's pinned `jolt-field` dependency.
+The field code is supplied by Akita's pinned `jolt-algebra` dependency (formerly `jolt-field`, where the links below point).
 
 | Property | Primary source |
 | --- | --- |

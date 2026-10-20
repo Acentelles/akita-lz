@@ -1,6 +1,6 @@
 use super::*;
 use akita_types::GrindingReplay;
-use jolt_field::AdditiveGroup;
+use jolt_algebra::AdditiveGroup;
 /// Transcript-derived continuation; no backend-private storage.
 pub(crate) struct FoldPublicState<F: Field, E: Field> {
     pub(crate) level: usize,
@@ -538,7 +538,7 @@ mod tests {
     use super::*;
     use crate::protocol::prove::fold_kernels::prepare_evaluation_trace_claim;
     use akita_types::PROOF_STREAM_PROTOCOL;
-    use jolt_field::{One, Prime32Offset99, Zero};
+    use jolt_algebra::{One, Prime32Offset99, Zero};
     use jolt_transcript::ProverTranscript;
 
     type TestF = Prime32Offset99;

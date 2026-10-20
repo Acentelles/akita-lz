@@ -20,7 +20,7 @@ pub(super) struct RelationWeightCompilation<'a, F: Field, E: Field> {
 
 pub(super) struct RelationWeightGroupSources<'a, F: Field> {
     group_index: usize,
-    pub(super) challenges: &'a akita_challenges::Challenges,
+    pub(super) challenges: &'a jolt_crypto::challenge::Challenges,
     pub(super) opening: OpeningFamily<&'a RingMultiplierOpeningPoint<F>, ()>,
 }
 

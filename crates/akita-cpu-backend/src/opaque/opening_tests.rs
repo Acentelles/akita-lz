@@ -6,7 +6,7 @@ use akita_params::*;
 use akita_prover::backend::*;
 use akita_sumcheck::{FusedRounds, SumcheckKernel};
 use akita_types::*;
-use jolt_field::{Ext2, ExtField, Field, One, Prime128OffsetA7F7, Ring, Zero};
+use jolt_algebra::{Ext2, ExtField, Field, One, Prime128OffsetA7F7, Ring, Zero};
 use jolt_poly::UnivariatePoly;
 use jolt_sumcheck::{prove_single, verify_single, SingleFormat, SingleInstance};
 use jolt_transcript::{ProverTranscript, VerifierTranscript};
@@ -327,7 +327,7 @@ fn mixed_setup_prefix_and_suffix_eor_matches_independent_dense_oracle() {
                 1,
                 1,
                 1,
-                akita_challenges::SparseChallengeConfig::production_for_ring_dim(D).unwrap(),
+                jolt_crypto::challenge::SparseChallengeConfig::production_for_ring_dim(D).unwrap(),
             )
             .with_decomp(4, 4, 2, 2, 2)
             .unwrap();
@@ -774,7 +774,7 @@ fn nonterminal_opening_cannot_publish_terminal_rows() {
     let point = PreparedOpeningPoint::<F, E>::from_parts(
         Vec::new(),
         RingMultiplierOpeningPoint::from_base(&outer),
-        akita_algebra::CyclotomicRing::<F, 64>::one(),
+        jolt_algebra::CyclotomicRing::<F, 64>::one(),
     );
     let prepared = crate::opaque::prepared_opening::evaluation_trace(
         backend.binding(&proof.session, &context).unwrap(),
@@ -787,9 +787,10 @@ fn nonterminal_opening_cannot_publish_terminal_rows() {
             ))),
         ),
         point,
-        vec![RingVec::from_ring_elems(&[
-            akita_algebra::CyclotomicRing::<F, 64>::one(),
-        ])],
+        vec![RingVec::from_ring_elems(&[jolt_algebra::CyclotomicRing::<
+            F,
+            64,
+        >::one()])],
         vec![E::one()],
     );
     let error = <CpuBackend as OpaqueWitnessOpeningKernel<F, E>>::terminal_native_witness_opening(

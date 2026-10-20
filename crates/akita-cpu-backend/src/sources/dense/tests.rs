@@ -1,14 +1,14 @@
 use super::poly::DensePoly;
 use crate::commitment::CommitmentSource;
 use crate::opaque::RootPolyMeta;
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
-use jolt_field::Prime128OffsetA7F7 as F;
-use jolt_field::{CanonicalEncoding, Ring, Zero};
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::Prime128OffsetA7F7 as F;
+use jolt_algebra::{CanonicalEncoding, Ring, Zero};
 
 #[test]
 fn chunked_fold_matches_windowed_reference_and_global() {
-    use akita_challenges::SparseChallenge;
+    use jolt_crypto::challenge::SparseChallenge;
 
     const D: usize = 64;
     const POSITIONS: usize = 2;
@@ -204,7 +204,7 @@ fn batch_fold_rejects_mixed_extents_and_count_mismatch() {
     use crate::opaque::{
         CpuBackend, DecomposeFoldBatchPlan, OpeningBatchKernel, RootOpeningSource,
     };
-    use akita_challenges::SparseChallenge;
+    use jolt_crypto::challenge::SparseChallenge;
 
     const D: usize = 64;
     let polys = [
@@ -246,7 +246,7 @@ fn batch_fold_rejects_mixed_extents_and_count_mismatch() {
 #[test]
 fn scalar_fold_rejects_short_and_excess_challenges() {
     use crate::opaque::{CpuBackend, DecomposeFoldPlan, OpeningFoldKernel, RootOpeningSource};
-    use akita_challenges::SparseChallenge;
+    use jolt_crypto::challenge::SparseChallenge;
 
     const D: usize = 8;
     // Two rings at one position per block give two live blocks.
@@ -288,7 +288,7 @@ fn scalar_fold_rejects_short_and_excess_challenges() {
 #[test]
 fn fold_rejects_unsupported_digit_shapes_with_cold_and_populated_caches() {
     use crate::opaque::{CpuBackend, DecomposeFoldPlan, OpeningFoldKernel, RootOpeningSource};
-    use akita_challenges::SparseChallenge;
+    use jolt_crypto::challenge::SparseChallenge;
 
     const D: usize = 8;
     let challenges = vec![
@@ -347,8 +347,8 @@ fn fold_rejects_unsupported_digit_shapes_with_cold_and_populated_caches() {
 // The expectation is the input integer itself, independent of decomposition.
 #[test]
 fn single_digit_fold_preserves_signed_i8_i16_boundaries() {
-    use akita_challenges::SparseChallenge;
-    use jolt_field::Prime64Offset59;
+    use jolt_algebra::Prime64Offset59;
+    use jolt_crypto::challenge::SparseChallenge;
     const D: usize = 128;
     let challenge = SparseChallenge {
         positions: vec![0].into(),
@@ -403,7 +403,7 @@ fn fold_operations_reject_invalid_ring_views() {
 
 #[test]
 fn single_digit_fold_validates_challenges_before_both_dense_row_loops() {
-    use akita_challenges::SparseChallenge;
+    use jolt_crypto::challenge::SparseChallenge;
 
     for value in [1, 256] {
         let poly = DensePoly::<F>::from_field_evals(6, vec![F::from_u64(value); 64]).unwrap();
@@ -426,7 +426,7 @@ fn single_digit_fold_validates_challenges_before_both_dense_row_loops() {
 
 #[test]
 fn dense_single_digit_fold_preserves_unused_challenges_and_empty_positions() {
-    use akita_challenges::SparseChallenge;
+    use jolt_crypto::challenge::SparseChallenge;
 
     let poly = DensePoly::<F>::from_field_evals(6, vec![F::from_u64(1); 64]).unwrap();
     assert!(poly.digit_planes_for::<64>(1, 4).is_some());

@@ -3,7 +3,7 @@ use crate::{
     CommittedGroupParams, FoldParams, FoldSchedule, TailSegmentGroupLayout, TailSegmentLayout,
     TerminalFoldParams, TerminalResponseShape,
 };
-use akita_challenges::SparseChallengeConfig;
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 fn committed(ring_dimension: usize) -> CommittedGroupParams {
     CommittedGroupParams::params_only(
@@ -167,7 +167,7 @@ fn rejects_sub_d64_commitment_matrix_dimensions() {
 
 #[test]
 fn reduced_residue_oracle_tracks_every_admitted_commitment_dimension() {
-    use jolt_field::{
+    use jolt_algebra::{
         Ext2, ExtField, Field, FpExt4, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59,
     };
 
@@ -203,7 +203,7 @@ fn reduced_residue_oracle_tracks_every_admitted_commitment_dimension() {
             })
             .collect::<Vec<_>>();
         assert_eq!(
-            akita_algebra::residue_kernel(&coefficients, alpha).unwrap(),
+            jolt_algebra::residue_kernel(&coefficients, alpha).unwrap(),
             expected,
             "residue kernel disagrees at admitted dimension {dimension}"
         );

@@ -1404,7 +1404,7 @@ The planner MUST keep the search bounded in the following ways.
 - Keep malformed verifier inputs on typed `AkitaError` or
   `SerializationError` paths.
 
-### `akita-challenges`
+### `jolt-crypto::challenge`
 
 - Reuse the signed-sparse sampler at dimension `s`.
 - Reuse the existing challenge entropy audit. Do not add a separate unit

@@ -136,7 +136,7 @@ pub(super) fn terminal(
         };
     let mut sparse_challenge_config = params.fold_challenge_config();
     if let Some(l2_challenge) =
-        akita_challenges::selective_l2_challenge_config(terminal_params.d_a())
+        jolt_crypto::challenge::selective_l2_challenge_config(terminal_params.d_a())
     {
         let fold_basis = 1usize
             .checked_shl(params.open().digits.log_basis)

@@ -1,10 +1,11 @@
 use crate::opaque::CommitInnerPlan;
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_params::{
     validate_setup_prefix_domain, CommitmentPayloadMode, CommitmentSliceGeometry,
     CommittedGroupParams, CompressionChainPlan, GroupCommitPhaseParams, RingRelationMode,
     SetupPrefixSlotId, SisModulusProfileId, TerminalFoldParams,
 };
+use jolt_algebra::checked;
 
 /// Checked B-stage arithmetic plan.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -328,8 +329,8 @@ impl CommitmentExecutionPlan {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use akita_challenges::SparseChallengeConfig;
     use akita_params::{CommitmentPayloadMode, SisModulusProfileId};
+    use jolt_crypto::challenge::SparseChallengeConfig;
 
     fn recursive_params(payload_mode: CommitmentPayloadMode) -> CommittedGroupParams {
         let mut params = CommittedGroupParams::params_only(

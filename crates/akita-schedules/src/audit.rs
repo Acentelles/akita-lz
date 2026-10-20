@@ -478,7 +478,7 @@ fn audit_terminal(
         params.inner.matrix.security_route(),
         akita_params::InnerCommitSecurityRoute::L2 { .. }
     ) {
-        if akita_challenges::selective_l2_operator_norm_rejection(d, sparse).is_none() {
+        if jolt_crypto::challenge::selective_l2_operator_norm_rejection(d, sparse).is_none() {
             return Err(invalid(label, "terminal L2 challenge is not certified"));
         }
         let fold_basis = 1usize
@@ -657,7 +657,7 @@ mod tests {
     }
 
     fn l2_terminal(policy: &PlannerPolicy) -> TerminalFoldParams {
-        let sparse = akita_challenges::selective_l2_challenge_config(64)
+        let sparse = jolt_crypto::challenge::selective_l2_challenge_config(64)
             .expect("certified D64 L2 challenge");
         let expected = selective_l2_inner_matrix(
             policy,

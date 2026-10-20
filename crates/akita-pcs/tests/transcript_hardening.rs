@@ -21,7 +21,7 @@ use common::mutations::{
     selected_sumcheck_protocols,
 };
 use common::*;
-use jolt_field::One;
+use jolt_algebra::One;
 use jolt_transcript::{Channel, ProtocolId, ProverTranscript, VerifierTranscript};
 
 const NUM_VARS: usize = 14;

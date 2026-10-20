@@ -24,7 +24,9 @@ impl PlannerOpeningCandidate {
     ) -> Result<Vec<Self>, AkitaError> {
         dimensions.validate_role_projection()?;
         let mut candidates = Vec::new();
-        for &challenge_subring_dimension in akita_challenges::PRODUCTION_FOLD_CHALLENGE_RING_DIMS {
+        for &challenge_subring_dimension in
+            jolt_crypto::challenge::PRODUCTION_FOLD_CHALLENGE_RING_DIMS
+        {
             if let Some(candidate) = Self::coefficient_packing(
                 extension_degree,
                 dimensions,

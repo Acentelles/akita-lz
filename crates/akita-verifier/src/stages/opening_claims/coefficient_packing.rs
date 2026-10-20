@@ -10,7 +10,7 @@ use akita_types::GrindingReplay;
 use akita_types::{
     Commitment, FpExtEncoding, OpeningClaims, PreparedSubringCoefficientPackingPoint,
 };
-use jolt_field::{CanonicalEncoding, ExtField, Field, Ring};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, Ring};
 use jolt_transcript::{Channel, Sponge};
 
 fn prepare_group<E: Field>(

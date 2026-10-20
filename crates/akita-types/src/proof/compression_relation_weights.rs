@@ -9,10 +9,11 @@ use akita_algebra::offset_eq::{
     eval_boolean_pair_tensor_families, EqPairTensorAxis, EqPairTensorFamily, OffsetEqWindow,
 };
 use akita_algebra::poly::multilinear_eval;
-use akita_algebra::ring::{eval_flat_ring_at_pows_fast, scalar_powers};
-use akita_error::{checked, AkitaError};
-use jolt_field::solinas::parallel::*;
-use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
+use akita_error::AkitaError;
+use jolt_algebra::checked;
+use jolt_algebra::ring::{eval_flat_ring_at_pows_fast, scalar_powers};
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
 use std::ops::Range;
 
 use crate::{AkitaExpandedSetup, FpExtEncoding, RingRelationInstance};
@@ -789,8 +790,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::Prime128OffsetA7F7 as F;
-    use jolt_field::{One, Zero};
+    use jolt_algebra::Prime128OffsetA7F7 as F;
+    use jolt_algebra::{One, Zero};
 
     #[test]
     fn sparse_evaluator_matches_dense_materialization() {

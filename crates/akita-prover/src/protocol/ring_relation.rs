@@ -3,8 +3,6 @@
 //! Coordinates public relation messages while private witness storage stays in the backend.
 use crate::backend::OperationCtx;
 use crate::ProverOpeningData;
-#[cfg(test)]
-use akita_challenges::Challenges;
 use akita_error::AkitaError;
 use akita_params::dispatch_for_field;
 use akita_params::{CommittedGroupParams, SignedDigitKernel, MAX_I8_LOG_BASIS};
@@ -13,8 +11,10 @@ use akita_types::GrindingReplay;
 use akita_types::RingRelationGroupOpening;
 use akita_types::RingVec;
 use akita_types::{OpeningFamily, RingRelationInstance};
-use jolt_field::Unreduced;
-use jolt_field::{CanonicalEncoding, Field, Ring};
+use jolt_algebra::Unreduced;
+use jolt_algebra::{CanonicalEncoding, Field, Ring};
+#[cfg(test)]
+use jolt_crypto::challenge::Challenges;
 use jolt_transcript::{Channel, PrivateChannel, Sponge};
 
 use super::fold_grind;
@@ -163,7 +163,7 @@ impl RingRelationProver {
             + 'static,
         <F as Unreduced>::Wide: From<F>,
         PointF: akita_types::FpExtEncoding<F>
-            + jolt_field::ExtField<F>
+            + jolt_algebra::ExtField<F>
             + akita_serialization::AkitaSerialize,
         B: crate::backend::ProverBackend<F, PointF>,
     {

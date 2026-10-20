@@ -4,10 +4,10 @@ use super::{
     sparse_mul_acc_i16_scalar, sparse_mul_acc_pm1, sparse_mul_acc_scalar, SignedDigitBasis,
     ValidatedSparseChallenge, ValidatedSparseChallenges,
 };
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
-use akita_algebra::CyclotomicRing;
-use akita_challenges::SparseChallenge;
-use jolt_field::{Fp64, Ring};
+use jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{Fp64, Ring};
+use jolt_crypto::challenge::SparseChallenge;
 
 /// SIMD-vs-scalar parity for the sparse-multiply-accumulate decompose-fold
 /// kernel, exercising whichever SIMD backend is active (NEON / AVX2 /

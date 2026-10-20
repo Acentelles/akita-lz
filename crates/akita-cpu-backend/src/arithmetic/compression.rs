@@ -6,7 +6,7 @@ use crate::kernels::linear::{
 };
 use crate::opaque::{CompressionComputeBackend, CompressionRowsProducts};
 use akita_error::AkitaError;
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::{CanonicalEncoding, Field};
 
 impl<F, E> CompressionComputeBackend<F> for CpuBackend<F, E>
 where
@@ -42,7 +42,7 @@ where
         &self,
         prepared: &Self::PreparedSetup,
         digit_vectors: &[&[[i8; D]]],
-    ) -> Result<Vec<Vec<akita_algebra::CyclotomicRing<F, D>>>, AkitaError> {
+    ) -> Result<Vec<Vec<jolt_algebra::CyclotomicRing<F, D>>>, AkitaError> {
         let input_width = validate_compression_batch_shape(digit_vectors)?;
         let total_ring_elements = prepared.expanded.shared_matrix.num_field_elements() / D;
         validate_digit_row_request(1, input_width, total_ring_elements)?;

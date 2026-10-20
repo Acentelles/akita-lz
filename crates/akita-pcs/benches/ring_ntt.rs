@@ -1,20 +1,20 @@
 #![allow(missing_docs)]
 
-use akita_algebra::ntt::butterfly::{forward_ntt, inverse_ntt, NttTwiddles};
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
-use akita_algebra::tables::{
+use akita_params::FlatMatrix;
+use akita_types::{prepare_ntt_cache, NttCacheMode};
+use jolt_algebra::ntt::butterfly::{forward_ntt, inverse_ntt, NttTwiddles};
+use jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_algebra::tables::{
     q128_primes, I16_TAIL_PRIME, Q128_NUM_PRIMES, Q32_MODULUS, Q32_NUM_PRIMES, Q32_PRIMES,
 };
-use akita_algebra::{
+use jolt_algebra::{
     balanced_decompose_coefficients_pow2_i8_into, mat_vec_i16_with_tail, CrtNttParamSet,
     CyclotomicCrtNtt, CyclotomicRing, DigitMontLut, I16TailParams, MontCoeff, NttKernelPlan,
 };
-use akita_params::FlatMatrix;
-use akita_types::{prepare_ntt_cache, NttCacheMode};
 use std::hint::black_box;
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use jolt_field::{CanonicalEncoding, Fp64, One, Prime128OffsetA7F7, Prime32Offset99, Ring};
+use jolt_algebra::{CanonicalEncoding, Fp64, One, Prime128OffsetA7F7, Prime32Offset99, Ring};
 
 type F = Fp64<{ Q32_MODULUS }>;
 type R = CyclotomicRing<F, 64>;

@@ -2,10 +2,10 @@ use super::prepared::validate_digit_row_request;
 use super::CpuBackend;
 use crate::kernels::linear::mat_vec_mul_ntt_digits_i8;
 use crate::opaque::DigitRowsComputeBackend;
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
 use akita_types::{NttCacheKey, NttTransformDomain};
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{CanonicalEncoding, Field};
 
 impl<F, E> DigitRowsComputeBackend<F> for CpuBackend<F, E>
 where

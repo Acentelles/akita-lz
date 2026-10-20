@@ -1,5 +1,4 @@
 //! Checked packing catalogs for root and setup-prefixed successor roundtrips.
-use akita_challenges::SparseChallengeConfig;
 use akita_config::CommitmentConfig;
 use akita_error::AkitaError;
 use akita_params::ScheduleLookupKey;
@@ -7,6 +6,7 @@ use akita_params::{
     CommittedGroupBatchProfile, DecompositionParams, GroupCommitPhaseParams, SetupMatrixCapacity,
     SisModulusProfileId,
 };
+use jolt_crypto::challenge::SparseChallengeConfig;
 use std::marker::PhantomData;
 
 mod geometry;

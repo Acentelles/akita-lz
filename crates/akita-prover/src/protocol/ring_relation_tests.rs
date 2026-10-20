@@ -1,11 +1,11 @@
 use super::*;
-use akita_challenges::{SparseChallenge, SparseChallengeConfig};
 use akita_params::{
     BasisMode, CommitmentPayloadMode, OpenCommitMatrixParams, OpeningClaimsLayout, OpeningMethod,
     RelationWitnessGeometry, SisModulusProfileId, SubringCoefficientPackingGeometry,
 };
 use akita_types::{relation_rhs_coeff_len, PreparedSubringCoefficientPackingPoint};
-use jolt_field::{Ext2, ExtField, Prime64Offset59, Zero};
+use jolt_algebra::{Ext2, ExtField, Prime64Offset59, Zero};
+use jolt_crypto::challenge::{SparseChallenge, SparseChallengeConfig};
 
 type F = Prime64Offset59;
 type E = Ext2<F>;

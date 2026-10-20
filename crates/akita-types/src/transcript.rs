@@ -1,7 +1,7 @@
 //! Akita's protocol identity on the shared `jolt-transcript` proof channel.
 
 use akita_error::AkitaError;
-use jolt_field::Field;
+use jolt_algebra::Field;
 use jolt_transcript::ProtocolId;
 
 /// Sponge used by Akita's standalone proving and verification API.

@@ -2,9 +2,9 @@ mod group;
 mod reduced;
 
 use super::*;
-use akita_algebra::cfg_try_fold_reduce;
-use akita_algebra::ring::{eval_ring_at_pows_fast, scalar_powers};
 use group::evaluate_base_ring_direct;
+use jolt_algebra::cfg_try_fold_reduce;
+use jolt_algebra::ring::{eval_ring_at_pows_fast, scalar_powers};
 use reduced::evaluate_groups_reduced;
 
 enum DirectScanKernel<'a, E: Field> {

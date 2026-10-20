@@ -1,10 +1,10 @@
 use super::PhysicalBWeightTerm;
-#[cfg(test)]
-use akita_algebra::ring::eval_flat_ring_at_pows_fast;
-use akita_algebra::ring::eval_ring_at_pows_fast;
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
-use jolt_field::{ExtField, Field, MulBaseUnreduced};
+#[cfg(test)]
+use jolt_algebra::ring::eval_flat_ring_at_pows_fast;
+use jolt_algebra::ring::eval_ring_at_pows_fast;
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{ExtField, Field, MulBaseUnreduced};
 
 #[derive(Clone)]
 pub(crate) struct GroupSetupSegment<E> {

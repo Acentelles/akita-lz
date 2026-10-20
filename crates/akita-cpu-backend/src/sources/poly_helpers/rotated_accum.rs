@@ -1,6 +1,6 @@
 //! Rotated-challenge accumulation for decompose-fold (dense D64 high-weight path).
 
-use akita_challenges::SparseChallenge;
+use jolt_crypto::challenge::SparseChallenge;
 
 const D64_ROTATED_CHALLENGE_MIN_WEIGHT: usize = 42;
 

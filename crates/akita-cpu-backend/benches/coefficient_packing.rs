@@ -1,6 +1,5 @@
 #![allow(missing_docs)]
 
-use akita_algebra::CyclotomicRing;
 use akita_config::proof_optimized::{fp128, fp32, fp64};
 use akita_cpu_backend::standalone::{
     dense_coefficient_packing, onehot_coefficient_packing,
@@ -9,10 +8,11 @@ use akita_cpu_backend::standalone::{
 use akita_cpu_backend::{DensePoly, OneHotPoly};
 use akita_params::{BasisMode, SubringCoefficientPackingGeometry};
 use akita_types::{FpExtEncoding, PreparedSubringCoefficientPackingPoint};
+use jolt_algebra::CyclotomicRing;
 use std::hint::black_box;
 
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
-use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced};
 use std::time::Duration;
 
 fn prepared_point<F, E, const D: usize>(

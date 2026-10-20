@@ -4,7 +4,7 @@ use akita_config::{CommitmentConfig, TrustedScheduleCatalog};
 use akita_error::AkitaError;
 use akita_params::{OpeningScheduleSelection, ScheduleRowDigest};
 use akita_types::AkitaVerifierSetup;
-use jolt_field::CanonicalEncoding;
+use jolt_algebra::CanonicalEncoding;
 
 use crate::prepared_cache::{terminal_ntt_cache_requirement, TerminalNttCache};
 
@@ -159,10 +159,9 @@ mod tests {
         verifier_setup_matrix_capacity_for_schedule, FlatMatrix, FoldSchedule,
         PolynomialGroupLayout, ScheduleLookupKey,
     };
-    use akita_types::{
-        AkitaExpandedSetup, AkitaSetupDescriptor, AkitaSetupSeed, SetupPrefixVerifierRegistry,
-    };
-    use jolt_field::Ring;
+    use akita_types::{AkitaExpandedSetup, AkitaSetupDescriptor, SetupPrefixVerifierRegistry};
+    use jolt_algebra::Ring;
+    use jolt_crypto::lattice::PublicMatrixSeed;
     use std::sync::Arc;
 
     type F = <OneHot as CommitmentConfig>::Field;
@@ -177,7 +176,7 @@ mod tests {
     }
 
     fn setup(max_num_vars: usize, num_field_elements: usize) -> AkitaVerifierSetup<F> {
-        let seed: AkitaSetupSeed = [6; 32].into();
+        let seed: PublicMatrixSeed = [6; 32].into();
         AkitaVerifierSetup::from_parts(
             Arc::new(
                 AkitaExpandedSetup::from_trusted_seed_derived_parts_unchecked(

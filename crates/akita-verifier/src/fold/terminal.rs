@@ -4,13 +4,13 @@
 use super::suffix::SuffixVerifierState;
 use crate::prepared_cache::TerminalNttCache;
 use crate::stages::opening_claims::verify_extension_claim_terminal_suffix;
-use akita_challenges::FoldDraw;
 use akita_error::AkitaError;
 use akita_params::{OpeningClaimsLayout, TerminalFoldParams};
 use akita_serialization::AkitaSerialize;
+use akita_types::FoldDraw;
 use akita_types::GrindingReplay;
 use akita_types::{prepare_opening_point, FpExtEncoding, RingVec};
-use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, PseudoMersenne, Ring};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, PseudoMersenne, Ring};
 use jolt_transcript::{Channel, Sponge};
 
 pub(super) fn verify_terminal_suffix<F, E, H: Sponge>(
@@ -122,7 +122,7 @@ where
         grinding.read_fold_response(akita_params::GrindingSite::FoldResponse { level })?;
     let operator_rejection = if scheduled.response_l2_sq_cap().is_some() {
         Some(
-            akita_challenges::selective_l2_operator_norm_rejection(
+            jolt_crypto::challenge::selective_l2_operator_norm_rejection(
                 scheduled.d_a(),
                 &scheduled.fold_challenge_config,
             )
@@ -131,10 +131,10 @@ where
     } else {
         None
     };
-    let mut draw = akita_challenges::ForkFoldDraw::new(&mut fork);
+    let mut draw = akita_types::ForkFoldDraw::new(&mut fork);
     let challenges = {
         draw.draw_folding_challenges_with_rejection(
-            akita_challenges::FoldChallengeDrawDomain::EvaluationTrace,
+            akita_types::FoldChallengeDrawDomain::EvaluationTrace,
             scheduled.d_a(),
             0,
             scheduled.blocks.live_blocks,

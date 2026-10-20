@@ -6,10 +6,11 @@ use std::ops::Range;
 use akita_algebra::offset_eq::{OffsetEqWindow, MAX_COMPACT_STRIDE_TERMS};
 #[cfg(test)]
 use akita_algebra::poly::multilinear_eval;
-use akita_algebra::ring::scalar_powers;
-use akita_challenges::Challenges;
-use akita_error::{checked, AkitaError};
-use jolt_field::{canonical_extension_basis, CanonicalEncoding, ExtField, Field};
+use akita_error::AkitaError;
+use jolt_algebra::checked;
+use jolt_algebra::ring::scalar_powers;
+use jolt_algebra::{canonical_extension_basis, CanonicalEncoding, ExtField, Field};
+use jolt_crypto::challenge::Challenges;
 
 use super::{
     relation_row_weight, RelationWeightContribution, RelationWeightEvent,
@@ -189,6 +190,7 @@ impl<'authority, 'output, F: Field, E: Field>
     {
         self.canonical_challenges
             .evals_at_pows::<F, E>(&self.alpha_powers)
+            .map_err(AkitaError::from)
     }
 
     #[must_use]

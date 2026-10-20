@@ -1,7 +1,7 @@
 use super::*;
 
 use akita_algebra::poly::multilinear_eval;
-use jolt_field::{
+use jolt_algebra::{
     CanonicalEncoding, Ext2, ExtField, Field, FpExt4, One, Prime128OffsetA7F7, Prime32Offset99,
     Prime64Offset59, Ring, Zero,
 };
@@ -571,7 +571,7 @@ fn semantic_events_match_an_independent_dense_accumulation() {
 
 #[test]
 fn malformed_authorities_and_exact_overlap_dispatch_by_method() {
-    assert!(akita_error::checked::product([usize::MAX, 2]).is_none());
+    assert!(jolt_algebra::checked::product([usize::MAX, 2]).is_none());
     let fixture = fixture::<F, E>(
         SisModulusProfileId::Q64Offset59,
         256,

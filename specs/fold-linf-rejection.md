@@ -117,7 +117,7 @@ bound. The hard probe cap is the protocol-wide termination guarantee.
 
 The current ownership boundaries are:
 
-- `akita-challenges` samples fixed-weight signed sparse challenges and exposes
+- `jolt-crypto::challenge` samples fixed-weight signed sparse challenges and exposes
   `challenge_l2_sq_max`;
 - `akita-types::sis` owns `β_inf`, the tail calculation, and balanced-digit
   sizing;

@@ -9,12 +9,12 @@
 //! as a `rows × cols` matrix of `CyclotomicRing<F, D>` elements, enabling
 //! the same underlying vector to serve multiple roles with different shapes.
 
-use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
 use akita_serialization::{
     AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate,
 };
-use jolt_field::Field;
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::Field;
 use std::io::{Read, Write};
 
 /// Flat 1D vector of field elements, independent of ring dimension.
@@ -394,7 +394,7 @@ impl<'a, F: Field, const D: usize> RingMatrixView<'a, F, D> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::{One, Prime128Offset275, Ring, Zero};
+    use jolt_algebra::{One, Prime128Offset275, Ring, Zero};
     use rand::rngs::StdRng;
     use rand::SeedableRng;
 

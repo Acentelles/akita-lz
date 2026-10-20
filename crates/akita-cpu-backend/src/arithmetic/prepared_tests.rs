@@ -3,11 +3,11 @@ use crate::opaque::RingSwitchRelationView;
 use crate::opaque::{ComputeBackendSetup, DigitRowsComputeBackend};
 use crate::opaque::{RingSwitchRelationKernel, RingSwitchRelationPlan};
 use crate::AkitaProverSetup;
-use akita_challenges::SparseChallengeConfig;
 use akita_params::MAX_I8_LOG_BASIS;
 use akita_params::{CommittedGroupParams, SetupMatrixCapacity, SisModulusProfileId};
 use akita_types::{NttCacheKey, NttTransformDomain};
-use jolt_field::Prime64Offset59;
+use jolt_algebra::Prime64Offset59;
+use jolt_crypto::challenge::SparseChallengeConfig;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
@@ -371,7 +371,7 @@ fn relation_prewarm_joins_d_a_b_prefixes_before_kernel_execution() {
     .with_decomp(4, 8, 1, 2, 2)
     .expect("relation cache test params");
     let open = params.open();
-    let extent = |rows, width| akita_error::checked::product([rows, width]).unwrap();
+    let extent = |rows, width| jolt_algebra::checked::product([rows, width]).unwrap();
     let cyclic_extent = [
         extent(open.matrix.output_rank(), open.matrix.input_width()),
         extent(

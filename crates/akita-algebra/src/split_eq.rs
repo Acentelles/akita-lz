@@ -24,8 +24,8 @@
 use super::eq_poly::EqPolynomial;
 use jolt_poly::UnivariatePoly;
 
-use crate::{Field, Ring};
 use akita_error::AkitaError;
+use jolt_algebra::{Field, Ring};
 
 /// Split equality polynomial with Gruen scalar accumulation.
 ///
@@ -320,8 +320,8 @@ fn mul_linear<E: Field>(q_coeffs: &[E], at_zero: E, slope: E) -> UnivariatePoly<
 mod tests {
     use super::*;
     use crate::poly::fold_evals_in_place;
-    use crate::Field;
-    use jolt_field::{One, Prime128Offset275, Zero};
+    use jolt_algebra::Field;
+    use jolt_algebra::{One, Prime128Offset275, Zero};
     use rand::rngs::StdRng;
     use rand::SeedableRng;
 

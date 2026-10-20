@@ -3,7 +3,7 @@
 
 use crate::{EqFactoredSumcheckKernel, SumcheckKernel};
 use akita_error::AkitaError;
-use jolt_field::Field;
+use jolt_algebra::Field;
 use jolt_poly::UnivariatePoly;
 use jolt_sumcheck::{ProveRounds, SingleFormat, SingleInstance};
 
@@ -115,7 +115,7 @@ impl<E: Field, K: EqFactoredSumcheckKernel<E> + ?Sized> ProveRounds<E, AkitaErro
 mod tests {
     use super::*;
     use akita_algebra::poly::multilinear_eval;
-    use jolt_field::{CanonicalBytes, One, Prime128Offset275 as F, Ring, Zero};
+    use jolt_algebra::{CanonicalBytes, One, Prime128Offset275 as F, Ring, Zero};
     use jolt_poly::{OmittedConstantPoly, Point};
     use jolt_sumcheck::{
         prove_single, verify_single, ProverRoundContext, SingleFormat, SingleInstance,

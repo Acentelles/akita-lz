@@ -1,5 +1,5 @@
 use super::*;
-use akita_error::checked;
+use jolt_algebra::checked;
 
 mod frontier;
 mod level_search;
@@ -623,7 +623,8 @@ fn append_selective_l2_candidates(
     else {
         return Ok(());
     };
-    let Some(l2_challenge) = akita_challenges::selective_l2_challenge_config(dimensions.d_a())
+    let Some(l2_challenge) =
+        jolt_crypto::challenge::selective_l2_challenge_config(dimensions.d_a())
     else {
         return Ok(());
     };

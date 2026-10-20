@@ -22,7 +22,7 @@ mod tests {
             3,
             2,
             3,
-            akita_challenges::SparseChallengeConfig::pm1_only(1),
+            jolt_crypto::challenge::SparseChallengeConfig::pm1_only(1),
         )
         .with_decomp(4, 32, 2, 2, 2)
         .expect("scalar test params");
@@ -175,7 +175,7 @@ mod tests {
             2,
             2,
             2,
-            akita_challenges::SparseChallengeConfig::production_for_ring_dim(64)
+            jolt_crypto::challenge::SparseChallengeConfig::production_for_ring_dim(64)
                 .expect("D64 challenge"),
         )
         .with_decomp(4, 8, 2, 2, 2)
@@ -262,11 +262,11 @@ mod tests {
                     .map(RelationRowGeometry::physical_coefficient_width)
                     .sum::<usize>()
             );
-            let v = crate::RingVec::<jolt_field::Prime128OffsetA7F7>::from_coeffs(vec![
+            let v = crate::RingVec::<jolt_algebra::Prime128OffsetA7F7>::from_coeffs(vec![
                 Default::default();
                 params.open().matrix.output_rank() * 128
             ]);
-            let u = crate::RingVec::<jolt_field::Prime128OffsetA7F7>::from_coeffs(vec![
+            let u = crate::RingVec::<jolt_algebra::Prime128OffsetA7F7>::from_coeffs(vec![
                 Default::default();
                 params.outer().matrix.output_rank() * 256
             ]);
@@ -365,7 +365,7 @@ mod tests {
                 params.own_group_mut().opening.opening_method = opening_method;
                 if matches!(opening_method, OpeningMethod::EvaluationTrace) {
                     params.own_group_mut().opening.fold_challenge_config =
-                        akita_challenges::SparseChallengeConfig::production_for_ring_dim(256)
+                        jolt_crypto::challenge::SparseChallengeConfig::production_for_ring_dim(256)
                             .expect("A-ring challenge");
                 }
                 let relation_geometry =
@@ -542,7 +542,7 @@ mod tests {
             2,
             2,
             2,
-            akita_challenges::SparseChallengeConfig::production_for_ring_dim(64)
+            jolt_crypto::challenge::SparseChallengeConfig::production_for_ring_dim(64)
                 .expect("D64 challenge"),
         )
         .with_decomp(4, 8, 2, 2, 2)
@@ -576,7 +576,7 @@ mod tests {
             2,
             2,
             2,
-            akita_challenges::SparseChallengeConfig::production_for_ring_dim(128)
+            jolt_crypto::challenge::SparseChallengeConfig::production_for_ring_dim(128)
                 .expect("D128 challenge"),
         )
         .with_decomp(4, 8, 2, 2, 2)
@@ -603,8 +603,7 @@ mod tests {
                 ..
             }
         ));
-        let v =
-            crate::RingVec::<jolt_field::Prime128OffsetA7F7>::from_coeffs(vec![
+        let v = crate::RingVec::<jolt_algebra::Prime128OffsetA7F7>::from_coeffs(vec![
                 Default::default();
                 overlap
                     .open()
@@ -612,8 +611,7 @@ mod tests {
                     .output_rank()
                     * 128
             ]);
-        let u =
-            crate::RingVec::<jolt_field::Prime128OffsetA7F7>::from_coeffs(vec![
+        let u = crate::RingVec::<jolt_algebra::Prime128OffsetA7F7>::from_coeffs(vec![
                 Default::default();
                 overlap
                     .outer()

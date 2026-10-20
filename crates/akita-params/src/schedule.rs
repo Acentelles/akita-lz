@@ -105,7 +105,7 @@ pub struct TerminalFoldParams {
     /// Response basis and depth this terminal fold was planned against.
     pub fold: crate::GadgetDigits,
     /// Fold-challenge family for the terminal response.
-    pub fold_challenge_config: akita_challenges::SparseChallengeConfig,
+    pub fold_challenge_config: jolt_crypto::challenge::SparseChallengeConfig,
     /// Shape of the clear terminal response payload.
     pub response_shape: TerminalResponseShape,
     /// Witness field length entering the terminal fold.
@@ -317,7 +317,7 @@ impl FoldSuccessor<'_> {
             Self::Recursive(params) => params.blocks().positions_per_block,
             Self::Terminal(params) => params.blocks.positions_per_block,
         };
-        akita_error::checked::product([self.ring_dimension(), positions])
+        jolt_algebra::checked::product([self.ring_dimension(), positions])
             .ok_or_else(|| AkitaError::InvalidSetup("source block width overflow".into()))
     }
 
@@ -640,7 +640,7 @@ struct OpeningExecutionGroup<'a> {
     /// this admission check meant to impose.
     opening_method: OpeningMethod,
     inner_commit_matrix: &'a crate::InnerCommitMatrixParams,
-    fold_challenge_config: akita_challenges::SparseChallengeConfig,
+    fold_challenge_config: jolt_crypto::challenge::SparseChallengeConfig,
     /// Encoding the committing fold actually used for this group.
     ///
     /// Carried explicitly rather than read from `params`: a group's own
@@ -725,7 +725,7 @@ fn validate_level_opening_execution(
         else {
             continue;
         };
-        let expected = akita_challenges::SparseChallengeConfig::production_for_ring_dim(
+        let expected = jolt_crypto::challenge::SparseChallengeConfig::production_for_ring_dim(
             challenge_subring_dimension,
         )
         .ok_or_else(|| {

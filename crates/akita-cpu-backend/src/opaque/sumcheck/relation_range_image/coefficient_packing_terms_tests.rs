@@ -1,7 +1,6 @@
 use super::*;
 
 use akita_algebra::poly::multilinear_eval;
-use akita_challenges::{Challenges, SparseChallenge, SparseChallengeConfig};
 use akita_params::{
     r_decomp_levels, BasisMode, CommitmentPayloadMode, DigitRangePlan, FlatMatrix,
     OpenCommitMatrixParams, OpeningClaimsLayout, OpeningMethod, RelationAddressGeometry,
@@ -15,7 +14,8 @@ use akita_types::{
     PreparedSubringCoefficientPackingPoint, RelationRangeImagePlan, RelationWeightEvent,
     RingRelationGroupOpening, RingRelationInstance, RingVec,
 };
-use jolt_field::{Ext2, One, Prime64Offset59, Ring, Zero};
+use jolt_algebra::{Ext2, One, Prime64Offset59, Ring, Zero};
+use jolt_crypto::challenge::{Challenges, SparseChallenge, SparseChallengeConfig};
 
 type F = Prime64Offset59;
 type E = Ext2<F>;
@@ -537,7 +537,7 @@ fn method_aware_relation_builder_uses_batch_packing_events_once() {
     use crate::opaque::relation_weights::{
         build_relation_lane_weights, RelationLaneWeightInputs, RelationSetupSource,
     };
-    use akita_algebra::ring::scalar_powers;
+    use jolt_algebra::ring::scalar_powers;
 
     let fixture = fixture();
     let batch = prepare_batch(&fixture);

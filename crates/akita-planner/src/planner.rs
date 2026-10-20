@@ -2,7 +2,7 @@
 
 use std::time::Instant;
 
-use akita_error::{checked, AkitaError};
+use akita_error::AkitaError;
 use akita_params::sis::{
     decomposed_s_block_ring_count, num_digits_open, rounded_up_collision_inf_norm,
     rounded_up_role_a_inf_norm, CommittedSourceContract, HonestFoldPolicy, HonestFoldSizingQuery,
@@ -14,6 +14,7 @@ use akita_params::{
     GroupOpenPhaseParams, OpeningClaimsLayout, PlannedFoldSchedule, PolynomialGroupLayout,
     PrecommittedGroupAdmissionPolicy,
 };
+use jolt_algebra::checked;
 
 use akita_schedules::planner_support::projected_collision_role_price;
 use akita_schedules::ResolvedScheduleRow;
@@ -138,7 +139,7 @@ fn materialize_precommitted_group_for_open_basis(
                 layout.inner.digits.log_basis,
                 layout.inner.digits.num_digits,
                 ring_dimension,
-                akita_error::checked::pow2(layout.group.num_vars())
+                jolt_algebra::checked::pow2(layout.group.num_vars())
                     .and_then(|len| len.checked_mul(group_claims))
                     .ok_or_else(|| AkitaError::InvalidSetup("source length overflow".into()))?,
             )?
@@ -508,7 +509,7 @@ fn root_final_group_level_params_candidate(
             log_basis_inner,
             num_digits_inner,
             d_a,
-            akita_error::checked::pow2(ctx.final_num_vars)
+            jolt_algebra::checked::pow2(ctx.final_num_vars)
                 .and_then(|len| len.checked_mul(ctx.main_num_polys))
                 .ok_or_else(|| AkitaError::InvalidSetup("source length overflow".into()))?,
         )?
@@ -641,7 +642,10 @@ pub fn find_schedule(
     final_source_contract: CommittedSourceContract,
     precommitted_source_contracts: &[CommittedSourceContract],
     policy: &PlannerPolicy,
-    ring_challenge_config: impl Fn(usize) -> Result<akita_challenges::SparseChallengeConfig, AkitaError>,
+    ring_challenge_config: impl Fn(
+        usize,
+    )
+        -> Result<jolt_crypto::challenge::SparseChallengeConfig, AkitaError>,
 ) -> Result<PlannedFoldSchedule, AkitaError> {
     find_schedule_in_relation_order(
         key,
@@ -682,7 +686,10 @@ pub fn find_adapted_schedule(
     request: &crate::emit::GroupedGenerationRequest,
     final_source_contract: CommittedSourceContract,
     policy: &PlannerPolicy,
-    ring_challenge_config: impl Fn(usize) -> Result<akita_challenges::SparseChallengeConfig, AkitaError>,
+    ring_challenge_config: impl Fn(
+        usize,
+    )
+        -> Result<jolt_crypto::challenge::SparseChallengeConfig, AkitaError>,
 ) -> Result<PlannedFoldSchedule, AkitaError> {
     let key = request.key();
     let precommitted_source_contracts = request.source_contracts();
@@ -717,7 +724,10 @@ fn find_adapted_schedule_for_key(
     final_source_contract: CommittedSourceContract,
     precommitted_source_contracts: &[CommittedSourceContract],
     policy: &PlannerPolicy,
-    ring_challenge_config: impl Fn(usize) -> Result<akita_challenges::SparseChallengeConfig, AkitaError>,
+    ring_challenge_config: impl Fn(
+        usize,
+    )
+        -> Result<jolt_crypto::challenge::SparseChallengeConfig, AkitaError>,
 ) -> Result<PlannedFoldSchedule, AkitaError> {
     akita_schedules::planner_support::validate_policy(policy)?;
     key.validate(policy.decomposition.field_bits())?;
@@ -777,7 +787,10 @@ pub fn find_schedule_for_test_relation_mode(
     final_source_contract: CommittedSourceContract,
     precommitted_source_contracts: &[CommittedSourceContract],
     policy: &PlannerPolicy,
-    ring_challenge_config: impl Fn(usize) -> Result<akita_challenges::SparseChallengeConfig, AkitaError>,
+    ring_challenge_config: impl Fn(
+        usize,
+    )
+        -> Result<jolt_crypto::challenge::SparseChallengeConfig, AkitaError>,
     relation_mode_filter: super::schedule_params::TestRelationModeFilter,
 ) -> Result<PlannedFoldSchedule, AkitaError> {
     find_schedule_in_relation_order(
@@ -800,7 +813,10 @@ pub(crate) fn find_schedule_in_relation_order(
     final_source_contract: CommittedSourceContract,
     precommitted_source_contracts: &[CommittedSourceContract],
     policy: &PlannerPolicy,
-    ring_challenge_config: impl Fn(usize) -> Result<akita_challenges::SparseChallengeConfig, AkitaError>,
+    ring_challenge_config: impl Fn(
+        usize,
+    )
+        -> Result<jolt_crypto::challenge::SparseChallengeConfig, AkitaError>,
     options: ScheduleSearchOptions<'_>,
 ) -> Result<PlannedFoldSchedule, AkitaError> {
     let diagnostics = crate::diagnostics::active();
@@ -899,7 +915,7 @@ pub(crate) fn find_schedule_in_relation_order(
         let bounded_note = if u32::try_from(class_count)
             .ok()
             .and_then(|classes| {
-                akita_challenges::PRODUCTION_FOLD_CHALLENGE_RING_DIMS
+                jolt_crypto::challenge::PRODUCTION_FOLD_CHALLENGE_RING_DIMS
                     .len()
                     .checked_pow(classes)
             })

@@ -1,11 +1,9 @@
 use super::*;
 use crate::transcript::test_transcripts::{prover as new_prover, verifier as new_verifier};
-use akita_challenges::{
-    Challenges, FoldChallengeDrawDomain, FoldDraw, FoldDrawRecord, ForkFoldDraw,
-    SparseChallengeConfig,
-};
+use crate::{FoldChallengeDrawDomain, FoldDraw, FoldDrawRecord, ForkFoldDraw};
 use akita_params::{ChallengeFieldOrder, GrindingRun};
-use jolt_field::Prime128Offset275 as F;
+use jolt_algebra::Prime128Offset275 as F;
+use jolt_crypto::challenge::{Challenges, SparseChallengeConfig};
 use jolt_transcript::{grinding_predicate_accepts, GRINDING_PREDICATE_LEN};
 use std::num::NonZeroU8;
 

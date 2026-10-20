@@ -1,11 +1,11 @@
 //! Inline nonce replay for transcript grinding.
 
+use crate::FoldDrawRecord;
 use crate::FoldSite;
-use akita_challenges::FoldDrawRecord;
 use akita_error::AkitaError;
 use akita_params::transcript_site::{ProtocolSiteId, SITE_FAMILY_SUMCHECK};
 use akita_params::{GrindingPlan, GrindingQueryKind, GrindingSite};
-use jolt_field::{CanonicalEncoding, ExtField, Field};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field};
 use jolt_sumcheck::{ProverRoundContext, SumcheckSite, VerifierRoundContext};
 use jolt_transcript::{
     Channel, Fork, PrivateChannel, ProverTranscript, SiteId, Sponge, TranscriptError,

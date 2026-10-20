@@ -5,8 +5,8 @@
 //! `L∞` bucket ready to feed [`super::ajtai_key::min_secure_rank`]. The folded witness `z`
 //! is decomposed (not Ajtai-committed), so it has no SIS bucket.
 
-use akita_challenges::SparseChallengeConfig;
 use akita_error::AkitaError;
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 use super::ajtai_key::{
     ceil_supported_linf_bound, SisMatrixRole, SisModulusProfileId, SisSecurityPolicyId,
@@ -525,7 +525,7 @@ mod tests {
     #[test]
     fn rounded_up_role_a_inf_norm_matches_certified_difference_envelope() {
         use crate::DecompositionParams;
-        use akita_challenges::{
+        use jolt_crypto::challenge::{
             SparseChallengeConfig, D64_PRODUCTION_PM1_COUNT, D64_PRODUCTION_PM2_COUNT,
         };
 
@@ -623,7 +623,7 @@ mod tests {
     #[test]
     fn committed_fold_collision_prices_digit_envelope_not_honest_cap() {
         use crate::DecompositionParams;
-        use akita_challenges::{
+        use jolt_crypto::challenge::{
             SparseChallengeConfig, D64_PRODUCTION_PM1_COUNT, D64_PRODUCTION_PM2_COUNT,
         };
 
@@ -683,7 +683,7 @@ mod tests {
     #[test]
     fn fold_linf_digit_plan_uses_the_universal_tail_cap() {
         use crate::DecompositionParams;
-        use akita_challenges::{
+        use jolt_crypto::challenge::{
             SparseChallengeConfig, D64_PRODUCTION_PM1_COUNT, D64_PRODUCTION_PM2_COUNT,
         };
 
@@ -731,7 +731,7 @@ mod tests {
     #[test]
     fn committed_fold_collision_uses_num_digits_fold_verifier_bound() {
         use crate::DecompositionParams;
-        use akita_challenges::{
+        use jolt_crypto::challenge::{
             SparseChallengeConfig, D64_PRODUCTION_PM1_COUNT, D64_PRODUCTION_PM2_COUNT,
         };
 

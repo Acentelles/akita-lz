@@ -1,5 +1,5 @@
-use akita_challenges::SparseChallengeConfig;
 use akita_error::AkitaError;
+use jolt_crypto::challenge::SparseChallengeConfig;
 
 use crate::descriptor_bytes::push_usize;
 use crate::schedule::GroupCommitPhaseParams;
