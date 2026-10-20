@@ -71,11 +71,12 @@ pub use layout::{
 pub use proof_size::{nonterminal_level_layout, NonterminalLevelLayout};
 pub use ring_relation_mode::{RelationCandidateTopology, RingRelationMode, RingRelationPhase};
 pub use schedule::{
-    detect_field_modulus, r_decomp_levels, root_input_witness_len, CommittedGroupBatchProfile,
-    CommittedSourceEncoding, FoldParams, FoldSchedule, FoldScheduleDescriptorStep,
-    FoldScheduleEstimate, FoldSuccessor, GroupCommitPhaseParams, NextWitnessBindingPolicy,
-    PlannedFoldSchedule, PrecommittedGroupProfiles, ScheduleLookupKey, ScheduleLookupOrderKey,
-    ScheduleSisBound, ScheduleSisOccurrence, ScheduleSisRole, TerminalFoldParams,
+    detect_field_modulus, fold_requires_coefficient_packing, r_decomp_levels,
+    root_input_witness_len, CommittedGroupBatchProfile, CommittedSourceEncoding, FoldParams,
+    FoldSchedule, FoldScheduleDescriptorStep, FoldScheduleEstimate, FoldSuccessor,
+    GroupCommitPhaseParams, NextWitnessBindingPolicy, PlannedFoldSchedule,
+    PrecommittedGroupProfiles, ScheduleLookupKey, ScheduleLookupOrderKey, ScheduleSisBound,
+    ScheduleSisOccurrence, ScheduleSisRole, TerminalFoldParams,
     TERMINAL_RESPONSE_MIN_TARGET_RETAIN_DEN, TERMINAL_RESPONSE_MIN_TARGET_RETAIN_NUM,
 };
 pub use schedule_selection::{schedule_row_digest, OpeningScheduleSelection, ScheduleRowDigest};

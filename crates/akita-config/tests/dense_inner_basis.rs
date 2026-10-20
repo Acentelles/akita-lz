@@ -11,8 +11,11 @@ fn catalog<Cfg: CommitmentConfig>() -> akita_config::TrustedScheduleCatalog<Cfg>
         .join("artifacts/schedules")
         .join(format!("{}.aks", Cfg::schedule_family_name()));
     let bytes = std::fs::read(path).expect("checked-in schedule artifact");
-    akita_config::TrustedScheduleCatalog::<Cfg>::from_artifact_bytes(&bytes)
-        .expect("trusted catalog")
+    akita_config::TrustedScheduleCatalog::<Cfg>::from_artifact_bytes(
+        &bytes,
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    )
+    .expect("trusted catalog")
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -107,10 +110,10 @@ fn dense_nv26_selected_schedules_keep_inner_basis_independent() {
             a_input_raw: 1_572_864,
             a_output_raw: 1_024,
             b_input_raw: 1_441_792,
-            b_output_raw: 256,
+            b_output_raw: 128,
             d_input_raw: 1_441_792,
-            d_output_raw: 256,
-            next_witness: 18_363_520,
+            d_output_raw: 128,
+            next_witness: 18_308_480,
         }
     );
 

@@ -11,18 +11,20 @@ use crate::{
 pub(crate) fn mutated_row_admission_error<Cfg: CommitmentConfig>(
     row: &akita_schedules::ResolvedScheduleRow,
     mutate: impl FnOnce(&mut FoldSchedule),
+    chunking: akita_params::ChunkedWitnessCfg,
 ) -> AkitaError {
     let profiles = row.profiles().clone();
     let mut schedule = row.schedule().clone();
     mutate(&mut schedule);
-    akita_schedules::ResolvedScheduleRow::try_new(profiles, schedule, &policy_of::<Cfg>())
+    akita_schedules::ResolvedScheduleRow::try_new(profiles, schedule, &policy_of::<Cfg>(chunking))
         .expect_err("noncanonical row must fail at admission")
 }
 
 fn row_with_setup_prefix<Cfg: CommitmentConfig>(
     predicate: impl Fn(&GroupOpenPhaseParams) -> bool,
+    chunking: akita_params::ChunkedWitnessCfg,
 ) -> akita_schedules::ResolvedScheduleRow {
-    crate::test_support::workspace_schedule_catalog::<Cfg>()
+    crate::test_support::workspace_schedule_catalog::<Cfg>(chunking)
         .expect("workspace schedule catalog")
         .rows()
         .find(|row| {
@@ -99,24 +101,31 @@ fn replace_schedule_evaluation_trace_challenges(
 fn row_admission_audits_recursive_setup_prefix_policy() {
     type RecursiveOneHot = RecursiveCommitmentConfig<fp128::OneHot>;
 
-    let row = row_with_setup_prefix::<RecursiveOneHot>(|_| true);
+    let row = row_with_setup_prefix::<RecursiveOneHot>(
+        |_| true,
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    );
     let prefix_index = row
         .schedule()
         .recursive_folds
         .iter()
         .position(|fold| fold.params.setup_prefix().is_some())
         .expect("recursive setup-prefix fold");
-    let error = mutated_row_admission_error::<RecursiveOneHot>(&row, |schedule| {
-        let fold = schedule
-            .recursive_folds
-            .get_mut(prefix_index)
-            .expect("recursive setup-prefix fold");
-        let mut prefix = *fold.params.setup_prefix().expect("setup-prefix group");
-        prefix.opening.num_digits_open -= 1;
-        fold.params
-            .set_setup_prefix(Some(prefix))
-            .expect("valid prefix topology");
-    });
+    let error = mutated_row_admission_error::<RecursiveOneHot>(
+        &row,
+        |schedule| {
+            let fold = schedule
+                .recursive_folds
+                .get_mut(prefix_index)
+                .expect("recursive setup-prefix fold");
+            let mut prefix = *fold.params.setup_prefix().expect("setup-prefix group");
+            prefix.opening.num_digits_open -= 1;
+            fold.params
+                .set_setup_prefix(Some(prefix))
+                .expect("valid prefix topology");
+        },
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    );
     assert!(
         error.to_string().contains(&format!(
             "recursive fold {prefix_index} setup prefix: opening digit depth is not canonical"
@@ -129,9 +138,10 @@ fn row_admission_audits_recursive_setup_prefix_policy() {
 fn catalog_binding_revalidates_recursive_setup_prefix_challenge_hook() {
     type RecursiveMultiChunk = RecursiveCommitmentConfig<fp128::OneHotMultiChunk>;
 
-    let row = row_with_setup_prefix::<RecursiveMultiChunk>(|prefix| {
-        prefix.opening.opening_method == OpeningMethod::EvaluationTrace
-    });
+    let row = row_with_setup_prefix::<RecursiveMultiChunk>(
+        |prefix| prefix.opening.opening_method == OpeningMethod::EvaluationTrace,
+        akita_params::MultiChunkProfileId::W8R2.cfg(),
+    );
     let (prefix_index, target_prefix) = row
         .schedule()
         .recursive_folds
@@ -160,7 +170,7 @@ fn catalog_binding_revalidates_recursive_setup_prefix_challenge_hook() {
     let profiles = row.profiles().clone();
     let mut schedule = row.schedule().clone();
     replace_schedule_evaluation_trace_challenges(&mut schedule, ring_dimension, replacement);
-    let policy = policy_of::<RecursiveMultiChunk>();
+    let policy = policy_of::<RecursiveMultiChunk>(akita_params::MultiChunkProfileId::W8R2.cfg());
     let catalog = ValidatedScheduleCatalog::try_new(
         RecursiveMultiChunk::schedule_family_name(),
         [(profiles, schedule)],
@@ -175,8 +185,11 @@ fn catalog_binding_revalidates_recursive_setup_prefix_challenge_hook() {
     )
     .expect("catalog admitted under its alternate challenge hook");
 
-    let error = TrustedScheduleCatalog::<RecursiveMultiChunk>::new(catalog)
-        .expect_err("concrete config must reject the alternate prefix challenge");
+    let error = TrustedScheduleCatalog::<RecursiveMultiChunk>::new(
+        catalog,
+        akita_params::MultiChunkProfileId::W8R2.cfg(),
+    )
+    .expect_err("concrete config must reject the alternate prefix challenge");
     assert!(
         error.to_string().contains(&format!(
             "recursive fold {prefix_index} setup prefix challenge config does not match the trusted runtime hook"
@@ -194,8 +207,10 @@ fn dense_recursive_artifacts_cover_benchmark_sizes_and_offload_setup() {
 
     fn check<Cfg: RecursiveScheduleConfig>(sizes: &[usize]) {
         type Recursive<C> = RecursiveCommitmentConfig<C>;
-        let catalog = crate::test_support::workspace_schedule_catalog::<Recursive<Cfg>>()
-            .expect("dense recursive artifact admitted under current policy");
+        let catalog = crate::test_support::workspace_schedule_catalog::<Recursive<Cfg>>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        )
+        .expect("dense recursive artifact admitted under current policy");
         assert_eq!(catalog.rows().count(), sizes.len());
         let mut offloaded = 0;
         for &num_vars in sizes {

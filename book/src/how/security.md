@@ -3,7 +3,9 @@
 One canonical security narrative: the hardness assumption, how Ajtai ranks
 connect to security bits, the weak-binding fold price, and the current SIS table
 model. [Introduction → Security status](../intro.md#security-status) states
-what the 128-bit target covers.
+what the 128-bit target covers. See
+[Reviewing and auditing Akita](../introduction/reviewing-akita.md) for what has
+been audited.
 
 ## SIS / MSIS and Ajtai sizing
 

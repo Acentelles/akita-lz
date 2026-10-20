@@ -130,11 +130,12 @@ quotient spans. Both paths close the same schedule-bound native-ring statement
 and feed the same next-witness opening into the successor. There is no
 proof-controlled mode bit or fallback path.
 
-Schedule validation admits reduced evaluation only as a monotone suffix from
-absolute level 2, with evaluation-trace openings and direct setup
-contribution. It rejects coefficient packing, an incoming setup prefix,
-deferred Stage 3, or a later return to quotient lifting before transcript
-replay. Raw versus compressed payload and `L∞` versus `L2` response security
+Schedule validation admits reduced evaluation only as a monotone single-chunk
+suffix after the first two folds and all multi-chunk folds, with
+evaluation-trace openings and direct setup contribution. Folds 0 and 1 require
+coefficient packing and quotient lift even when single-chunk. The reduced suffix rejects packing, incoming setup
+prefixes, deferred Stage 3, and any later return to quotient lifting before
+transcript replay. Raw versus compressed payload and `L∞` versus `L2` response security
 remain independent choices within that admitted suffix.
 
 An L2 fold at D64 or D128 also replays operator norm rejection from the
