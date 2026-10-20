@@ -1,5 +1,6 @@
 use super::*;
 use crate::sources::packed_digits::PackedSignedDigits;
+use akita_prover::stage1::Stage1Session;
 use jolt_field::{One, Prime128OffsetA7F7 as F, Zero};
 
 // Same four-digit setup as the existing recursive witness session tests.

@@ -160,6 +160,47 @@ impl_proof_optimized_preset!(
         potential_d_dimensions: &Dense::D_RING_DIMENSIONS,
     }
 );
+/// Dense preset with a caller-selected signed committed-source width.
+///
+/// Supported widths are 3, 4, 5 and 6, covering unsigned chunk alphabets of
+/// size 4, 8, 16 and 32 respectively. `DenseSmall<K>` admits centered values
+/// in `[-2^(K-1), 2^(K-1)-1]`; commit rejects values outside that interval.
+/// Opening witnesses retain full field width. Each width has its own
+/// `fp128_dense_small_<K>` family and the adaptive dimensions of [`Dense`].
+#[derive(Clone, Copy, Debug, Default)]
+pub struct DenseSmall<const SIGNED_BITS: u32>;
+
+impl<const SIGNED_BITS: u32> DenseSmall<SIGNED_BITS> {
+    /// Signed width of the committed source.
+    pub const LOG_COMMIT_BOUND: u32 = SIGNED_BITS;
+}
+
+macro_rules! impl_small_dense {
+    ($bits:literal) => {
+        impl_proof_optimized_preset!(
+            DenseSmall<$bits>,
+            Field,
+            Field,
+            akita_params::SisModulusProfileId::Q128OffsetA7F7,
+            128,
+            DenseSmall::<$bits>::LOG_COMMIT_BOUND,
+            source = balanced_digits,
+            schedule_family = concat!("fp128_dense_small_", stringify!($bits)),
+            ring_dimension_schedule = akita_schedules::RingDimensionSchedule {
+                num_search_levels: akita_schedules::ADAPTIVE_SEARCH_LEVELS,
+                suffix_dimensions: &[64],
+                potential_a_dimensions: &Dense::A_RING_DIMENSIONS,
+                potential_b_dimensions: &Dense::B_RING_DIMENSIONS,
+                potential_d_dimensions: &Dense::D_RING_DIMENSIONS,
+            }
+        );
+    };
+}
+impl_small_dense!(3);
+impl_small_dense!(4);
+impl_small_dense!(5);
+impl_small_dense!(6);
+
 impl_proof_optimized_preset!(
     OneHot,
     Field,

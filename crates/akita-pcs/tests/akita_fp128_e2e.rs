@@ -620,3 +620,6 @@ fn fp128_dense_monomial_basis() {
             .expect("monomial verify");
     });
 }
+
+#[path = "akita_fp128_e2e/small_dense.rs"]
+mod small_dense;

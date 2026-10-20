@@ -45,3 +45,6 @@ pub use protocol::{
     SuffixProverState,
 };
 pub use setup::{PreparedSetupPrefix, SetupPrefixProverRegistry};
+
+/// Stage-1 range-check transcript execution.
+pub mod stage1;

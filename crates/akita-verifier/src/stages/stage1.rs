@@ -18,10 +18,14 @@ use akita_types::{
     batch_l2_virtual_evaluations, FpExtEncoding, PhysicalResponsePlan, RelationRangeImagePlan,
 };
 use jolt_field::{CanonicalEncoding, ExtField, Field, Ring};
-pub(crate) struct Stage1VerifyOutput<E: Field> {
-    pub(crate) point: Vec<E>,
-    pub(crate) range_image_evaluation: E,
-    pub(crate) physical_l2_virtual_evaluations: Option<Vec<E>>,
+/// Verified Stage-1 claims; proof messages are read from the Spongefish stream.
+pub struct Stage1VerifyOutput<E: Field> {
+    /// Final point in digit-domain coordinate order.
+    pub point: Vec<E>,
+    /// Multilinear range-image evaluation to bind to the committed witness.
+    pub range_image_evaluation: E,
+    /// Physical L2 virtual evaluations, when the route requests them.
+    pub physical_l2_virtual_evaluations: Option<Vec<E>>,
 }
 
 pub(crate) struct RangeLeafVerifierInput<E: Field> {
@@ -114,8 +118,13 @@ impl<E: Field + Ring + AkitaSerialize> Stage1Verifier<E> {
         })
     }
 
-    /// Replay the non-L2 stage-1 proof directly from Spongefish.
-    pub(crate) fn verify<F>(
+    /// Replay the canonical Stage-1 proof directly from Spongefish.
+    ///
+    /// For standalone digit-range proofs pass `None` for `physical_l2` and the
+    /// prover's level. Use the same equality point, range plan and grinding plan.
+    /// The caller must finish the verifier channel and bind the returned
+    /// range-image evaluation to its committed witness in the surrounding PIOP.
+    pub fn verify<F>(
         &self,
         grinding: &mut akita_types::VerifierGrinding<'_, '_>,
         physical_l2: Option<(

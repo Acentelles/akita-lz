@@ -104,12 +104,23 @@ pub struct DigitRangeProver<E: Field> {
 
 impl<E: Field + Ring> DigitRangeProver<E> {
     /// Build a standalone prover from a compact digit witness.
+    /// Rejects digits outside `[-basis / 2, basis / 2 - 1]` and invalid layouts.
     pub fn new(
         digit_witness: std::sync::Arc<[i8]>,
         plan: DigitRangePlan,
         domain: FlatBooleanDomain,
         equality_point: DigitRangeEqualityPoint<E>,
     ) -> Result<Self, AkitaError> {
+        let half = i16::try_from(plan.basis() / 2)
+            .map_err(|_| AkitaError::InvalidInput("digit alphabet exceeds i16".into()))?;
+        if digit_witness
+            .iter()
+            .any(|&digit| i16::from(digit) < -half || i16::from(digit) >= half)
+        {
+            return Err(AkitaError::InvalidInput(
+                "digit outside the balanced alphabet".into(),
+            ));
+        }
         Self::from_packed_digits(
             PackedSignedDigits::from_i8_digits_auto(digit_witness.as_ref().to_vec()),
             plan,
@@ -147,5 +158,43 @@ impl<E: Field + Ring> DigitRangeProver<E> {
             high_variable_count,
             low_variable_count,
         })
+    }
+}
+
+impl<E> DigitRangeProver<E>
+where
+    E: Field
+        + Ring
+        + jolt_field::Fold
+        + jolt_field::Unreduced
+        + akita_serialization::AkitaSerialize,
+{
+    /// Prove standalone digit membership through the canonical PCS Stage-1 driver.
+    ///
+    /// Messages are written to `grinding`; its `finish` method returns the proof
+    /// bytes. Replay them with `akita_verifier::Stage1Verifier::verify`, passing
+    /// `None` for physical L2 and the same level, equality point, range plan and
+    /// grinding plan. The result exposes the final point and range-image claim.
+    /// A surrounding protocol must bind that claim to its committed witness;
+    /// this stage alone does not prove a commitment opening.
+    pub fn prove<F>(
+        self,
+        grinding: &mut akita_types::ProverGrinding<'_>,
+        level: u32,
+    ) -> Result<akita_prover::stage1::Stage1ProveOutput<E>, AkitaError>
+    where
+        F: Field + jolt_field::CanonicalEncoding + akita_serialization::AkitaSerialize,
+        E: jolt_field::ExtField<F>,
+    {
+        let plan = self.plan;
+        let equality_point = self.equality_point.clone();
+        akita_prover::stage1::prove_stage1::<F, E, _>(
+            DigitRangeSession::new(self, None)?,
+            plan,
+            equality_point,
+            None,
+            grinding,
+            level,
+        )
     }
 }

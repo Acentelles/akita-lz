@@ -799,6 +799,30 @@ pub const ALL_GENERATED_FAMILIES: &[GeneratedFamily] = &[
         MultiChunkProfileId::W8R3.cfg()
     ),
     family_row!(
+        &[PolynomialGroupLayout::singleton(14)],
+        fp128::DenseSmall<3>,
+        no_grouped_requests,
+        ChunkedWitnessCfg::default_non_chunked()
+    ),
+    family_row!(
+        &[PolynomialGroupLayout::singleton(14)],
+        fp128::DenseSmall<4>,
+        no_grouped_requests,
+        ChunkedWitnessCfg::default_non_chunked()
+    ),
+    family_row!(
+        &[PolynomialGroupLayout::singleton(14)],
+        fp128::DenseSmall<5>,
+        no_grouped_requests,
+        ChunkedWitnessCfg::default_non_chunked()
+    ),
+    family_row!(
+        &[PolynomialGroupLayout::singleton(14)],
+        fp128::DenseSmall<6>,
+        no_grouped_requests,
+        ChunkedWitnessCfg::default_non_chunked()
+    ),
+    family_row!(
         FP128_DENSE_BOUNDED_KEYS,
         fp128::DenseBounded,
         no_grouped_requests,

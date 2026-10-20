@@ -1,4 +1,5 @@
 //! Direct CPU implementation of the opaque protocol kernels.
+use akita_prover::stage1::Stage1Session;
 mod admission;
 mod backend;
 pub(crate) mod capabilities;
@@ -21,7 +22,6 @@ mod prepared_opening;
 pub(crate) mod recursive;
 pub(crate) mod relation_weights;
 mod source;
-#[doc(hidden)]
 pub mod standalone;
 pub(crate) mod sumcheck;
 

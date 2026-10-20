@@ -4,6 +4,7 @@ use crate::opaque::{CpuBackend, RootOpeningSource, RootPolyShape};
 use crate::sources::packed_digits::PackedSignedDigits;
 use akita_algebra::CyclotomicRing;
 use akita_challenges::SparseChallenge;
+use akita_prover::stage1::Stage1Session;
 use jolt_field::{One, Prime128OffsetA7F7 as F, Ring, Zero};
 
 #[test]

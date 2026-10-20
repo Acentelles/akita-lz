@@ -1,9 +1,12 @@
+//! Public standalone CPU proof operations and benchmark scenarios.
+
 /// Standalone CPU scenarios used by integration tests and benchmarks.
 pub use super::recursive::opening::{
     ExtensionOpeningReductionGroup, ExtensionOpeningReductionProver, ExtensionOpeningReductionTerm,
 };
 pub use super::recursive::{DigitRangeProver, LowBasisRangeCheckProver};
 use crate::opaque::RootOpeningSource;
+pub use akita_prover::stage1::Stage1ProveOutput;
 use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced};
 
 /// Opaque recursive-witness input for standalone benchmarks.

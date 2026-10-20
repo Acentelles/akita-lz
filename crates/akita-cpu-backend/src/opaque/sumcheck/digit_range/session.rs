@@ -334,8 +334,12 @@ impl<E: Field + Ring + Fold + Unreduced> DigitRangeSession<E> {
         self.pending = None;
         self.point.clear();
     }
+}
 
-    pub(crate) fn round_polynomial(
+impl<E: Field + Ring + Fold + Unreduced> akita_prover::stage1::Stage1Session<E>
+    for DigitRangeSession<E>
+{
+    fn round_polynomial(
         &mut self,
         step: Stage1Step,
         round: usize,
@@ -377,7 +381,7 @@ impl<E: Field + Ring + Fold + Unreduced> DigitRangeSession<E> {
         Ok(polynomial)
     }
 
-    pub(crate) fn bind_challenge(
+    fn bind_challenge(
         &mut self,
         step: Stage1Step,
         round: usize,
@@ -426,7 +430,7 @@ impl<E: Field + Ring + Fold + Unreduced> DigitRangeSession<E> {
         Ok(())
     }
 
-    pub(crate) fn public_transition(
+    fn public_transition(
         &mut self,
         step: Stage1Step,
     ) -> Result<Stage1PublicTransition<E>, AkitaError> {
@@ -517,7 +521,7 @@ impl<E: Field + Ring + Fold + Unreduced> DigitRangeSession<E> {
         }
     }
 
-    pub(crate) fn bind_batch_challenge(
+    fn bind_batch_challenge(
         &mut self,
         transition: Stage1Transition,
         challenge: E,
@@ -576,6 +580,17 @@ impl<E: Field + Ring + Fold + Unreduced> DigitRangeSession<E> {
         }
     }
 
+    fn finish(self) -> Result<Stage1FinalClaims<E>, AkitaError> {
+        if self.phase != Phase::Ready || self.pending.is_some() {
+            return Err(AkitaError::InvalidInput(
+                "Stage 1 finalized before its public claims were consumed".into(),
+            ));
+        }
+        Ok(Stage1FinalClaims::new(self.point, self.claim))
+    }
+}
+
+impl<E: Field + Ring + Fold + Unreduced> DigitRangeSession<E> {
     fn start_fused(&mut self, merge: E) -> Result<(), AkitaError> {
         let coefficients = self
             .plan
@@ -618,14 +633,5 @@ impl<E: Field + Ring + Fold + Unreduced> DigitRangeSession<E> {
         }));
         self.begin_active();
         Ok(())
-    }
-
-    pub(crate) fn finish(self) -> Result<Stage1FinalClaims<E>, AkitaError> {
-        if self.phase != Phase::Ready || self.pending.is_some() {
-            return Err(AkitaError::InvalidInput(
-                "Stage 1 finalized before its public claims were consumed".into(),
-            ));
-        }
-        Ok(Stage1FinalClaims::new(self.point, self.claim))
     }
 }

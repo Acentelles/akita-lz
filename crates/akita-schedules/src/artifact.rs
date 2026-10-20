@@ -867,6 +867,10 @@ mod tests {
         for family_name in [
             "fp128_dense",
             "fp128_dense_bounded",
+            "fp128_dense_small_3",
+            "fp128_dense_small_4",
+            "fp128_dense_small_5",
+            "fp128_dense_small_6",
             "fp128_dense_multi_chunk",
             "fp128_onehot",
             "fp128_onehot_multi_chunk",
