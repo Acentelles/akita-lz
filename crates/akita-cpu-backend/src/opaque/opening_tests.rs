@@ -587,8 +587,10 @@ fn mixed_setup_prefix_and_suffix_eor_matches_independent_dense_oracle() {
 }
 #[test]
 fn proof_schedule_from_layout_includes_entire_batch() {
-    let catalog = akita_config::test_support::workspace_schedule_catalog::<OneHot>()
-        .expect("workspace schedule catalog");
+    let catalog = akita_config::test_support::workspace_schedule_catalog::<OneHot>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    )
+    .expect("workspace schedule catalog");
     let batch = OpeningClaimsLayout::from_groups(vec![
         PolynomialGroupLayout::new(16, 1),
         PolynomialGroupLayout::new(16, 1),
@@ -810,7 +812,10 @@ fn witness_level_transition_requires_one_successor_commitment() {
     );
     assert_eq!(witness.operation_binding().fold_level(), 0);
     // Only successful commitment execution grants this private authorization.
-    witness.pending_successor = Some(1);
+    witness.phase = crate::opaque::WitnessPhase::CommittedForSuccessor {
+        producer: 0,
+        successor: 1,
+    };
     <CpuBackend as OpaqueWitnessCommitKernel<F, E>>::advance_witness_level(&backend, &mut witness)
         .unwrap();
     assert_eq!(witness.operation_binding().fold_level(), 1);

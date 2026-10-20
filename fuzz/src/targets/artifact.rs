@@ -8,9 +8,45 @@ use crate::input::Reader;
 use crate::stats;
 use akita_config::proof_optimized::{fp128, fp32, fp64};
 use akita_config::{CommitmentConfig, RecursiveCommitmentConfig, TrustedScheduleCatalog};
+use akita_params::{ChunkedWitnessCfg, MultiChunkProfileId};
+
+/// Trusted caller policy for the shipped families, independent of fuzzed bytes.
+pub fn chunking(family: &str) -> ChunkedWitnessCfg {
+    match family {
+        "fp128_dense_multi_chunk"
+        | "fp128_onehot_multi_chunk"
+        | "fp128_onehot_recursive_multi_chunk_w8r2" => MultiChunkProfileId::W8R2.cfg(),
+        "fp128_onehot_multi_chunk_w2r2" => MultiChunkProfileId::W2R2.cfg(),
+        "fp128_onehot_multi_chunk_w4r2" => MultiChunkProfileId::W4R2.cfg(),
+        "fp128_onehot_multi_chunk_w2r3" | "fp128_onehot_recursive_multi_chunk_w2r3" => {
+            MultiChunkProfileId::W2R3.cfg()
+        }
+        "fp128_onehot_multi_chunk_w4r3" | "fp128_onehot_recursive_multi_chunk_w4r3" => {
+            MultiChunkProfileId::W4R3.cfg()
+        }
+        "fp128_dense_multi_chunk_w8r3"
+        | "fp128_onehot_multi_chunk_w8r3"
+        | "fp128_onehot_recursive_multi_chunk_w8r3" => MultiChunkProfileId::W8R3.cfg(),
+        "fp128_dense"
+        | "fp128_dense_bounded"
+        | "fp128_onehot"
+        | "fp128_dense_recursive"
+        | "fp128_onehot_recursive"
+        | "fp32_dense"
+        | "fp32_onehot"
+        | "fp32_dense_recursive"
+        | "fp64_dense"
+        | "fp64_onehot"
+        | "fp64_dense_recursive" => ChunkedWitnessCfg::default_non_chunked(),
+        _ => panic!("unregistered fuzz catalog family: {family}"),
+    }
+}
 
 fn admit<Cfg: CommitmentConfig>(bytes: &[u8]) {
-    let Ok(catalog) = TrustedScheduleCatalog::<Cfg>::from_artifact_bytes(bytes) else {
+    let Ok(catalog) = TrustedScheduleCatalog::<Cfg>::from_artifact_bytes(
+        bytes,
+        chunking(Cfg::schedule_family_name()),
+    ) else {
         stats::count("artifact_rejected");
         return;
     };
@@ -27,7 +63,7 @@ pub fn run(data: &[u8]) {
     let mut reader = Reader::new(data);
     let selector = reader.u8();
     let bytes = reader.rest();
-    match selector % 16 {
+    match selector as usize % FAMILIES.len() {
         0 => admit::<fp128::Dense>(bytes),
         1 => admit::<fp128::DenseBounded>(bytes),
         2 => admit::<fp128::DenseMultiChunk>(bytes),
@@ -43,12 +79,19 @@ pub fn run(data: &[u8]) {
         12 => admit::<RecursiveCommitmentConfig<fp32::Dense>>(bytes),
         13 => admit::<fp64::Dense>(bytes),
         14 => admit::<fp64::OneHot>(bytes),
-        _ => admit::<RecursiveCommitmentConfig<fp64::Dense>>(bytes),
+        15 => admit::<RecursiveCommitmentConfig<fp64::Dense>>(bytes),
+        16 => admit::<fp128::OneHotMultiChunkW2R3>(bytes),
+        17 => admit::<fp128::OneHotMultiChunkW4R3>(bytes),
+        18 => admit::<fp128::OneHotMultiChunkW8R3>(bytes),
+        19 => admit::<fp128::DenseMultiChunkW8R3>(bytes),
+        20 => admit::<RecursiveCommitmentConfig<fp128::OneHotMultiChunkW2R3>>(bytes),
+        21 => admit::<RecursiveCommitmentConfig<fp128::OneHotMultiChunkW4R3>>(bytes),
+        _ => admit::<RecursiveCommitmentConfig<fp128::OneHotMultiChunkW8R3>>(bytes),
     }
 }
 
 /// Selector byte for each shipped family, in the order used by [`run`].
-pub const FAMILIES: [&str; 16] = [
+pub const FAMILIES: [&str; 23] = [
     "fp128_dense",
     "fp128_dense_bounded",
     "fp128_dense_multi_chunk",
@@ -65,4 +108,11 @@ pub const FAMILIES: [&str; 16] = [
     "fp64_dense",
     "fp64_onehot",
     "fp64_dense_recursive",
+    "fp128_onehot_multi_chunk_w2r3",
+    "fp128_onehot_multi_chunk_w4r3",
+    "fp128_onehot_multi_chunk_w8r3",
+    "fp128_dense_multi_chunk_w8r3",
+    "fp128_onehot_recursive_multi_chunk_w2r3",
+    "fp128_onehot_recursive_multi_chunk_w4r3",
+    "fp128_onehot_recursive_multi_chunk_w8r3",
 ];

@@ -63,6 +63,13 @@ fn all_families() -> Vec<Box<dyn Family>> {
         FamilyImpl::<fp64::Dense>::boxed(),
         FamilyImpl::<fp64::OneHot>::boxed(),
         FamilyImpl::<RecursiveCommitmentConfig<fp64::Dense>>::boxed(),
+        FamilyImpl::<fp128::OneHotMultiChunkW2R3>::boxed(),
+        FamilyImpl::<fp128::OneHotMultiChunkW4R3>::boxed(),
+        FamilyImpl::<fp128::OneHotMultiChunkW8R3>::boxed(),
+        FamilyImpl::<fp128::DenseMultiChunkW8R3>::boxed(),
+        FamilyImpl::<RecursiveCommitmentConfig<fp128::OneHotMultiChunkW2R3>>::boxed(),
+        FamilyImpl::<RecursiveCommitmentConfig<fp128::OneHotMultiChunkW4R3>>::boxed(),
+        FamilyImpl::<RecursiveCommitmentConfig<fp128::OneHotMultiChunkW8R3>>::boxed(),
     ]
 }
 
@@ -156,5 +163,33 @@ fn matches(selector: Selector, family: &dyn Family, case: &Case) -> bool {
         Selector::Recursive => family.is_recursive(),
         Selector::AnyDirect => !family.is_recursive(),
         Selector::Any => true,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeSet;
+
+    #[test]
+    fn every_shipped_catalog_loads_with_trusted_chunking() {
+        let families = all_families();
+        let registered: BTreeSet<_> = families.iter().map(|family| family.name()).collect();
+        let artifact_targets: BTreeSet<_> =
+            crate::targets::artifact::FAMILIES.into_iter().collect();
+        assert_eq!(registered, artifact_targets);
+        let shipped: BTreeSet<_> = std::fs::read_dir(crate::env::artifacts_dir())
+            .expect("shipped artifact directory")
+            .map(|entry| entry.expect("artifact entry").path())
+            .filter(|path| path.extension().is_some_and(|extension| extension == "aks"))
+            .map(|path| path.file_stem().unwrap().to_str().unwrap().to_owned())
+            .collect();
+        assert_eq!(
+            registered
+                .into_iter()
+                .map(str::to_owned)
+                .collect::<BTreeSet<_>>(),
+            shipped
+        );
     }
 }

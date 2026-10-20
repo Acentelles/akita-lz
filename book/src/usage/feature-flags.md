@@ -49,6 +49,8 @@ cargo build -p akita-pcs --release --features disk-persistence
 This stores public matrix coefficients and setup prefix artifacts. Prepared NTT
 caches remain local memory state and rebuild from the public setup.
 
+Backend routing requires no Cargo feature; see [backend routing](../how/architecture.md#backend-routing).
+
 ## Transcript backends
 
 Production builds enable exactly one transcript backend.
@@ -68,6 +70,18 @@ applications may use a filesystem, database, object store, or another trusted
 parameter channel; Akita itself accepts bytes or a validated catalog and does
 not choose that storage policy. The [configuration guide](./configuration.md)
 explains which family to choose.
+
+## Guest inline backends
+
+These features matter only to a Jolt RISC-V guest verifier. On `riscv64` they
+route hot primitives through Jolt inlines with the same outputs as the portable
+paths; every other target keeps the portable path.
+
+| Feature | Inline |
+| --- | --- |
+| `blake2-inline` | Blake2b transcript sponge and descriptor digests (`jolt-inlines-blake2`) |
+| `keccak-inline` | Keccak-f[1600] for the SHAKE challenge samplers (`jolt-inlines-keccak256`) |
+| `ntt-inline` | 64-point i32 negacyclic NTT and six-product pointwise dot (`jolt-inlines-ntt`) |
 
 ## Diagnostic features
 

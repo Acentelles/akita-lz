@@ -1,7 +1,7 @@
 use super::{
-    compile_commitment_request, BackendKindId, CommitmentExecutionOutput, CommitmentExecutionPlan,
-    CommitmentExecutorBuilder, CommitmentRequestCapabilities, CommitmentSource,
-    CommitmentStateBinding, CommitmentStatePolicy, CompiledCommitmentRequest,
+    compile_commitment_request, AcceptedReach, BackendKindId, CommitmentExecutionOutput,
+    CommitmentExecutionPlan, CommitmentExecutorBuilder, CommitmentRequestCapabilities,
+    CommitmentSource, CommitmentStateBinding, CommitmentStatePolicy, CompiledCommitmentRequest,
     CompressionOperationCapabilities, FullCommitmentOutput, InnerCommitOutput, PolynomialType,
     PreparedCommitmentResources, PreparedCompression, PreparedFusedCommitment,
     PreparedInnerCommitment, PreparedOuterCommitment, ResidentStatePolicy,
@@ -456,7 +456,7 @@ where
         let compiled =
             compile_commitment_request(plan.inner(), sources, &inner_registration.capabilities)?;
         self.prepare_request_resources(plan, &compiled)?;
-        let resolved = compiled.materialize()?;
+        let resolved = compiled.materialize(None)?;
         let binding = CommitmentStateBinding::new(
             self.setup.clone(),
             *plan.inner(),
@@ -499,6 +499,7 @@ where
         &self,
         plan: &CommitmentExecutionPlan,
         sources: &[&dyn CommitmentSource<F>],
+        accepted: Option<AcceptedReach>,
     ) -> Result<UncompressedCommitmentOutput<F>, AkitaError> {
         let uncompressed = plan.uncompressed().ok_or_else(|| {
             AkitaError::InvalidInput(
@@ -511,7 +512,7 @@ where
             self.request_capabilities(plan)?,
         )?;
         self.prepare_request_resources(plan, &compiled)?;
-        let resolved = compiled.materialize()?;
+        let resolved = compiled.materialize(accepted)?;
         let binding = CommitmentStateBinding::new(
             self.setup.clone(),
             *uncompressed.inner(),
@@ -580,7 +581,7 @@ where
             ));
         }
         self.trace_route(plan.mode());
-        let output = self.execute_uncompressed_stages(plan, sources)?;
+        let output = self.execute_uncompressed_stages(plan, sources, None)?;
         CommitmentExecutionOutput::from_uncompressed(
             output,
             &self.state_policy,
@@ -605,7 +606,7 @@ where
                 "compressed commitment execution plan has no relation mode".into(),
             )
         })?;
-        let uncompressed = self.execute_uncompressed_stages(plan, sources)?;
+        let uncompressed = self.execute_uncompressed_stages(plan, sources, None)?;
         let (image, u) = uncompressed.into_parts();
         let expected_binding = image.binding().clone();
         let compression_registration = self.compression()?;
@@ -687,12 +688,13 @@ where
         backend: &CpuBackend<F, E>,
         profile: GroupCommitPhaseParams,
         sources: &[&dyn CommitmentSource<F>],
+        accepted: Option<AcceptedReach>,
     ) -> Result<(CommittedGroup<F>, PortableCommitmentHandle<F>), AkitaError>
 where {
         let plan = CommitmentExecutionPlan::for_root(&profile)?;
         self.trace_route(plan.mode());
         let (image, outer_image) = self
-            .execute_uncompressed_stages(&plan, sources)?
+            .execute_uncompressed_stages(&plan, sources, accepted)?
             .into_parts();
         let binding = image.binding().clone();
         let exporter = self.state_exporters(&plan)?.inner.ok_or_else(|| {
@@ -1341,7 +1343,7 @@ mod tests {
         let poly = DensePoly::from_field_evals(9, vec![F::from_u64(1); 512]).unwrap();
         let sources: [&dyn CommitmentSource<F>; 1] = [&poly];
         let output = executor
-            .execute_uncompressed_stages(&plan, &sources)
+            .execute_uncompressed_stages(&plan, &sources, None)
             .unwrap();
         let uncompressed = plan.uncompressed().unwrap();
 

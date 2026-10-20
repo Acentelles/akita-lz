@@ -66,7 +66,7 @@ fold (attempts, response energy, cap, measured source energy), and the
 liveness checks read those reports. Proof bytes are unchanged.
 
 CI (`.github/workflows/fuzz.yml`) type-checks every fuzz crate, runs the
-runner's tests, and fuzzes each lane marked `ci` in `campaign/targets.toml`
+library and runner tests, and fuzzes each lane marked `ci` in `campaign/targets.toml`
 for a minute: every target that builds without the `end-to-end` feature.
 Targets that prove need minutes of setup per process and several GiB of
 memory, so they run only in campaigns.

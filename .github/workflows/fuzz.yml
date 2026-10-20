@@ -46,14 +46,15 @@ jobs:
         with:
           tool: cargo-fuzz
       # Cargo in fuzz/ uses the nightly pinned in fuzz/rust-toolchain.toml, the
-      # one campaigns build with. The end-to-end harness is only type-checked
-      # here; the runner does not link Akita, so its tests are cheap.
+      # one campaigns build with. Library tests check catalog admission without
+      # generating proofs; the runner's tests do not link Akita.
       - name: Check the fuzz crates
         working-directory: fuzz
         run: |
           set -euo pipefail
           cargo fmt --all --check
           cargo check -q --workspace --all-targets
+          cargo test -q -p akita-fuzz --lib
           cargo test -q --release -p akita-fuzz-runner
       # End-to-end and boundary targets that prove need minutes of setup per
       # process and more memory than this runner has; they run in long

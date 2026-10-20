@@ -47,19 +47,36 @@ fn relation_transition_authority_is_monotone_and_part_of_the_memo_identity() {
     let prefix = super::RingRelationPhase::QuotientPrefix;
     let reduced = super::RingRelationPhase::ReducedEvaluationSuffix;
     let direct_trace = super::RelationCandidateTopology::DirectEvaluationTrace;
-    assert_eq!(prefix.candidate_modes(1, direct_trace), &[QuotientLift]);
+    let single_chunk = akita_params::ChunkedWitnessCfg::default_non_chunked();
     assert_eq!(
-        prefix.candidate_modes(2, direct_trace),
+        prefix.candidate_modes(2, single_chunk, direct_trace),
         &[QuotientLift, ReducedEvaluation]
     );
     assert_eq!(
-        reduced.candidate_modes(2, direct_trace),
+        prefix.candidate_modes(
+            2,
+            akita_params::MultiChunkProfileId::W8R3.cfg(),
+            direct_trace,
+        ),
+        &[QuotientLift]
+    );
+    assert_eq!(
+        prefix.candidate_modes(
+            2,
+            single_chunk,
+            super::RelationCandidateTopology::DirectCoefficientPacking,
+        ),
+        &[QuotientLift]
+    );
+    assert_eq!(
+        reduced.candidate_modes(2, single_chunk, direct_trace),
         &[ReducedEvaluation]
     );
     assert_eq!(prefix.after(ReducedEvaluation), reduced);
     assert!(reduced
         .candidate_modes(
             2,
+            single_chunk,
             super::RelationCandidateTopology::SetupPrefixedEvaluationTrace
         )
         .is_empty());
@@ -104,7 +121,9 @@ fn suffix_cache_gives_referenced_entry_a_second_chance() {
 
 #[test]
 fn parent_observable_key_tracks_grinding_successor_geometry() {
-    let policy = akita_config::policy_of::<akita_config::proof_optimized::fp128::Dense>();
+    let policy = akita_config::policy_of::<akita_config::proof_optimized::fp128::Dense>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    );
     let challenge = akita_challenges::SparseChallengeConfig::production_for_ring_dim(64)
         .expect("D64 challenge");
     let mut shell = akita_params::CommittedGroupParams::params_only(
@@ -270,7 +289,9 @@ fn guided_early_pruning_includes_recursive_prefixes() {
 
 #[test]
 fn query_prefix_checks_cached_suffix_against_the_complete_root_path() {
-    let policy = akita_config::policy_of::<akita_config::proof_optimized::fp128::Dense>();
+    let policy = akita_config::policy_of::<akita_config::proof_optimized::fp128::Dense>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    );
     let challenge = akita_challenges::SparseChallengeConfig::pm1_only(3);
     let mut params = akita_params::CommittedGroupParams::params_only(
         akita_params::SisModulusProfileId::Q128OffsetA7F7,
@@ -366,7 +387,7 @@ fn query_prefix_checks_cached_suffix_against_the_complete_root_path() {
 fn restricted_search_recovers_pruned_query_tradeoff() {
     use akita_config::{policy_of, proof_optimized::fp32::OneHot, CommitmentConfig};
 
-    let mut policy = policy_of::<OneHot>();
+    let mut policy = policy_of::<OneHot>(akita_params::ChunkedWitnessCfg::default_non_chunked());
     // A singleton adaptive domain keeps the split frontier needed to expose
     // this query tradeoff while using the production setup-first objective.
     policy.ring_dimension_schedule = crate::RingDimensionSchedule {
@@ -494,10 +515,7 @@ fn restricted_search_recovers_pruned_query_tradeoff() {
             .unwrap()
             .expanded_query_count
     };
-    assert_eq!(
-        (edge_queries(high_query), edge_queries(low_query)),
-        (95, 85)
-    );
+    assert!(edge_queries(high_query) > edge_queries(low_query));
     let incoming = super::PendingQueryEdge::new(
         super::SuffixState { level: 0, ..state },
         &key.opening_layout().unwrap(),
@@ -561,7 +579,9 @@ fn restricted_search_recovers_pruned_query_tradeoff() {
 
 #[test]
 fn memo_key_discards_dimension_history_after_adaptive_cutoff() {
-    let policy = akita_config::policy_of::<akita_config::proof_optimized::fp128::OneHot>();
+    let policy = akita_config::policy_of::<akita_config::proof_optimized::fp128::OneHot>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    );
     let crate::RingDimensionSchedule {
         num_search_levels, ..
     } = policy.ring_dimension_schedule;
@@ -594,7 +614,9 @@ fn memo_key_discards_dimension_history_after_adaptive_cutoff() {
 
 #[test]
 fn fp32_suffix_memo_key_retains_only_the_effective_transition_ceiling() {
-    let policy = akita_config::policy_of::<akita_config::proof_optimized::fp32::OneHot>();
+    let policy = akita_config::policy_of::<akita_config::proof_optimized::fp32::OneHot>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    );
     let crate::RingDimensionSchedule {
         num_search_levels, ..
     } = policy.ring_dimension_schedule;

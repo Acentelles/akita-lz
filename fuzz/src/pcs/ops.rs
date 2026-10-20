@@ -186,7 +186,10 @@ where
     OneHotPoly<Cfg::Field, u8>: CpuSource<Cfg::Field, Cfg::ExtField>,
 {
     fn load_scheme(bytes: &[u8]) -> Result<AkitaCommitmentScheme<Self>, AkitaError> {
-        AkitaCommitmentScheme::<Self>::from_schedule_artifact(bytes)
+        AkitaCommitmentScheme::<Self>::from_schedule_artifact(
+            bytes,
+            crate::targets::artifact::chunking(Self::schedule_family_name()),
+        )
     }
 
     fn schedules(scheme: &AkitaCommitmentScheme<Self>) -> &TrustedScheduleCatalog<Self> {
