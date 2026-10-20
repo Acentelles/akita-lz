@@ -1,0 +1,11 @@
+   Compiling akita-schedules v0.1.0 (/home/user/akita-root-basis-5/crates/akita-schedules)
+   Compiling akita-config v0.1.0 (/home/user/akita-root-basis-5/crates/akita-config)
+   Compiling akita-planner v0.1.0 (/home/user/akita-root-basis-5/crates/akita-planner)
+    Finished `release` profile [optimized] target(s) in 16.70s
+     Running unittests src/lib.rs (target/release/deps/akita_planner-6a08c38f96e550c6)
+
+running 1 test
+test policy::tests::root_override_is_validated_and_both_options_bind_identity ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 89 filtered out; finished in 0.00s
+

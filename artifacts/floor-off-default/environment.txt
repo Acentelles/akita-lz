@@ -1,0 +1,48 @@
+Tue Oct 20 09:45:11 PM UTC 2026
+CARGO_BUILD_JOBS=1
+Architecture:                            x86_64
+CPU op-mode(s):                          32-bit, 64-bit
+Address sizes:                           48 bits physical, 48 bits virtual
+Byte Order:                              Little Endian
+CPU(s):                                  8
+On-line CPU(s) list:                     0-7
+Vendor ID:                               AuthenticAMD
+Model name:                              AMD Ryzen 9 9950X 16-Core Processor
+CPU family:                              26
+Model:                                   68
+Thread(s) per core:                      1
+Core(s) per socket:                      8
+Socket(s):                               1
+Stepping:                                0
+BogoMIPS:                                8583.83
+Flags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm rep_good nopl xtopology cpuid extd_apicid tsc_known_freq pni pclmulqdq ssse3 fma cx16 sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm cmp_legacy svm cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw perfctr_core ssbd ibrs ibpb stibp ibrs_enhanced vmmcall fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves avx_vnni avx512_bf16 clzero xsaveerptr wbnoinvd arat npt lbrv nrip_save tsc_scale vmcb_clean flushbyasid pausefilter pfthreshold v_vmsave_vmload vgif vnmi avx512vbmi umip pku ospke avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq rdpid movdiri movdir64b fsrm avx512_vp2intersect flush_l1d arch_capabilities
+Virtualization:                          AMD-V
+Hypervisor vendor:                       KVM
+Virtualization type:                     full
+L1d cache:                               512 KiB (8 instances)
+L1i cache:                               512 KiB (8 instances)
+L2 cache:                                4 MiB (8 instances)
+L3 cache:                                128 MiB (8 instances)
+NUMA node(s):                            1
+NUMA node0 CPU(s):                       0-7
+Vulnerability Gather data sampling:      Not affected
+Vulnerability Ghostwrite:                Not affected
+Vulnerability Indirect target selection: Not affected
+Vulnerability Itlb multihit:             Not affected
+Vulnerability L1tf:                      Not affected
+Vulnerability Mds:                       Not affected
+Vulnerability Meltdown:                  Not affected
+Vulnerability Mmio stale data:           Not affected
+Vulnerability Old microcode:             Not affected
+Vulnerability Reg file data sampling:    Not affected
+Vulnerability Retbleed:                  Not affected
+Vulnerability Spec rstack overflow:      Vulnerable
+Vulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl
+Vulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+Vulnerability Spectre v2:                Mitigation; Enhanced / Automatic IBRS; IBPB conditional; STIBP disabled; PBRSB-eIBRS Not affected; BHI Not affected
+Vulnerability Srbds:                     Not affected
+Vulnerability Tsa:                       Not affected
+Vulnerability Tsx async abort:           Not affected
+Vulnerability Vmscape:                   Not affected
+-rwxrwxr-x 2 user user 170040584 Oct 20 21:43 /home/user/akita-baseline/target/release/examples/profile
+/home/user/akita-baseline/target/release/examples/profile: /home/user/akita-baseline/crates/akita-algebra/src/eq_poly.rs /home/user/akita-baseline/crates/akita-algebra/src/fft.rs /home/user/akita-baseline/crates/akita-algebra/src/lib.rs /home/user/akita-baseline/crates/akita-algebra/src/ntt/avx/field_limbs.rs /home/user/akita-baseline/crates/akita-algebra/src/ntt/avx/lanes.rs /home/user/akita-baseline/crates/akita-algebra/src/ntt/avx/montgomery.rs /home/user/akita-baseline/crates/akita-algebra/s{"rustc":7458672600737419911,"features":"[\"parallel\", \"profile-bench-selected\", \"profile-ci\", \"profile-ci-distributed\", \"profile-ci-fp128-base\", \"profile-ci-fp32\", \"profile-ci-fp64\", \"profile-ci-multi-group-direct\", \"profile-ci-multi-group-recursive\", \"profile-ci-multi-group-recursive-w8r2\", \"transcript-blake2b\"]","declared_features":"[\"blake2-inline\", \"default\", \"disk-persistence\", \"keccak-inline\", \"logging-transcript\", \"ntt-inline\", \"parallel\", \"profile-bench-selected\", \"profile-ci\", \"profile-ci-distributed\", \"profile-ci-fp128-base\", \"profile-ci-fp32\", \"profile-ci-fp64\", \"profile-ci-multi-group-direct\", \"profile-ci-multi-group-recursive\", \"profile-ci-multi-group-recursive-w8r2\", \"profile-onehot-fp128\", \"response-model-diagnostics\", \"transcript-blake2b\", \"transcript-keccak\"]","target":6454022312325999292,"profile":2521846271689135465,"path":13492666867931012869,"deps":[[1691887445126362957,"p3_koala_bear",false,16594886325002560753],[1798699687809515301,"akita_types",false,10406158643712282572],[2861339268572013578,"akita_cpu_backend",false,12354424519984120681],[4338777737812123845,"akita_params",false,4301052718975880928],[5330460842384404171,"serde_json",false,358818719343202179],[5380358770761950913,"tracing_subscriber",false,18113589912018048201],[6259821168632234177,"akita_serialization",false,7049117307912262416],[6557439603276904804,"serde",false,12005979550279313756],[6599277786048094822,"akita_pcs",false,6572659114838342769],[6616597234749121037,"akita_algebra",false,6210163470746810963],[6789481087086957364,"jolt_poly",false,11473828956855616414],[6800487342727341458,"akita_planner",false,6441471652972724138],[6960258817058176788,"rand",false,17246776278958962969],[7324936631789965869,"p3_field",false,15456739857833597062],[8052438823800546707,"num_bigint",false,178299899622869228],[8066638135757694999,"proptest",false,4787663038746978420],[9096974112256101934,"ark_bn254",false,8676580275923741267],[9370964846288582073,"p3_baby_bear",false,1928353291694116594],[9484382438976773425,"akita_error",false,4261631410706105611],[10504718112287328430,"libc",false,3650350626999160808],[10724023031440497000,"jolt_field",false,17420764854791169439],[11727119764974429078,"akita_config",false,5570028392222879134],[11892949338074098040,"akita_setup",false,8048360712817815904],[11910974697091955563,"rayon",false,13108352827434142179],[12158229925572786028,"akita_prover",false,6161783200015483712],[12899115483296202909,"akita_schedules",false,15645966945025638716],[13579199044751101439,"akita_verifier",false,9643689100753225653],[14246254490277817274,"akita_transcript",false,8369120966752720837],[14322078079234171953,"tracing_chrome",false,3525984618857707010],[14522360934172675225,"ark_ff",false,4423955994117453939],[14757622794040968908,"tracing",false,11040813290464781116],[15015726975787700703,"sysinfo",false,12730727191518463646],[16321741466644061277,"criterion",false,1873508193014425702],[17779617933858707833,"akita_challenges",false,16939171427143510002],[17921761091868433627,"p3_mersenne_31",false,10306539350832649362],[18130209639506977569,"rand_core",false,10358596005908712267]],"local":[{"CheckDepInfo":{"dep_info":"release/.fingerprint/akita-pcs-b55819e66b975724/dep-example-profile","checksum":false}}],"rustflags":[],"config":8247474407144887393,"compile_kind":0}
