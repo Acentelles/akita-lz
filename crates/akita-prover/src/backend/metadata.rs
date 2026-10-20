@@ -76,36 +76,31 @@ impl<E: Field> RelationWitnessFinalClaims<E> {
     }
 }
 
+/// Prepared public opening geometry and prover-owned coefficient-packing tables.
+pub type PreparedRelationOpening<F, E> = akita_types::OpeningFamily<
+    akita_types::PreparedOpeningPoint<F, E>,
+    (
+        akita_types::PreparedSubringCoefficientPackingPoint<E>,
+        akita_types::SubringCoefficientPackingWeights<E>,
+    ),
+>;
+
 /// Public, witness-free opening metadata retained for Stage 2.
 #[derive(Clone)]
 pub struct PreparedRelationGroupPublic<F: Field, E: Field> {
-    kind: akita_types::OpeningFamily<
-        akita_types::PreparedOpeningPoint<F, E>,
-        akita_types::PreparedSubringCoefficientPackingPoint<E>,
-    >,
+    kind: PreparedRelationOpening<F, E>,
     scalar_openings: Vec<E>,
 }
 
 impl<F: Field, E: Field> PreparedRelationGroupPublic<F, E> {
-    pub fn new(
-        kind: akita_types::OpeningFamily<
-            akita_types::PreparedOpeningPoint<F, E>,
-            akita_types::PreparedSubringCoefficientPackingPoint<E>,
-        >,
-        scalar_openings: Vec<E>,
-    ) -> Self {
+    pub fn new(kind: PreparedRelationOpening<F, E>, scalar_openings: Vec<E>) -> Self {
         Self {
             kind,
             scalar_openings,
         }
     }
 
-    pub const fn kind(
-        &self,
-    ) -> &akita_types::OpeningFamily<
-        akita_types::PreparedOpeningPoint<F, E>,
-        akita_types::PreparedSubringCoefficientPackingPoint<E>,
-    > {
+    pub const fn kind(&self) -> &PreparedRelationOpening<F, E> {
         &self.kind
     }
 
@@ -119,7 +114,7 @@ impl<F: Field, E: Field> PreparedRelationGroupPublic<F, E> {
     ) -> Option<&akita_types::PreparedSubringCoefficientPackingPoint<E>> {
         match &self.kind {
             akita_types::OpeningFamily::EvaluationTrace(_) => None,
-            akita_types::OpeningFamily::SubringCoefficientPacking(point) => Some(point),
+            akita_types::OpeningFamily::SubringCoefficientPacking((point, _)) => Some(point),
         }
     }
 }

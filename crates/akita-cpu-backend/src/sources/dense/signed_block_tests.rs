@@ -111,7 +111,7 @@ fn signed_block_opening_and_packing_match_field_dense() {
                     &backend,
                     None,
                     dense_batch,
-                    SubringCoefficientPackingPlan { point: &point },
+                    SubringCoefficientPackingPlan { point: &point, weights: &point.weight_tables().unwrap() },
                 )
                 .unwrap();
             let actual = <CpuBackend<F, F> as SubringCoefficientPackingBatchKernel<
@@ -123,7 +123,7 @@ fn signed_block_opening_and_packing_match_field_dense() {
                     &backend,
                     None,
                     vec![block],
-                    SubringCoefficientPackingPlan { point: &point },
+                    SubringCoefficientPackingPlan { point: &point, weights: &point.weight_tables().unwrap() },
                 )
                 .unwrap();
             assert_eq!(actual[0].coordinates(), expected[0].coordinates());

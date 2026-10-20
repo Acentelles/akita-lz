@@ -162,13 +162,14 @@ where
             source_num_vars,
             protocol_point,
         )?;
+        let weights = point.weight_tables()?;
         let sources = [source];
         let batch = <RecursiveWitnessFlat as RootOpeningSource<F, D>>::opening_batch(&sources)?;
         let partials_by_claim = crate::opaque::SubringCoefficientPackingBatchKernel::coefficient_packing_partials_batch(
                 backend,
                 Some(prepared),
                 batch,
-                crate::opaque::SubringCoefficientPackingPlan { point: &point },
+                crate::opaque::SubringCoefficientPackingPlan { point: &point, weights: &weights },
             )?;
         let [partials] = partials_by_claim.as_slice() else {
             return Err(AkitaError::Internal(
@@ -182,13 +183,14 @@ where
                 point.num_live_blocks(),
                 core::slice::from_ref(partials),
                 &[E::one()],
-                point.live_block_weights(),
-                point.tail_weights(),
+                &weights.live_block_weights,
+                &weights.tail_weights,
             )?;
         return Ok(crate::opaque::prepared_opening::coefficient_packing(
             binding,
             opening_source,
             point,
+            weights,
             partials_by_claim,
             vec![scalar],
         ));

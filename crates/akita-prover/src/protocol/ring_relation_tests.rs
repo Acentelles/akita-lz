@@ -111,7 +111,7 @@ fn fixture() -> (
 fn prepared_relation_group_rejects_stale_shape_and_claims() {
     let (params, opening_batch, relation, point) = fixture();
     let valid = vec![PreparedRelationGroupPublic::new(
-        OpeningFamily::SubringCoefficientPacking(point),
+        OpeningFamily::SubringCoefficientPacking((point.clone(), point.weight_tables().unwrap())),
         vec![E::from_u64(7), E::from_u64(11)],
     )];
     validate_prepared_relation_groups(&valid, &params, &opening_batch, &relation).unwrap();
@@ -140,7 +140,10 @@ fn prepared_relation_group_rejects_stale_shape_and_claims() {
         .unwrap(),
     ] {
         let stale = vec![PreparedRelationGroupPublic::new(
-            OpeningFamily::SubringCoefficientPacking(stale_point),
+            OpeningFamily::SubringCoefficientPacking((
+                stale_point.clone(),
+                stale_point.weight_tables().unwrap(),
+            )),
             vec![E::from_u64(7), E::from_u64(11)],
         )];
         assert!(
@@ -162,15 +165,23 @@ fn prepared_relation_group_rejects_stale_shape_and_claims() {
     )
     .unwrap();
     let stale = vec![PreparedRelationGroupPublic::new(
-        OpeningFamily::SubringCoefficientPacking(wrong_point),
+        OpeningFamily::SubringCoefficientPacking((
+            wrong_point.clone(),
+            wrong_point.weight_tables().unwrap(),
+        )),
         vec![E::from_u64(7), E::from_u64(11)],
     )];
     assert!(validate_prepared_relation_groups(&stale, &params, &opening_batch, &relation).is_err());
 
     let missing_claim = vec![PreparedRelationGroupPublic::new(
-        OpeningFamily::SubringCoefficientPacking(
+        OpeningFamily::SubringCoefficientPacking((
             valid[0].coefficient_packing_point().unwrap().clone(),
-        ),
+            valid[0]
+                .coefficient_packing_point()
+                .unwrap()
+                .weight_tables()
+                .unwrap(),
+        )),
         vec![E::from_u64(7)],
     )];
     assert!(

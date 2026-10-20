@@ -53,6 +53,7 @@ fn bench_dense_shape<F, E, const D: usize>(
     let source_num_vars = source_len.trailing_zeros() as usize;
     assert_eq!(source_len, 1usize << source_num_vars);
     let point = prepared_point::<F, E, D>(num_positions, positions_per_block, source_num_vars);
+    let weights = point.weight_tables().unwrap();
     let rings = (0..num_positions)
         .map(|position| {
             CyclotomicRing::<F, D>::from_coefficients(std::array::from_fn(|coefficient| {
@@ -68,7 +69,12 @@ fn bench_dense_shape<F, E, const D: usize>(
     group.throughput(Throughput::Elements(source_len as u64));
     group.bench_function(name, |b| {
         b.iter(|| {
-            dense_coefficient_packing::<F, E, D>(black_box(&poly), black_box(&point)).unwrap()
+            dense_coefficient_packing::<F, E, D>(
+                black_box(&poly),
+                black_box(&point),
+                black_box(&weights),
+            )
+            .unwrap()
         })
     });
     group.finish();
@@ -85,6 +91,7 @@ fn bench_recursive_shape<const D: usize>(
     let live_len = num_positions * D;
     let source_num_vars = live_len.trailing_zeros() as usize;
     let point = prepared_point::<F, E, D>(num_positions, positions_per_block, source_num_vars);
+    let weights = point.weight_tables().unwrap();
     let digits = (0..live_len).map(|index| (index % 15) as i8 - 7).collect();
     let poly = recursive_witness_from_i8_digits(digits);
     let mut group = c.benchmark_group("coefficient_packing");
@@ -96,6 +103,7 @@ fn bench_recursive_shape<const D: usize>(
             recursive_witness_coefficient_packing_partials::<F, E, D>(
                 black_box(&poly),
                 black_box(&point),
+                black_box(&weights),
             )
             .unwrap()
         })
@@ -119,6 +127,7 @@ fn bench_onehot_shape<F, E, const D: usize>(
     assert_eq!(source_len, 1usize << source_num_vars);
     assert_eq!(source_len % ONEHOT_K, 0);
     let point = prepared_point::<F, E, D>(num_positions, positions_per_block, source_num_vars);
+    let weights = point.weight_tables().unwrap();
     let indices = (0..source_len / ONEHOT_K)
         .map(|chunk| (chunk % 100 < density_percent).then_some((chunk % ONEHOT_K) as u8))
         .collect();
@@ -130,7 +139,12 @@ fn bench_onehot_shape<F, E, const D: usize>(
     group.throughput(Throughput::Elements(source_len as u64));
     group.bench_function(name, |b| {
         b.iter(|| {
-            onehot_coefficient_packing::<F, E, D>(black_box(&poly), black_box(&point)).unwrap()
+            onehot_coefficient_packing::<F, E, D>(
+                black_box(&poly),
+                black_box(&point),
+                black_box(&weights),
+            )
+            .unwrap()
         })
     });
     group.finish();

@@ -199,7 +199,11 @@ fn prepare_batch(fixture: &Fixture) -> CoefficientPackingBatchSemantics<'_, E> {
 }
 
 fn materialize_shared(semantics: &CoefficientPackingGroupSemantics<'_, E>) -> Vec<E> {
-    let terms = CpuCoefficientPackingTerms::new(semantics).unwrap();
+    let terms = CpuCoefficientPackingTerms::new(
+        semantics,
+        &semantics.prepared_point().weight_tables().unwrap(),
+    )
+    .unwrap();
     let mut dense = vec![E::zero(); terms.physical_field_len()];
     let (sources, segments, terms) = terms.into_linear_parts();
     for term in &terms {
@@ -226,22 +230,17 @@ fn materialize_independent_oracles(
     let physical_len = semantics.physical_field_len();
     let d_d = semantics.d_d();
     let mut direct = vec![E::zero(); physical_len];
+    let tables = semantics.prepared_point().weight_tables().unwrap();
     let direct_source = semantics
         .basis()
         .iter()
-        .flat_map(|&basis| {
-            semantics
-                .prepared_point()
-                .tail_weights()
-                .iter()
-                .map(move |&tail| basis * tail)
-        })
+        .flat_map(|&basis| tables.tail_weights.iter().map(move |&tail| basis * tail))
         .collect::<Vec<_>>();
 
     for (claim, &claim_coefficient) in semantics.group_claim_coefficients().iter().enumerate() {
         for unit in semantics.witness_units() {
             for global_block in unit.global_block_range() {
-                let block_weight = semantics.prepared_point().live_block_weights()[global_block];
+                let block_weight = tables.live_block_weights[global_block];
                 for (digit, &opening_weight) in semantics.opening_gadget().iter().enumerate() {
                     let factor = semantics.scalar_claim_weight()
                         * claim_coefficient
@@ -272,12 +271,7 @@ fn materialize_independent_oracles(
     }
 
     let mut packing_z_source = vec![E::zero(); geometry.a_ring_dimension()];
-    for (low_index, &packing_weight) in semantics
-        .prepared_point()
-        .packing_weights()
-        .iter()
-        .enumerate()
-    {
+    for (low_index, &packing_weight) in tables.packing_weights.iter().enumerate() {
         for (subring_index, &alpha_power) in semantics.alpha_powers().iter().enumerate() {
             let coefficient = geometry
                 .a_ring_coefficient_index(low_index, subring_index)
@@ -287,12 +281,7 @@ fn materialize_independent_oracles(
     }
     let mut packing_z = vec![E::zero(); physical_len];
     for unit in semantics.witness_units() {
-        for (position, &position_weight) in semantics
-            .prepared_point()
-            .position_weights()
-            .iter()
-            .enumerate()
-        {
+        for (position, &position_weight) in tables.position_weights.iter().enumerate() {
             for (witness_digit, &witness_weight) in semantics.witness_gadget().iter().enumerate() {
                 for (fold_digit, &fold_weight) in semantics.fold_gadget().iter().enumerate() {
                     let physical_start = unit
@@ -325,7 +314,11 @@ fn materialize_independent_oracles(
 fn materialize_cpu_sources(
     semantics: &CoefficientPackingGroupSemantics<'_, E>,
 ) -> (Vec<E>, Vec<E>) {
-    let terms = CpuCoefficientPackingTerms::new(semantics).unwrap();
+    let terms = CpuCoefficientPackingTerms::new(
+        semantics,
+        &semantics.prepared_point().weight_tables().unwrap(),
+    )
+    .unwrap();
     let mut direct = vec![E::zero(); terms.physical_field_len()];
     let mut packing_z = vec![E::zero(); terms.physical_field_len()];
     let (sources, segments, terms) = terms.into_linear_parts();
@@ -401,7 +394,11 @@ fn prover_adapter_preserves_shared_stage2_semantics() {
     let fixture = fixture();
     let packing_semantics = prepare_batch(&fixture);
     let semantics = &packing_semantics.groups()[0];
-    let prepared = prepare_coefficient_packing_linear_terms(semantics.clone()).unwrap();
+    let prepared = prepare_coefficient_packing_linear_terms(
+        semantics.clone(),
+        &semantics.prepared_point().weight_tables().unwrap(),
+    )
+    .unwrap();
     assert_eq!(semantics.group_index(), 0);
     assert_eq!(semantics.geometry(), fixture.prepared_point.geometry());
     assert_eq!(prepared.source_count(), 2);
@@ -413,7 +410,11 @@ fn response_norm_sparse_terms_merge_with_coefficient_packing_support() {
     let fixture = fixture();
     let batch = prepare_batch(&fixture);
     let semantics = &batch.groups()[0];
-    let mut prepared = prepare_coefficient_packing_linear_terms(semantics.clone()).unwrap();
+    let mut prepared = prepare_coefficient_packing_linear_terms(
+        semantics.clone(),
+        &semantics.prepared_point().weight_tables().unwrap(),
+    )
+    .unwrap();
     let live_lane_count = prepared.live_lane_count;
     let coeff_count = prepared.coeff_count;
     let witness_digits = (0..live_lane_count * coeff_count)
@@ -473,7 +474,11 @@ fn prover_adapter_folds_to_shared_stage2_point_evaluation() {
         let fixture = fixture_for_basis(basis);
         let batch = prepare_batch(&fixture);
         let semantics = &batch.groups()[0];
-        let mut prepared = prepare_coefficient_packing_linear_terms(semantics.clone()).unwrap();
+        let mut prepared = prepare_coefficient_packing_linear_terms(
+            semantics.clone(),
+            &semantics.prepared_point().weight_tables().unwrap(),
+        )
+        .unwrap();
         let padded_len = semantics.physical_field_len().next_power_of_two();
         let point = (0..padded_len.trailing_zeros())
             .map(|index| E::from_u64(101 + u64::from(index)))
@@ -516,10 +521,12 @@ fn duplicate_packing_group_support_is_rejected() {
     let second_batch = prepare_batch(&second);
     let mut combined = prepare_coefficient_packing_linear_terms(
         first_batch.into_groups().into_iter().next().unwrap(),
+        &first.prepared_point.weight_tables().unwrap(),
     )
     .unwrap();
     let duplicate = prepare_coefficient_packing_linear_terms(
         second_batch.into_groups().into_iter().next().unwrap(),
+        &second.prepared_point.weight_tables().unwrap(),
     )
     .unwrap();
     let source_count = combined.source_count();
@@ -718,7 +725,14 @@ fn recursive_packing_phases_share_one_relation_authority() {
     let batch =
         <RecursiveWitnessFlat as RootOpeningSource<F, 256>>::opening_batch(&source_refs).unwrap();
     let partials = CpuBackend::<F, E>::for_arithmetic_tests()
-        .coefficient_packing_partials_batch(None, batch, SubringCoefficientPackingPlan { point })
+        .coefficient_packing_partials_batch(
+            None,
+            batch,
+            SubringCoefficientPackingPlan {
+                point,
+                weights: &point.weight_tables().unwrap(),
+            },
+        )
         .unwrap();
     let d_input = materialize_coefficient_packing_d_input::<F, 128>(
         &fixture.params,
@@ -765,14 +779,17 @@ fn recursive_packing_phases_share_one_relation_authority() {
                 point.num_live_blocks(),
                 std::slice::from_ref(partial),
                 &[E::one()],
-                point.live_block_weights(),
-                point.tail_weights(),
+                &point.weight_tables().unwrap().live_block_weights,
+                &point.weight_tables().unwrap().tail_weights,
             )
         })
         .collect::<Result<Vec<_>, _>>()
         .unwrap();
     let relation_groups = vec![PreparedRelationGroupPublic::new(
-        akita_types::OpeningFamily::SubringCoefficientPacking(point.clone()),
+        akita_types::OpeningFamily::SubringCoefficientPacking((
+            point.clone(),
+            point.weight_tables().unwrap(),
+        )),
         scalar_openings.clone(),
     )];
     validate_prepared_relation_groups(
@@ -784,7 +801,11 @@ fn recursive_packing_phases_share_one_relation_authority() {
     .unwrap();
 
     let semantics = &packing_semantics.groups()[0];
-    let prepared = prepare_coefficient_packing_linear_terms(semantics.clone()).unwrap();
+    let prepared = prepare_coefficient_packing_linear_terms(
+        semantics.clone(),
+        &semantics.prepared_point().weight_tables().unwrap(),
+    )
+    .unwrap();
     assert_eq!(prepared.materialize_dense(), materialize_shared(semantics),);
 }
 

@@ -80,7 +80,10 @@ pub enum Stage2OpeningDescription<'a, E: Field> {
         output_scale: E,
     },
     /// One ring-switch authority for both relation weights and linear terms.
-    CoefficientPacking(akita_types::CoefficientPackingBatchSemantics<'a, E>),
+    CoefficientPacking {
+        semantics: akita_types::CoefficientPackingBatchSemantics<'a, E>,
+        weights: Vec<&'a akita_types::SubringCoefficientPackingWeights<E>>,
+    },
 }
 
 /// Validated public inputs for constructing a backend-owned Stage 2 session.

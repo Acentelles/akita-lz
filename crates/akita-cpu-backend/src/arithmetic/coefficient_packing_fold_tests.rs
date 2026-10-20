@@ -303,8 +303,8 @@ fn prepared_point_matches_direct_opening_in_both_bases() {
             num_live_positions,
             num_positions_per_block,
             &source,
-            prepared.position_weights(),
-            prepared.packing_weights(),
+            &prepared.weight_tables().unwrap().position_weights,
+            &prepared.weight_tables().unwrap().packing_weights,
         )
         .unwrap();
         let got = coefficient_packing_scalar_opening::<F, E>(
@@ -312,8 +312,8 @@ fn prepared_point_matches_direct_opening_in_both_bases() {
             prepared.num_live_blocks(),
             &[partials],
             &[E::one()],
-            prepared.live_block_weights(),
-            prepared.tail_weights(),
+            &prepared.weight_tables().unwrap().live_block_weights,
+            &prepared.weight_tables().unwrap().tail_weights,
         )
         .unwrap();
 

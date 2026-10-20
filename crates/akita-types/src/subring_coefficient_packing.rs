@@ -13,9 +13,8 @@ use akita_params::{basis_weights, basis_weights_prefix, BasisMode};
 
 /// Canonical opening-point split for subring coefficient packing.
 ///
-/// The source point order is `[r_pack | r_tail | r_M | r_B]`. Full domains
-/// are retained for the first three axes; only the exact live block prefix is
-/// retained from the padded block domain.
+/// The source point order is `[r_pack | r_tail | r_M | r_B]`. Each axis retains
+/// its padded domain; the block count identifies the exact live block prefix.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PreparedSubringCoefficientPackingPoint<E: Field> {
     geometry: SubringCoefficientPackingGeometry,
@@ -28,10 +27,15 @@ pub struct PreparedSubringCoefficientPackingPoint<E: Field> {
     tail_point: Vec<E>,
     position_point: Vec<E>,
     block_point: Vec<E>,
-    packing_weights: Vec<E>,
-    tail_weights: Vec<E>,
-    position_weights: Vec<E>,
-    live_block_weights: Vec<E>,
+}
+
+/// Prover-owned tensor-product tables for one checked coefficient-packing point.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SubringCoefficientPackingWeights<E: Field> {
+    pub packing_weights: Vec<E>,
+    pub tail_weights: Vec<E>,
+    pub position_weights: Vec<E>,
+    pub live_block_weights: Vec<E>,
 }
 
 impl<E: Field> PreparedSubringCoefficientPackingPoint<E> {
@@ -110,10 +114,6 @@ impl<E: Field> PreparedSubringCoefficientPackingPoint<E> {
         let tail_point = take_axis(axis_bits[1])?.to_vec();
         let position_point = take_axis(axis_bits[2])?.to_vec();
         let block_point = take_axis(axis_bits[3])?.to_vec();
-        let packing_weights = basis_weights(&packing_point, basis)?;
-        let tail_weights = basis_weights(&tail_point, basis)?;
-        let position_weights = basis_weights(&position_point, basis)?;
-        let live_block_weights = basis_weights_prefix(&block_point, basis, num_live_blocks)?;
         Ok(Self {
             geometry,
             basis,
@@ -125,10 +125,6 @@ impl<E: Field> PreparedSubringCoefficientPackingPoint<E> {
             tail_point,
             position_point,
             block_point,
-            packing_weights,
-            tail_weights,
-            position_weights,
-            live_block_weights,
         })
     }
 
@@ -182,24 +178,21 @@ impl<E: Field> PreparedSubringCoefficientPackingPoint<E> {
         &self.block_point
     }
 
-    /// Weights for the low A-ring coefficient axis.
-    pub fn packing_weights(&self) -> &[E] {
-        &self.packing_weights
-    }
-
-    /// Weights for the challenge-subring coefficient axis.
-    pub fn tail_weights(&self) -> &[E] {
-        &self.tail_weights
-    }
-
-    /// Weights for positions within one block.
-    pub fn position_weights(&self) -> &[E] {
-        &self.position_weights
-    }
-
-    /// Exact live prefix of the padded block-domain weights.
-    pub fn live_block_weights(&self) -> &[E] {
-        &self.live_block_weights
+    /// Materialize the four opening tables for prover kernels.
+    ///
+    /// Verifiers use the checked axes directly and do not need these tables.
+    /// Propagates the canonical basis builders' size and allocation errors.
+    pub fn weight_tables(&self) -> Result<SubringCoefficientPackingWeights<E>, AkitaError> {
+        Ok(SubringCoefficientPackingWeights {
+            packing_weights: basis_weights(&self.packing_point, self.basis)?,
+            tail_weights: basis_weights(&self.tail_point, self.basis)?,
+            position_weights: basis_weights(&self.position_point, self.basis)?,
+            live_block_weights: basis_weights_prefix(
+                &self.block_point,
+                self.basis,
+                self.num_live_blocks,
+            )?,
+        })
     }
 }
 
@@ -219,20 +212,21 @@ mod tests {
                 PreparedSubringCoefficientPackingPoint::new(geometry, basis, 6, 4, 10, &point)
                     .unwrap();
             assert_eq!(prepared.basis(), basis);
+            let weights = prepared.weight_tables().unwrap();
             assert_eq!(
-                prepared.packing_weights(),
+                weights.packing_weights,
                 basis_weights(&point[..1], basis).unwrap()
             );
             assert_eq!(
-                prepared.tail_weights(),
+                weights.tail_weights,
                 basis_weights(&point[1..7], basis).unwrap()
             );
             assert_eq!(
-                prepared.position_weights(),
+                weights.position_weights,
                 basis_weights(&point[7..9], basis).unwrap()
             );
             assert_eq!(
-                prepared.live_block_weights(),
+                weights.live_block_weights,
                 basis_weights_prefix(&point[9..], basis, 2).unwrap()
             );
             assert_eq!(prepared.num_live_blocks(), 2);

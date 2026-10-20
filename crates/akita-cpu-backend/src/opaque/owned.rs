@@ -214,13 +214,17 @@ where
                         vars,
                         plan.point(),
                     )?;
+                    let weights = point.weight_tables()?;
                     let batch = <P as RootOpeningSource<F, D>>::opening_batch(&polys)?;
                     let partials =
                         SubringCoefficientPackingBatchKernel::coefficient_packing_partials_batch(
                             backend,
                             prepared,
                             batch,
-                            SubringCoefficientPackingPlan { point: &point },
+                            SubringCoefficientPackingPlan {
+                                point: &point,
+                                weights: &weights,
+                            },
                         )?;
                     let openings = partials
                         .iter()
@@ -230,8 +234,8 @@ where
                                 point.num_live_blocks(),
                                 std::slice::from_ref(p),
                                 &[E::one()],
-                                point.live_block_weights(),
-                                point.tail_weights(),
+                                &weights.live_block_weights,
+                                &weights.tail_weights,
                             )
                         })
                         .collect::<Result<Vec<_>, _>>()?;
@@ -239,6 +243,7 @@ where
                         binding.clone(),
                         source,
                         point,
+                        weights,
                         partials,
                         openings,
                     ));

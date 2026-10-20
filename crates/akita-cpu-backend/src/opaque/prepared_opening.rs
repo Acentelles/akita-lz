@@ -30,6 +30,7 @@ pub(in crate::opaque) fn coefficient_packing<F, E>(
     binding: OperationBinding,
     source: PreparedOpeningSource<F, E>,
     point: akita_types::PreparedSubringCoefficientPackingPoint<E>,
+    weights: akita_types::SubringCoefficientPackingWeights<E>,
     partials_by_claim: Vec<crate::opaque::SubringCoefficientPackingPartials<F>>,
     scalar_openings: Vec<E>,
 ) -> PreparedGroupOpening<E, CpuPreparedOpeningHandle<F, E>>
@@ -41,6 +42,7 @@ where
         binding,
         source,
         point,
+        weights,
         partials_by_claim,
         scalar_openings.clone(),
     );

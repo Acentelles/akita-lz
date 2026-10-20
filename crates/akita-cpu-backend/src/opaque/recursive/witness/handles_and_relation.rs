@@ -10,6 +10,7 @@ enum OpaquePreparedGroupOpeningKind<F: Field, E: Field> {
     },
     CoefficientPacking {
         point: akita_types::PreparedSubringCoefficientPackingPoint<E>,
+        weights: akita_types::SubringCoefficientPackingWeights<E>,
         partials_by_claim: Vec<crate::opaque::SubringCoefficientPackingPartials<F>>,
     },
 }
@@ -80,6 +81,7 @@ where
         binding: crate::opaque::OperationBinding,
         source: crate::opaque::openings::PreparedOpeningSource<F, E>,
         point: akita_types::PreparedSubringCoefficientPackingPoint<E>,
+        weights: akita_types::SubringCoefficientPackingWeights<E>,
         partials_by_claim: Vec<crate::opaque::SubringCoefficientPackingPartials<F>>,
         scalar_openings: Vec<E>,
     ) -> Self {
@@ -87,6 +89,7 @@ where
             binding,
             kind: OpaquePreparedGroupOpeningKind::CoefficientPacking {
                 point,
+                weights,
                 partials_by_claim,
             },
             scalar_openings,
@@ -127,7 +130,7 @@ where
     ) -> Result<
         (
             crate::opaque::PreparedOpeningWitness<F>,
-            crate::opaque::PublicPreparedRelationOpening<F, E>,
+            akita_prover::backend::PreparedRelationOpening<F, E>,
         ),
         AkitaError,
     >
@@ -163,6 +166,7 @@ where
             }
             OpaquePreparedGroupOpeningKind::CoefficientPacking {
                 point,
+                weights,
                 partials_by_claim,
             } => {
                 if point.num_positions_per_block() != group.num_positions_per_block()
@@ -182,7 +186,10 @@ where
                 )?;
                 Ok((
                     opening,
-                    akita_types::OpeningFamily::SubringCoefficientPacking(point.clone()),
+                    akita_types::OpeningFamily::SubringCoefficientPacking((
+                        point.clone(),
+                        weights.clone(),
+                    )),
                 ))
             }
         }

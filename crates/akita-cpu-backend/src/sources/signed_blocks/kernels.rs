@@ -216,7 +216,7 @@ where
         source: Vec<SignedBlocks<'_>>,
         plan: SubringCoefficientPackingPlan<'_, E>,
     ) -> Result<Vec<SubringCoefficientPackingPartials<F>>, AkitaError> {
-        let fused_weights = FusedPackingWeights::new(plan.point)?;
+        let fused_weights = FusedPackingWeights::new(plan)?;
         source.into_iter().map(|blocks| {
             if num_rings::<D>(blocks)? != plan.point.num_live_positions() { return Err(AkitaError::InvalidSize { expected: plan.point.num_live_positions(), actual: num_rings::<D>(blocks)? }); }
             let coordinates = with_source!(blocks, storage => seam_packing_partials::<F, E, _, D>(&storage, blocks.len(), blocks.num_vars(), &fused_weights))?;

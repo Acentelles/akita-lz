@@ -378,7 +378,7 @@ fn prepare_relation_sumcheck<'a, F, E, H>(
     lp: &'a CommittedGroupParams,
     opening_batch: &'a OpeningClaimsLayout,
     opening_semantics: OpeningFamily<(), CoefficientPackingBatchSemantics<'a, E>>,
-    relation_groups: &[crate::backend::PreparedRelationGroupPublic<F, E>],
+    relation_groups: &'a [crate::backend::PreparedRelationGroupPublic<F, E>],
     evaluation_trace_claim_coefficients: &'a [E],
     evaluation_trace_claim: E,
     evaluation_trace_basis: BasisMode,
@@ -438,7 +438,18 @@ where
                 ));
             }
             Ok((
-                Stage2OpeningDescription::CoefficientPacking(batch),
+                Stage2OpeningDescription::CoefficientPacking {
+                    semantics: batch,
+                    weights: relation_groups
+                        .iter()
+                        .map(|group| match group.kind() {
+                            OpeningFamily::SubringCoefficientPacking((_, weights)) => Ok(weights),
+                            OpeningFamily::EvaluationTrace(_) => Err(AkitaError::Internal(
+                                "packing Stage 2 group has no packing tables".into(),
+                            )),
+                        })
+                        .collect::<Result<Vec<_>, _>>()?,
+                },
                 weighted_opening_claim,
             ))
         }

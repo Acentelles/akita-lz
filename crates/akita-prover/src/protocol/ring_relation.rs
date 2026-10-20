@@ -91,7 +91,7 @@ where
                 == &point.ring_multiplier_point => {}
             (
                 akita_params::OpeningMethod::SubringCoefficientPacking { .. },
-                OpeningFamily::SubringCoefficientPacking(point),
+                OpeningFamily::SubringCoefficientPacking((point, _)),
                 Some(relation_geometry),
             ) if relation_geometry == point.geometry()
                 && point.source_num_vars() == layout.num_vars()
@@ -381,7 +381,7 @@ impl RingRelationProver {
                 )),
                 (
                     OpeningFamily::SubringCoefficientPacking(challenges),
-                    OpeningFamily::SubringCoefficientPacking(point),
+                    OpeningFamily::SubringCoefficientPacking((point, _)),
                 ) if challenges.geometry() == point.geometry() => Ok(
                     akita_types::RingRelationGroupOpening::coefficient_packing(challenges.clone()),
                 ),

@@ -88,6 +88,8 @@ impl<F: Field> OpeningFoldPlan<'_, F> {
 pub struct SubringCoefficientPackingPlan<'a, E: Field> {
     /// Canonically split public opening point.
     pub point: &'a PreparedSubringCoefficientPackingPoint<E>,
+    /// Prover-owned tables built once from this point.
+    pub weights: &'a akita_types::SubringCoefficientPackingWeights<E>,
 }
 
 impl<E: Field> SubringCoefficientPackingPlan<'_, E> {

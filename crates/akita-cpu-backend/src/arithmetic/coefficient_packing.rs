@@ -19,30 +19,28 @@ fn zero_vec<T: AdditiveGroup>(len: usize) -> Result<Vec<T>, AkitaError> {
 
 /// Position × packing weights tied to the prepared point that produced them.
 pub(crate) struct FusedPackingWeights<'a, E: Field> {
-    point: &'a akita_types::PreparedSubringCoefficientPackingPoint<E>,
+    plan: SubringCoefficientPackingPlan<'a, E>,
     values: Vec<E>,
 }
 
 impl<'a, E: Field> FusedPackingWeights<'a, E> {
     /// Precompute the tensor product reused by every claim in one opening batch.
     #[tracing::instrument(skip_all, name = "coefficient_packing_prepare_weights")]
-    pub(crate) fn new(
-        point: &'a akita_types::PreparedSubringCoefficientPackingPoint<E>,
-    ) -> Result<Self, AkitaError> {
-        let len = Self::required_len(point)?;
+    pub(crate) fn new(plan: SubringCoefficientPackingPlan<'a, E>) -> Result<Self, AkitaError> {
+        let len = Self::required_len(plan.point)?;
         let mut values = Vec::new();
         values.try_reserve_exact(len).map_err(|_| {
             AkitaError::InvalidInput("coefficient-packing fused weight allocation failed".into())
         })?;
-        for &position_weight in point.position_weights() {
+        for &position_weight in plan.weights.position_weights.iter() {
             values.extend(
-                point
-                    .packing_weights()
+                plan.weights
+                    .packing_weights
                     .iter()
                     .map(|&packing_weight| position_weight * packing_weight),
             );
         }
-        Ok(Self { point, values })
+        Ok(Self { plan, values })
     }
 
     pub(crate) fn required_len(
@@ -57,8 +55,8 @@ impl<'a, E: Field> FusedPackingWeights<'a, E> {
         })
     }
 
-    pub(crate) fn point(&self) -> &'a akita_types::PreparedSubringCoefficientPackingPoint<E> {
-        self.point
+    pub(crate) fn plan(&self) -> SubringCoefficientPackingPlan<'a, E> {
+        self.plan
     }
 
     pub(crate) fn values(&self) -> &[E] {
@@ -84,9 +82,7 @@ where
     E: ExtField<F> + FpExtEncoding<F> + MulBaseUnreduced<F>,
     P: Sync,
 {
-    let plan = SubringCoefficientPackingPlan {
-        point: fused_weights.point(),
-    };
+    let plan = fused_weights.plan();
     plan.validate::<D>(source_num_vars)?;
     let point = plan.point;
     let geometry = point.geometry();
@@ -322,8 +318,8 @@ mod tests {
             2,
             4,
             &source,
-            point.position_weights(),
-            point.packing_weights(),
+            &point.weight_tables().unwrap().position_weights,
+            &point.weight_tables().unwrap().packing_weights,
         )
         .unwrap();
         let poly = DensePoly::from_ring_coeffs(rings).unwrap();
@@ -333,7 +329,10 @@ mod tests {
             .coefficient_packing_partials_batch(
                 None,
                 batch,
-                SubringCoefficientPackingPlan { point: &point },
+                SubringCoefficientPackingPlan {
+                    point: &point,
+                    weights: &point.weight_tables().unwrap(),
+                },
             )
             .unwrap();
         assert_eq!(got[0].coordinates(), expected);
@@ -358,8 +357,8 @@ mod tests {
             point.num_live_positions(),
             point.num_positions_per_block(),
             &source,
-            point.position_weights(),
-            point.packing_weights(),
+            &point.weight_tables().unwrap().position_weights,
+            &point.weight_tables().unwrap().packing_weights,
         )
         .unwrap();
         let poly = DensePoly::from_ring_coeffs(rings).unwrap();
@@ -369,7 +368,10 @@ mod tests {
             .coefficient_packing_partials_batch(
                 None,
                 batch,
-                SubringCoefficientPackingPlan { point: &point },
+                SubringCoefficientPackingPlan {
+                    point: &point,
+                    weights: &point.weight_tables().unwrap(),
+                },
             )
             .unwrap();
         assert_eq!(got.len(), 1);
@@ -418,8 +420,8 @@ mod tests {
             POSITIONS,
             POSITIONS_PER_BLOCK,
             &source,
-            point.position_weights(),
-            point.packing_weights(),
+            &point.weight_tables().unwrap().position_weights,
+            &point.weight_tables().unwrap().packing_weights,
         )
         .unwrap();
         let poly = DensePoly::from_ring_coeffs(rings).unwrap();
@@ -429,7 +431,10 @@ mod tests {
             .coefficient_packing_partials_batch(
                 None,
                 batch,
-                SubringCoefficientPackingPlan { point: &point },
+                SubringCoefficientPackingPlan {
+                    point: &point,
+                    weights: &point.weight_tables().unwrap(),
+                },
             )
             .unwrap();
 
@@ -482,7 +487,10 @@ mod tests {
             .coefficient_packing_partials_batch(
                 None,
                 batch,
-                SubringCoefficientPackingPlan { point: &point },
+                SubringCoefficientPackingPlan {
+                    point: &point,
+                    weights: &point.weight_tables().unwrap(),
+                },
             )
             .unwrap();
         assert_eq!(got.len(), 2);
@@ -500,8 +508,8 @@ mod tests {
                 6,
                 4,
                 &source,
-                point.position_weights(),
-                point.packing_weights(),
+                &point.weight_tables().unwrap().position_weights,
+                &point.weight_tables().unwrap().packing_weights,
             )
             .unwrap();
             assert_eq!(partials.coordinates(), expected);
@@ -528,7 +536,10 @@ mod tests {
             <DensePoly<F> as RootOpeningSource<F, D>>::opening_batch(&dense_refs).unwrap();
         let onehot_batch =
             <OneHotPoly<F> as RootOpeningSource<F, D>>::opening_batch(&onehot_refs).unwrap();
-        let plan = SubringCoefficientPackingPlan { point: &point };
+        let plan = SubringCoefficientPackingPlan {
+            point: &point,
+            weights: &point.weight_tables().unwrap(),
+        };
         let dense_partials = CpuBackend::<F, E>::for_arithmetic_tests()
             .coefficient_packing_partials_batch(None, dense_batch, plan)
             .unwrap();
@@ -584,7 +595,10 @@ mod tests {
             <DensePoly<F> as RootOpeningSource<F, D>>::opening_batch(&dense_refs).unwrap();
         let onehot_batch =
             <OneHotPoly<F> as RootOpeningSource<F, D>>::opening_batch(&onehot_refs).unwrap();
-        let plan = SubringCoefficientPackingPlan { point: &point };
+        let plan = SubringCoefficientPackingPlan {
+            point: &point,
+            weights: &point.weight_tables().unwrap(),
+        };
 
         assert!(matches!(
             CpuBackend::<F, E>::for_arithmetic_tests().coefficient_packing_partials_batch(
@@ -641,7 +655,10 @@ mod tests {
             <DensePoly<F> as RootOpeningSource<F, LARGE_D>>::opening_batch(&dense_refs).unwrap();
         let onehot_batch =
             <OneHotPoly<F> as RootOpeningSource<F, LARGE_D>>::opening_batch(&onehot_refs).unwrap();
-        let plan = SubringCoefficientPackingPlan { point: &point };
+        let plan = SubringCoefficientPackingPlan {
+            point: &point,
+            weights: &point.weight_tables().unwrap(),
+        };
         let dense_partials = CpuBackend::<F, E>::for_arithmetic_tests()
             .coefficient_packing_partials_batch(None, dense_batch, plan)
             .unwrap();
@@ -708,7 +725,10 @@ mod tests {
             <OneHotPoly<F> as RootOpeningSource<F, D>>::opening_batch(&onehot_refs).unwrap();
         let dense_batch =
             <DensePoly<F> as RootOpeningSource<F, D>>::opening_batch(&dense_refs).unwrap();
-        let plan = SubringCoefficientPackingPlan { point: &point };
+        let plan = SubringCoefficientPackingPlan {
+            point: &point,
+            weights: &point.weight_tables().unwrap(),
+        };
         let onehot_partials = CpuBackend::<F, E>::for_arithmetic_tests()
             .coefficient_packing_partials_batch(None, onehot_batch, plan)
             .unwrap();
@@ -750,7 +770,10 @@ mod tests {
         let recursive_batch =
             <RecursiveWitnessFlat as RootOpeningSource<F, D>>::opening_batch(&recursive_refs)
                 .unwrap();
-        let plan = SubringCoefficientPackingPlan { point: &point };
+        let plan = SubringCoefficientPackingPlan {
+            point: &point,
+            weights: &point.weight_tables().unwrap(),
+        };
         let dense_partials = CpuBackend::<F, E>::for_arithmetic_tests()
             .coefficient_packing_partials_batch(None, dense_batch, plan)
             .unwrap();
@@ -785,7 +808,10 @@ mod tests {
             .coefficient_packing_partials_batch(
                 None,
                 batch,
-                SubringCoefficientPackingPlan { point: &point },
+                SubringCoefficientPackingPlan {
+                    point: &point,
+                    weights: &point.weight_tables().unwrap()
+                },
             )
             .is_err());
     }
