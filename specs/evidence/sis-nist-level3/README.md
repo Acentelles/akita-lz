@@ -1,11 +1,11 @@
 # NIST category 3 SIS policy evidence
 
 These files compare the complete generated schedule catalog at `main`
-`60b82bc30f4f8f1130ccd71fe10b0b9bed909ab9` (128-bit policy) with the
-`Quantum169BitADPS16` branch.
+`346fbbb5b38d8224c25029ead63c776c0964215a` (128-bit policy) with the
+`Quantum169BitADPS16` branch merged onto it.
 
-- `base.tsv` is the tracked `artifacts/schedule-catalog.tsv` snapshot at the
-  base commit.
+- `base.tsv` is the tracked `artifacts/schedule-catalog.tsv` snapshot at that
+  `main` commit.
 - `head.tsv` is the regenerated snapshot, identical to the branch's
   `artifacts/schedule-catalog.tsv`.
 - `comparison.tsv` is the `--catalog-report` union of both: lookup and row
@@ -33,11 +33,11 @@ boundary.
 | Proof bytes, 111 rows | +4.2% to +25.2%, median +14.9% (+10,368 bytes) |
 | Proof bytes, 4 small recursive rows | +97% to +250% (see below) |
 | Total setup fields, 111 rows | median x1.14, range x0.54 to x2.67 |
-| Fold levels (111 rows) | unchanged in 64, one more in 43, fewer in 4 |
+| Fold levels (111 rows) | unchanged in 60, one more in 47, fewer in 4 |
 
-Per-family medians fall between +10% and +17%. Higher A, B, and D ranks
+Per-family medians fall between +8% and +17%. Higher A, B, and D ranks
 enlarge the witness that every later fold and the terminal response carry,
-and 43 rows need one more fold. Each compressed level also carries two
+and 47 rows need one more fold. Each compressed level also carries two
 256-byte terminal images instead of two 128-byte ones. In the measured fp128
 dense nv28 proof, the terminal response grows by 3,453 bytes and the fold
 levels by 8,032 bytes.
@@ -53,6 +53,10 @@ nv20 already made the same trade on `main` (161 KB). A larger setup bucket
 would restore a deep schedule; the catalog objective is unchanged here.
 
 ### Slice-pruning fix
+
+This section, the Jolt-scale coverage, and the profile benchmark were
+measured before the branch merged `main` `346fbbb5`, against `main`
+`60b82bc3`. The catalog summary above is current.
 
 Under the 169-bit tables, the oracle comparison for the fp128 one-hot W8 nv20
 fixture failed. At every level and under both objectives, the planner kept
@@ -110,7 +114,8 @@ cargo test --release -p akita-planner --lib --features catalog-gen -- \
 | Dense bounded and full, nv34 and nv35 | 88,786 to 88,910 | 7 | at most 90,177,536 |
 
 Each shape plans in 35 to 90 seconds. The check plans schedules only; it
-does not prove at these sizes.
+does not prove at these sizes. It has not been rerun since the merge with
+`346fbbb5`.
 
 ## Measured profile benchmark
 

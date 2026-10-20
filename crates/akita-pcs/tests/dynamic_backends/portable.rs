@@ -48,7 +48,10 @@ where
     Cfg: CommitmentConfig<Field = F, ExtField = E> + 'static,
     P: CpuSource<F, E>,
 {
-    let scheme = common::load_workspace_scheme::<Cfg>().unwrap();
+    let scheme = common::load_workspace_scheme::<Cfg>(
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    )
+    .unwrap();
     let setup = scheme.setup_prover(nv, polys.len()).unwrap();
     let producer = Cpu::new(setup.expanded.clone()).unwrap();
     let consumer = Cpu::new(setup.expanded.clone()).unwrap();

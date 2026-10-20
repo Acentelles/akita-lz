@@ -33,7 +33,7 @@ const WORD_OFFSETS: usize = 4;
 
 /// Value range of the `i8` digits a fold source hands to the gather kernel.
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(super) enum I8DigitSpan {
+pub(crate) enum I8DigitSpan {
     /// Any `i8` value.
     Full,
     /// Every digit lies in `[-64, 63]`, so two digits (or their complements)
@@ -67,7 +67,7 @@ struct SignedPlane<const D: usize> {
 /// word packs [`WORD_OFFSETS`] [`SignedPlane`] offsets; unused slots point at
 /// the zeros. `corrections[window]` is the weighted number of complemented
 /// sources in that window's list.
-pub(super) struct WindowedChallenge {
+pub(crate) struct WindowedChallenge {
     words: Vec<u64>,
     // The x86 kernels read negated sources, which need no correction.
     #[cfg_attr(all(target_arch = "x86_64", target_feature = "avx2"), allow(dead_code))]

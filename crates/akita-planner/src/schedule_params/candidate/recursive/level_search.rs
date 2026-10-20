@@ -24,7 +24,7 @@ pub(super) fn prepare_recursive_level_search(
     } = *request;
     let num_chunks = policy.chunks_at_level(fold_level);
     dimensions.validate_role_projection()?;
-    opening.validate_for(fold_level, policy.claim_ext_degree, dimensions)?;
+    opening.validate_for(policy.claim_ext_degree, dimensions)?;
     let d_a = dimensions.d_a();
     if current_witness_len == 0 {
         return Ok(None);

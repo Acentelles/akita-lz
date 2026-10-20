@@ -48,9 +48,9 @@ pub(crate) use resources::{
 };
 
 pub(crate) use source::{
-    compile_commitment_request, CompiledCommitmentRequest, DenseCoefficientSource,
-    DenseRepresentation, DenseType, OneHotIndexWidth, PolynomialType, PredecomposedDigitPlanes,
-    ResolvedCommitSource, UnitPositionSlice,
+    compile_commitment_request, AcceptedReach, CompiledCommitmentRequest, DenseCoefficientSource,
+    DenseRepresentation, DenseType, OneHotIndexWidth, PolynomialType, ResolvedCommitSource,
+    SignedValues, UnitPositionSlice,
 };
 
 pub use external::{
@@ -60,7 +60,7 @@ pub use external::{
 };
 pub use source::{
     AvailablePolynomialTypes, CommitSourceClass, CommitSourceDescriptor, CommitmentSource,
-    PolynomialRepresentation, PolynomialTypeSelection,
+    PolynomialRepresentation, PolynomialTypeSelection, SignedBlockDecoder, SignedBlocks,
 };
 pub(crate) use stages::{
     CompressionOperation, CompressionStageOutput, FullCommitmentOutput, FusedInnerOuterOperation,

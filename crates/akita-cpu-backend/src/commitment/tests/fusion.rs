@@ -391,9 +391,11 @@ fn explicitly_selected_fused_route_has_one_submission_and_cpu_parity() {
     assert_eq!(split_inner_ensures.load(Ordering::SeqCst), 0);
     assert_eq!(compression_ensures.load(Ordering::SeqCst), 0);
 
-    let expected_u = split.execute_uncompressed_stages(&plan, &sources).unwrap();
+    let expected_u = split
+        .execute_uncompressed_stages(&plan, &sources, None)
+        .unwrap();
     let actual_u = fused_executor
-        .execute_uncompressed_stages(&plan, &sources)
+        .execute_uncompressed_stages(&plan, &sources, None)
         .unwrap();
     assert_eq!(actual_u.u(), expected_u.u());
     assert_eq!(
@@ -507,7 +509,7 @@ fn explicitly_selected_fused_route_has_one_submission_and_cpu_parity() {
 
     attempts_per_call.store(2, Ordering::SeqCst);
     fused_executor
-        .execute_uncompressed_stages(&plan, &sources)
+        .execute_uncompressed_stages(&plan, &sources, None)
         .unwrap();
     assert_eq!(
         events

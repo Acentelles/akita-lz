@@ -62,7 +62,7 @@ impl<F: Field + CanonicalEncoding + 'static, E> CpuBackend<F, E> {
         let prepared = self.prepared()?;
         let validated =
             crate::setup::setup_prefix::validate_setup_prefix_commitment(&prepared.expanded, id)?;
-        self.memoized_setup_prefix(id, || {
+        self.setup_prefix_cache.get_or_build(id, || {
             let executor = CommitmentExecutor::cpu(
                 self,
                 prepared,
@@ -92,7 +92,7 @@ impl<F: Field + CanonicalEncoding + 'static, E> CpuBackend<F, E> {
             &prepared.expanded,
             &artifact.id,
         )?;
-        self.memoized_setup_prefix(&artifact.id, || {
+        self.setup_prefix_cache.get_or_build(&artifact.id, || {
             Ok(CachedSetupPrefix {
                 artifact: artifact.clone(),
                 source: self.setup_prefix_source(&artifact.id)?,
@@ -199,10 +199,8 @@ where
         &self,
         id: &SetupPrefixSlotId,
     ) -> Result<PreparedSetupPrefix<F, CommitmentHandle<F, E>>, AkitaError> {
-        // The commitment and the prefix coefficients are a pure function of the
-        // owned setup and the slot id, so derive them at most once per backend.
-        // Only the per-proof operation identity below is minted fresh, keeping
-        // handle lineage exactly as it was when every call re-derived.
+        // Retain one value per slot, allowing duplicate cold derivations without waiting.
+        // Each handle receives a fresh per-proof operation identity.
         let cached = self.setup_prefix_material(id)?;
 
         self.issue_setup_prefix_handle(id, cached)
@@ -278,8 +276,10 @@ mod tests {
                 type Cfg = fp128::Dense;
                 type F = fp128::Field;
                 const NV: usize = 14;
-                let catalog =
-                    akita_config::test_support::workspace_schedule_catalog::<Cfg>().unwrap();
+                let catalog = akita_config::test_support::workspace_schedule_catalog::<Cfg>(
+                    akita_params::ChunkedWitnessCfg::default_non_chunked(),
+                )
+                .unwrap();
                 let capacity =
                     akita_config::SetupRequirements::from_catalog::<Cfg>(&catalog, NV, 1)
                         .unwrap()
@@ -314,9 +314,8 @@ mod tests {
                 assert_eq!(first.setup_prefix_cache_len().unwrap(), 1);
                 assert!(artifacts.is_backend_validated());
                 let cached_after_export = first
-                    .memoized_setup_prefix(&id, || {
-                        panic!("export must seed the setup-prefix cache")
-                    })
+                    .setup_prefix_cache
+                    .get_or_build(&id, || panic!("export must seed the setup-prefix cache"))
                     .unwrap();
                 let exported = artifacts.get(&id).unwrap();
                 assert_eq!(cached_after_export.artifact.id, exported.id);
@@ -388,172 +387,7 @@ mod tests {
             .join()
             .unwrap();
     }
-
-    #[test]
-    fn failed_prefix_cache_generations_are_removed_and_retriable() {
-        type Cfg = fp128::Dense;
-        const NV: usize = 14;
-        let catalog = akita_config::test_support::workspace_schedule_catalog::<Cfg>().unwrap();
-        let row = catalog
-            .resolve_key(&akita_params::ScheduleLookupKey::single(
-                akita_params::PolynomialGroupLayout::new(NV, 1),
-            ))
-            .unwrap();
-        let params = &row.schedule().root.params;
-        let n_prefix = (params.d_a() * params.outer_slice_count().get()).next_power_of_two();
-        let prefix = akita_params::setup_prefix_precommitted_params(params, n_prefix).unwrap();
-        let id = akita_params::scheduled_setup_prefix(n_prefix, prefix)
-            .slot_id()
-            .unwrap();
-
-        let failed = super::super::backend::SetupPrefixCache::<u64>::default();
-        for offset in 0..32 {
-            let mut failed_id = id.clone();
-            failed_id.natural_len = failed_id.natural_len.checked_add(offset).unwrap();
-            assert!(failed
-                .memoized(&failed_id, || {
-                    Err(AkitaError::InvalidSetup("injected prefix failure".into()))
-                })
-                .is_err());
-        }
-        assert_eq!(failed.len().unwrap(), 0);
-
-        assert!(failed
-            .memoized(&id, || {
-                Err(AkitaError::InvalidSetup("injected prefix failure".into()))
-            })
-            .is_err());
-        assert_eq!(failed.len().unwrap(), 0);
-        assert_eq!(*failed.memoized(&id, || Ok(17u64)).unwrap(), 17);
-        assert_eq!(failed.len().unwrap(), 1);
-    }
-
-    #[test]
-    fn concurrent_prefix_cache_failure_preserves_the_successful_retry() {
-        use std::sync::atomic::{AtomicUsize, Ordering};
-        use std::sync::{Barrier, Mutex};
-
-        type Cfg = fp128::Dense;
-        const NV: usize = 14;
-        const WORKERS: usize = 8;
-        let catalog = akita_config::test_support::workspace_schedule_catalog::<Cfg>().unwrap();
-        let row = catalog
-            .resolve_key(&akita_params::ScheduleLookupKey::single(
-                akita_params::PolynomialGroupLayout::new(NV, 1),
-            ))
-            .unwrap();
-        let params = &row.schedule().root.params;
-        let n_prefix = (params.d_a() * params.outer_slice_count().get()).next_power_of_two();
-        let prefix = akita_params::setup_prefix_precommitted_params(params, n_prefix).unwrap();
-        let id = akita_params::scheduled_setup_prefix(n_prefix, prefix)
-            .slot_id()
-            .unwrap();
-
-        let backend = Arc::new(super::super::backend::SetupPrefixCache::<u64>::default());
-        let start = Arc::new(Barrier::new(WORKERS));
-        let attempts = Arc::new(AtomicUsize::new(0));
-        let outcomes = Arc::new(Mutex::new(Vec::with_capacity(WORKERS)));
-        std::thread::scope(|scope| {
-            for _ in 0..WORKERS {
-                let backend = Arc::clone(&backend);
-                let start = Arc::clone(&start);
-                let attempts = Arc::clone(&attempts);
-                let outcomes = Arc::clone(&outcomes);
-                let id = id.clone();
-                scope.spawn(move || {
-                    start.wait();
-                    let result = backend.memoized(&id, || {
-                        if attempts.fetch_add(1, Ordering::SeqCst) == 0 {
-                            Err(AkitaError::InvalidSetup("injected prefix failure".into()))
-                        } else {
-                            Ok(23)
-                        }
-                    });
-                    outcomes.lock().unwrap().push(result.map(|value| *value));
-                });
-            }
-        });
-
-        let outcomes = outcomes.lock().unwrap();
-        assert_eq!(outcomes.iter().filter(|result| result.is_err()).count(), 1);
-        assert_eq!(
-            outcomes
-                .iter()
-                .filter(|result| matches!(result, Ok(23)))
-                .count(),
-            WORKERS - 1
-        );
-        assert_eq!(attempts.load(Ordering::SeqCst), 2);
-        assert_eq!(backend.len().unwrap(), 1);
-        assert_eq!(
-            *backend
-                .memoized(&id, || { panic!("successful retry must remain cached") })
-                .unwrap(),
-            23
-        );
-    }
-
-    #[test]
-    fn panicking_prefix_derivation_releases_waiters_and_is_retriable() {
-        use std::sync::mpsc;
-        use std::time::Duration;
-
-        type Cfg = fp128::Dense;
-        const NV: usize = 14;
-        let catalog = akita_config::test_support::workspace_schedule_catalog::<Cfg>().unwrap();
-        let row = catalog
-            .resolve_key(&akita_params::ScheduleLookupKey::single(
-                akita_params::PolynomialGroupLayout::new(NV, 1),
-            ))
-            .unwrap();
-        let params = &row.schedule().root.params;
-        let n_prefix = (params.d_a() * params.outer_slice_count().get()).next_power_of_two();
-        let prefix = akita_params::setup_prefix_precommitted_params(params, n_prefix).unwrap();
-        let id = akita_params::scheduled_setup_prefix(n_prefix, prefix)
-            .slot_id()
-            .unwrap();
-
-        let cache = Arc::new(super::super::backend::SetupPrefixCache::<u64>::default());
-        let (started_tx, started_rx) = mpsc::channel();
-        let (release_tx, release_rx) = mpsc::channel::<()>();
-        let deriver = {
-            let cache = Arc::clone(&cache);
-            let id = id.clone();
-            std::thread::spawn(move || {
-                cache.memoized(&id, || {
-                    started_tx.send(()).unwrap();
-                    release_rx.recv().unwrap();
-                    panic!("injected prefix derivation panic");
-                })
-            })
-        };
-        started_rx.recv().unwrap();
-
-        // Blocks on the in-flight slot, then must retry once the deriver unwinds.
-        let (waiter_tx, waiter_rx) = mpsc::channel();
-        let waiter = {
-            let cache = Arc::clone(&cache);
-            let id = id.clone();
-            std::thread::spawn(move || {
-                waiter_tx
-                    .send(cache.memoized(&id, || Ok(29)).map(|value| *value))
-                    .unwrap();
-            })
-        };
-        release_tx.send(()).unwrap();
-        assert!(deriver.join().is_err());
-        assert_eq!(
-            waiter_rx.recv_timeout(Duration::from_secs(30)).unwrap(),
-            Ok(29)
-        );
-        waiter.join().unwrap();
-
-        assert_eq!(cache.len().unwrap(), 1);
-        assert_eq!(
-            *cache
-                .memoized(&id, || panic!("successful retry must remain cached"))
-                .unwrap(),
-            29
-        );
-    }
 }
+
+#[cfg(test)]
+mod cache_tests;

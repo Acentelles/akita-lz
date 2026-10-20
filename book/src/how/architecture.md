@@ -22,14 +22,14 @@ orchestration lives in `akita-pcs`.
 | `akita-types` | Proof, setup, and claim wire values, shared protocol math, and native transcript replay |
 | `akita-planner` | `Cfg`-free offline schedule search and artifact emission |
 | `akita-schedules` | Versioned schedule artifacts, semantic row audit, and validated owned catalogs |
-| `akita-config` | Runtime presets, the `CommitmentConfig` trait, trusted artifact loading, `policy_of::<Cfg>()`, and transcript binding |
+| `akita-config` | Runtime presets, the `CommitmentConfig` trait, trusted artifact loading, `policy_of::<Cfg>(chunking)`, and transcript binding |
 | `akita-setup` | Config-backed setup construction and optional setup cache |
 | `akita-verifier` | Verifier replay without prover-only polynomial backends; directly `<Cfg>`-generic |
 | `akita-prover` | Protocol sequencing, public geometry checks, proof assembly, opaque operation contracts |
 | `akita-cpu-backend` | Backend-owned sources, commitment and witness arithmetic, prepared setup resources, caches |
 | `akita-pcs` | Umbrella crate: `AkitaCommitmentScheme`, re-exports, examples, benches, integration tests |
 
-**Dependency graph and ownership rules:** [`docs/crate-graph.md`](../../../docs/crate-graph.md).
+**Dependency graph and ownership rules:** [`docs/crate-graph.md`](https://github.com/LayerZero-Labs/akita/blob/main/docs/crate-graph.md).
 CI enforces one-way boundaries via `scripts/check-crate-deps.sh`.
 
 Key structural facts:
@@ -152,7 +152,7 @@ Mixed-dimension malformed proof rejection is covered by
 | `CommitmentConfig` | Single user-facing trait for every per-config policy hook (algebra, exact SIS profile, decomposition, layout, schedule, transcript bind, prove/commitment params). Verifier-reachable hooks return `Result<_, AkitaError>` |
 | `CommittedGroupParams` | One fold's ordered groups, shared D matrix, payload mode, source encoding, and witness chunk layout |
 | `FoldParams`, `TerminalFoldParams`, `FoldSchedule` | Verifier-visible nonterminal, terminal, and complete schedule structure |
-| `PlannerPolicy` | `Cfg`-free projection of a preset for `akita_planner::find_schedule`; derive via `akita_config::policy_of::<Cfg>()` |
+| `PlannerPolicy` | `Cfg`-free projection of a preset for `akita_planner::find_schedule`; derive via `akita_config::policy_of::<Cfg>(chunking)` |
 | `DensePoly`, `OneHotPoly`, `CommitmentSource`, `CommitmentExecutor` | D-free polynomial storage, commitment representations, and the checked split-or-fused commitment boundary |
 | `ProverBackend`, focused opaque kernel traits | Public protocol operations with backend-owned opening, EOR, fold, and sumcheck state |
 | `WitnessLayout`, `WitnessUnitLayout` | Canonical digit-innermost group-and-chunk ranges ([opening layout](./proving/opening-points-layout.md)) |
@@ -186,7 +186,10 @@ only at dispatch; all arithmetic kernels keep their associated handle types.
 ## Backend routing
 
 Backend routing is always available through `batched_prove`; it requires no
-Cargo feature. A fold reduces a private witness to a smaller successor witness.
+Cargo feature. A nonterminal fold reduces the current claims to an opening of
+a successor witness. The complete successor witness need not be smaller than
+its input.
+
 Before preparing any executor, a caller-defined policy resolves the owner of
 every fold. Each producer commits its successor once. On a switch, the source
 exports a typed packet, a registered bridge converts it, and the destination

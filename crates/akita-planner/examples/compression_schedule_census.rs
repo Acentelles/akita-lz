@@ -246,7 +246,15 @@ fn main() -> Result<(), String> {
                 key.num_vars(),
                 key.num_polynomials()
             );
-            let schedule = match (family.regen)(key) {
+            let schedule = match akita_planner::find_schedule(
+                &akita_params::ScheduleLookupKey::single(key),
+                (family.source_contract)().map_err(|error| error.to_string())?,
+                &[],
+                &(family.policy)(),
+                family.ring_challenge_config,
+            )
+            .map(|planned| planned.schedule)
+            {
                 Ok(schedule) => schedule,
                 Err(AkitaError::UnsupportedSchedule(_)) => {
                     unsupported += 1;
@@ -268,12 +276,20 @@ fn main() -> Result<(), String> {
             }
             schedules += 1;
         }
-        for request in (family.grouped_requests)(&preplans)
+        for request in (family.grouped_requests)(&preplans, (family.policy)().witness_chunk)
             .map_err(|error| format!("{} group keys: {error}", family.family_name()))?
         {
             let key = request.key();
             let label = format!("{}:group:{key:?}", family.family_name());
-            let schedule = match (family.regen_group_batch)(request) {
+            let schedule = match akita_planner::find_schedule(
+                &key,
+                (family.source_contract)().map_err(|error| error.to_string())?,
+                &request.source_contracts(),
+                &(family.policy)(),
+                family.ring_challenge_config,
+            )
+            .map(|planned| planned.schedule)
+            {
                 Ok(schedule) => schedule,
                 Err(AkitaError::UnsupportedSchedule(_)) => {
                     unsupported += 1;

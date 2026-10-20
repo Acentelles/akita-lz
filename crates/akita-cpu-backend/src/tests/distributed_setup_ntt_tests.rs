@@ -24,11 +24,14 @@ fn w8r2_profiling_key(
 
 #[test]
 fn w8r2_ntt_requirements_match_distributed_a_tail_decisions() {
-    let base_catalog =
-        akita_config::test_support::workspace_schedule_catalog::<fp128::OneHotMultiChunk>()
-            .expect("base W8R2 catalog");
-    let catalog = akita_config::test_support::workspace_schedule_catalog::<W8R2Cfg>()
-        .expect("recursive W8R2 catalog");
+    let base_catalog = akita_config::test_support::workspace_schedule_catalog::<
+        fp128::OneHotMultiChunk,
+    >(akita_params::MultiChunkProfileId::W8R2.cfg())
+    .expect("base W8R2 catalog");
+    let catalog = akita_config::test_support::workspace_schedule_catalog::<W8R2Cfg>(
+        akita_params::MultiChunkProfileId::W8R2.cfg(),
+    )
+    .expect("recursive W8R2 catalog");
     let key = w8r2_profiling_key(&base_catalog);
     let schedule = catalog
         .resolve_key(&key)

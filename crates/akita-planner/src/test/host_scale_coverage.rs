@@ -42,22 +42,12 @@ fn shapes() -> Vec<Shape> {
     let k256 = OneHot::committed_source_contract().unwrap();
     let mut shapes = Vec::new();
     for (profile, witness_chunk) in [
-        ("single", ChunkedWitnessCfg::default()),
-        (
-            "w2r2",
-            ChunkedWitnessCfg::from_profile(MultiChunkProfileId::W2R2),
-        ),
-        (
-            "w4r2",
-            ChunkedWitnessCfg::from_profile(MultiChunkProfileId::W4R2),
-        ),
-        (
-            "w8r2",
-            ChunkedWitnessCfg::from_profile(MultiChunkProfileId::W8R2),
-        ),
+        ("single", ChunkedWitnessCfg::default_non_chunked()),
+        ("w2r2", MultiChunkProfileId::W2R2.cfg()),
+        ("w4r2", MultiChunkProfileId::W4R2.cfg()),
+        ("w8r2", MultiChunkProfileId::W8R2.cfg()),
     ] {
-        let mut policy = policy_of::<RecursiveCommitmentConfig<OneHot>>();
-        policy.witness_chunk = witness_chunk;
+        let policy = policy_of::<RecursiveCommitmentConfig<OneHot>>(witness_chunk);
         let mut push = |label: String, key, contract| {
             shapes.push(Shape {
                 label,
@@ -104,11 +94,10 @@ fn shapes() -> Vec<Shape> {
             }
         }
     }
-    let w8r2 = ChunkedWitnessCfg::from_profile(MultiChunkProfileId::W8R2);
+    let w8r2 = MultiChunkProfileId::W8R2.cfg();
     for num_vars in [34, 35] {
         for num_polys in [1, 2] {
-            let mut policy = policy_of::<DenseBounded>();
-            policy.witness_chunk = w8r2;
+            let policy = policy_of::<DenseBounded>(w8r2);
             shapes.push(Shape {
                 label: format!("dense-bounded nv{num_vars} p{num_polys}"),
                 key: root_group(num_vars, num_polys),
@@ -117,8 +106,7 @@ fn shapes() -> Vec<Shape> {
                 ring_challenge_config: DenseBounded::ring_challenge_config,
             });
         }
-        let mut policy = policy_of::<Dense>();
-        policy.witness_chunk = w8r2;
+        let policy = policy_of::<Dense>(w8r2);
         shapes.push(Shape {
             label: format!("dense-full nv{num_vars} p1"),
             key: root_group(num_vars, 1),
