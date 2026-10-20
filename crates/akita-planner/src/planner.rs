@@ -974,6 +974,9 @@ pub(crate) fn find_schedule_in_relation_order(
 #[cfg(all(test, feature = "catalog-gen"))]
 #[path = "test/host_scale_coverage.rs"]
 mod host_scale_coverage_tests;
+#[cfg(test)]
+#[path = "test/setup_prefix_challenge_hook.rs"]
+mod setup_prefix_challenge_hook_tests;
 #[cfg(all(test, feature = "catalog-gen"))]
 #[path = "test/planner_totality.rs"]
 mod totality_tests;
