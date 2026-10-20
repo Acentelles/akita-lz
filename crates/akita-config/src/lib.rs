@@ -432,9 +432,9 @@ pub trait CommitmentConfig: Clone + Send + Sync + 'static {
         None
     }
 
-    /// Whether recursive opening bases must be non-decreasing.
+    /// Whether recursive opening bases must be non-decreasing (opt-in).
     fn monotone_opening_basis() -> bool {
-        true
+        false
     }
 
     /// Inclusive `(min, max)` A/source decomposition basis range.

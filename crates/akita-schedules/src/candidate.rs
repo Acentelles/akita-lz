@@ -183,7 +183,7 @@ mod tests {
             inner_basis_range: (1, 1),
             opening_basis_range: (1, 1),
             root_opening_log_basis: None,
-            monotone_opening_basis: true,
+            monotone_opening_basis: false,
             witness_chunk: ChunkedWitnessCfg::default(),
             recursive_setup_planning: false,
         };
@@ -243,7 +243,7 @@ mod tests {
             inner_basis_range: (4, 4),
             opening_basis_range: (4, 4),
             root_opening_log_basis: None,
-            monotone_opening_basis: true,
+            monotone_opening_basis: false,
             witness_chunk: ChunkedWitnessCfg::default(),
             recursive_setup_planning: false,
         };

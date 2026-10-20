@@ -30,7 +30,7 @@ pub fn policy_digest(policy: &PlannerPolicy) -> [u8; 32] {
         recursive_setup_planning,
     } = *policy;
     let mut bytes = Vec::new();
-    bytes.extend_from_slice(b"AKITA-PLANNER-POLICY-V1");
+    bytes.extend_from_slice(b"AKITA-PLANNER-POLICY-V2");
     write_u64(&mut bytes, sis_modulus_profile_tag(sis_modulus_profile));
     write_u64(&mut bytes, u64::from(sis_security_policy.tag()));
     bytes.extend_from_slice(&sis_table_digest.0);
@@ -53,9 +53,9 @@ pub fn policy_digest(policy: &PlannerPolicy) -> [u8; 32] {
     write_u64(&mut bytes, u64::from(recursive_setup_search_policy.tag()));
     write_optional_usize(&mut bytes, setup_field_budget);
     write_u64(&mut bytes, min_offloaded_witness_contraction as u64);
-    // Preserve V1 bytes for legacy policies. Non-default opening policies use
-    // a tagged extension so neither override can alias a legacy catalog.
-    if root_opening_log_basis.is_some() || !monotone_opening_basis {
+    // V2 makes unrestricted opening bases the normal policy. Root overrides
+    // and the monotone opt-in use a tagged extension; V1 identities are retired.
+    if root_opening_log_basis.is_some() || monotone_opening_basis {
         bytes.extend_from_slice(b"AKITA-OPENING-POLICY-V2");
         match root_opening_log_basis {
             Some(basis) => {

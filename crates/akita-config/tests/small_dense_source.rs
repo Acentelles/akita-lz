@@ -18,6 +18,11 @@ where
     fp128::DenseSmall<BITS>: CommitmentConfig,
 {
     assert_eq!(fp128::DenseSmall::<BITS>::LOG_COMMIT_BOUND, BITS);
+    assert!(!fp128::DenseSmall::<BITS>::monotone_opening_basis());
+    assert_eq!(
+        fp128::DenseSmall::<BITS>::root_opening_log_basis(),
+        (BITS >= 5).then_some(5)
+    );
     assert_eq!(
         fp128::DenseSmall::<BITS>::schedule_family_name(),
         format!("fp128_dense_small_{BITS}")

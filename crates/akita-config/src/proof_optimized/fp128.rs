@@ -169,7 +169,7 @@ impl_proof_optimized_preset!(
 /// `fp128_dense_small_<K>` family and the adaptive dimensions of [`Dense`].
 /// K=5 and K=6 cover arities 13 through 29, use one root source digit,
 /// pin the root opening log basis to 5, and allow decreasing recursive bases.
-/// K=3 and K=4 retain the legacy arity-14 policy.
+/// K=3 and K=4 retain arity-14 coverage and use the default opening policy.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DenseSmall<const SIGNED_BITS: u32>;
 
@@ -209,8 +209,8 @@ macro_rules! impl_small_dense {
         );
     };
 }
-impl_small_dense!(3, None, true);
-impl_small_dense!(4, None, true);
+impl_small_dense!(3, None, false);
+impl_small_dense!(4, None, false);
 impl_small_dense!(5, Some(5), false);
 impl_small_dense!(6, Some(5), false);
 

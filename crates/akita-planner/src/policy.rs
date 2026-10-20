@@ -75,7 +75,8 @@ mod tests {
         let mut policy = akita_config::policy_of::<akita_config::proof_optimized::fp128::Dense>(
             akita_params::ChunkedWitnessCfg::default_non_chunked(),
         );
-        let legacy = akita_schedules::policy_digest(&policy);
+        assert!(!policy.monotone_opening_basis);
+        let default_digest = akita_schedules::policy_digest(&policy);
         assert_eq!(log_basis_search_range_at_level(&policy, 0), (3, 3));
         assert_eq!(log_basis_search_range_at_level(&policy, 1), (3, 6));
         policy.root_opening_log_basis = Some(5);
@@ -83,12 +84,14 @@ mod tests {
         assert_eq!(log_basis_search_range_at_level(&policy, 0), (5, 5));
         assert_eq!(log_basis_search_range_at_level(&policy, 1), (3, 6));
         let pinned = akita_schedules::policy_digest(&policy);
-        assert_ne!(legacy, pinned);
-        policy.monotone_opening_basis = false;
-        let free = akita_schedules::policy_digest(&policy);
-        assert_ne!(pinned, free);
+        assert_ne!(default_digest, pinned);
+        policy.monotone_opening_basis = true;
+        let monotone = akita_schedules::policy_digest(&policy);
+        assert_ne!(pinned, monotone);
         policy.root_opening_log_basis = None;
-        assert_ne!(legacy, akita_schedules::policy_digest(&policy));
+        assert_ne!(default_digest, akita_schedules::policy_digest(&policy));
+        policy.monotone_opening_basis = false;
+        assert_eq!(default_digest, akita_schedules::policy_digest(&policy));
         policy.root_opening_log_basis = Some(7);
         assert!(akita_schedules::validate_policy(&policy).is_err());
     }
