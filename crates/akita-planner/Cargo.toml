@@ -67,3 +67,8 @@ required-features = ["catalog-security"]
 
 [lints]
 workspace = true
+
+[[example]]
+name = "root_basis_report"
+path = "examples/root_basis_report.rs"
+required-features = ["catalog-gen"]

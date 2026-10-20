@@ -623,3 +623,6 @@ fn fp128_dense_monomial_basis() {
 
 #[path = "akita_fp128_e2e/small_dense.rs"]
 mod small_dense;
+
+#[path = "akita_fp128_e2e/root_basis_measurement.rs"]
+mod root_basis_measurement;
