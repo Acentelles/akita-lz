@@ -4,7 +4,7 @@
 //! utilities.
 //!
 //! Concrete fields, field packing, the cyclotomic ring, NTT/CRT arithmetic,
-//! and the smooth FFT live in `jolt-field`. Sparse Fiat–Shamir challenge
+//! and the smooth FFT live in `jolt-algebra`. Sparse Fiat–Shamir challenge
 //! representations and samplers live in `jolt-crypto`.
 
 #![warn(missing_docs)]
@@ -21,7 +21,7 @@ pub use split_eq::GruenSplitEq;
 
 /// Compatibility re-export for jolt-akita; removed once jolt-akita ports (RP3)
 /// and Akita re-pins.
-pub use jolt_field::ring;
+pub use jolt_algebra::ring;
 /// Compatibility re-export for jolt-akita; removed once jolt-akita ports (RP3)
 /// and Akita re-pins.
-pub use jolt_field::CyclotomicRing;
+pub use jolt_algebra::CyclotomicRing;

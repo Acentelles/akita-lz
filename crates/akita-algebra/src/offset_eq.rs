@@ -6,10 +6,10 @@
 //! equality primitive shared by the kernel and direct callers.
 
 use akita_error::AkitaError;
-use jolt_field::checked;
+use jolt_algebra::checked;
 
-use jolt_field::solinas::parallel::*;
-use jolt_field::Field;
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::Field;
 
 mod tensor_pair;
 pub use tensor_pair::{
@@ -1453,7 +1453,7 @@ mod tests;
 #[cfg(test)]
 mod amortization_tests {
     use super::*;
-    use jolt_field::{Fp64, Ring};
+    use jolt_algebra::{Fp64, Ring};
 
     type F = Fp64<4294967197>;
 

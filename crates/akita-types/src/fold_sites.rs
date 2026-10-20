@@ -10,7 +10,7 @@ use akita_params::transcript_site::{
     ProtocolSiteId, SITE_FAMILY_FOLD_BINDING, SITE_FAMILY_FOLD_CHALLENGE, SITE_FAMILY_NEXT_WITNESS,
     SITE_FAMILY_OPENING_PAYLOAD, SITE_FAMILY_ROOT_STATEMENT, SITE_FAMILY_TERMINAL,
 };
-use jolt_field::narrowing::usize_to_u32;
+use jolt_algebra::narrowing::usize_to_u32;
 
 /// One fold-owned proof-stream site.
 ///

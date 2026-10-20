@@ -30,7 +30,7 @@ dependencies = [
  "akita-error",
  "akita-serialization",
  "criterion",
- "jolt-field",
+ "jolt-algebra",
  "jolt-poly",
  "rand 0.8.8",
  "rayon",
@@ -53,8 +53,8 @@ dependencies = [
  "akita-schedules",
  "akita-serialization",
  "akita-types",
+ "jolt-algebra",
  "jolt-crypto",
- "jolt-field",
  "rand_core 0.6.4",
  "serde_json",
 ]
@@ -73,8 +73,8 @@ dependencies = [
  "akita-types",
  "akita-verifier",
  "criterion",
+ "jolt-algebra",
  "jolt-crypto",
- "jolt-field",
  "jolt-poly",
  "jolt-transcript",
  "rand 0.8.8",
@@ -86,8 +86,8 @@ dependencies = [
 name = "akita-error"
 version = "0.1.0"
 dependencies = [
+ "jolt-algebra",
  "jolt-crypto",
- "jolt-field",
  "jolt-transcript",
  "thiserror",
 ]
@@ -101,8 +101,8 @@ dependencies = [
  "akita-serialization",
  "akita-sumcheck",
  "blake2",
+ "jolt-algebra",
  "jolt-crypto",
- "jolt-field",
  "jolt-transcript",
  "num-bigint 0.5.1",
  "rand 0.8.8",
@@ -129,8 +129,8 @@ dependencies = [
  "ark-bn254 0.6.0",
  "ark-ff 0.6.0",
  "criterion",
+ "jolt-algebra",
  "jolt-crypto",
- "jolt-field",
  "jolt-poly",
  "jolt-transcript",
  "libc",
@@ -160,8 +160,8 @@ dependencies = [
  "akita-params",
  "akita-schedules",
  "akita-sis-estimator",
+ "jolt-algebra",
  "jolt-crypto",
- "jolt-field",
  "libm",
 ]
 
@@ -175,8 +175,8 @@ dependencies = [
  "akita-serialization",
  "akita-sumcheck",
  "akita-types",
+ "jolt-algebra",
  "jolt-crypto",
- "jolt-field",
  "jolt-poly",
  "jolt-transcript",
  "tracing",
@@ -198,8 +198,8 @@ name = "akita-serialization"
 version = "0.1.0"
 dependencies = [
  "getrandom 0.2.17",
+ "jolt-algebra",
  "jolt-crypto",
- "jolt-field",
  "jolt-poly",
  "proptest",
  "thiserror",
@@ -215,8 +215,8 @@ dependencies = [
  "akita-params",
  "akita-serialization",
  "akita-types",
+ "jolt-algebra",
  "jolt-crypto",
- "jolt-field",
  "tracing",
 ]
 
@@ -242,7 +242,7 @@ dependencies = [
  "akita-algebra",
  "akita-error",
  "akita-serialization",
- "jolt-field",
+ "jolt-algebra",
  "jolt-poly",
  "jolt-transcript",
 ]
@@ -257,8 +257,8 @@ dependencies = [
  "akita-serialization",
  "akita-sumcheck",
  "criterion",
+ "jolt-algebra",
  "jolt-crypto",
- "jolt-field",
  "jolt-poly",
  "jolt-transcript",
  "rand 0.8.8",
@@ -277,8 +277,8 @@ dependencies = [
  "akita-sumcheck",
  "akita-types",
  "criterion",
+ "jolt-algebra",
  "jolt-crypto",
- "jolt-field",
  "jolt-poly",
  "jolt-transcript",
  "rayon",

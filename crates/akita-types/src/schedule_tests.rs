@@ -43,7 +43,7 @@ use akita_serialization::{AkitaSerialize, Compress};
 use jolt_crypto::challenge::SparseChallengeConfig;
 
 use akita_sumcheck::{EqFactoredSumcheckProof, SumcheckProof};
-use jolt_field::{CanonicalEncoding, Field, Prime128OffsetA7F7, Zero};
+use jolt_algebra::{CanonicalEncoding, Field, Prime128OffsetA7F7, Zero};
 
 #[path = "schedule_tests/descriptor.rs"]
 mod descriptor;

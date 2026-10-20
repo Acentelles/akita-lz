@@ -5,8 +5,8 @@ use crate::opaque::ComputeBackendSetup;
 use crate::opaque::RingSwitchRelationView;
 use crate::opaque::{FoldResponseKernel, RingSwitchRelationKernel};
 use akita_error::AkitaError;
-use jolt_field::Unreduced;
-use jolt_field::{CanonicalEncoding, Field, Ring};
+use jolt_algebra::Unreduced;
+use jolt_algebra::{CanonicalEncoding, Field, Ring};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
@@ -108,7 +108,7 @@ where
 /// centering convention is written once: a canonical
 /// residue at or below `centering_threshold` is the positive side, anything above
 /// it is negative with magnitude `modulus - canonical`. That is the same split
-/// `jolt_field::ring::cyclotomic::BalancedDecomposePow2Params` applies when
+/// `jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params` applies when
 /// it selects the bias for a residue. The range check tracks the `u128`
 /// magnitude on each side because `modulus - canonical` can exceed `i128::MAX`
 /// for a full-width residue.
@@ -195,7 +195,7 @@ fn evaluate_root_polynomial_with_kernel<F, P, const D: usize>(
     num_positions_per_block: usize,
     num_live_blocks: usize,
     basis: akita_params::BasisMode,
-    evaluate: impl FnOnce(&[F], &[F], usize) -> Result<jolt_field::CyclotomicRing<F, D>, AkitaError>,
+    evaluate: impl FnOnce(&[F], &[F], usize) -> Result<jolt_algebra::CyclotomicRing<F, D>, AkitaError>,
 ) -> Result<F, AkitaError>
 where
     F: Field + CanonicalEncoding,
@@ -369,7 +369,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::Fp64;
+    use jolt_algebra::Fp64;
 
     type F = Fp64<4294967197>;
 

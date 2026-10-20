@@ -2,10 +2,10 @@
 
 use akita_algebra::{eq_poly::EqPolynomial, offset_eq::OffsetEqWindow};
 use akita_error::AkitaError;
-use jolt_field::reduce_signed_accum;
-use jolt_field::solinas::parallel::*;
-use jolt_field::Unreduced;
-use jolt_field::{Field, Ring, Zero};
+use jolt_algebra::reduce_signed_accum;
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::Unreduced;
+use jolt_algebra::{Field, Ring, Zero};
 use std::cmp::Ordering;
 use std::mem;
 use std::ops::Range;

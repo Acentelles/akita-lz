@@ -3,7 +3,7 @@
 
 use std::io::{Read, Write};
 
-use jolt_field::{CyclotomicRing, Field};
+use jolt_algebra::{CyclotomicRing, Field};
 
 use crate::{AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate};
 

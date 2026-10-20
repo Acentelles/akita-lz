@@ -9,11 +9,11 @@ use crate::sources::block_digits::{CachedDigits, DigitShape, LiveRings};
 use crate::sources::poly_helpers::{element_partitioned_decompose_fold, SignedDigitBasis};
 use akita_error::AkitaError;
 use akita_types::SubfieldMultiplierOpeningPoint;
+use jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{CanonicalEncoding, Field};
 use jolt_crypto::challenge::SparseChallenge;
-use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
-use jolt_field::solinas::parallel::*;
-use jolt_field::CyclotomicRing;
-use jolt_field::{CanonicalEncoding, Field};
 
 /// Reject a digit shape the dense fold kernels cannot run, before any cache
 /// build or decomposition setup can panic on it.

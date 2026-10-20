@@ -5,12 +5,12 @@ use akita_config::CommitmentConfig;
 use akita_cpu_backend::DensePoly;
 use akita_params::balanced_signed_digit_abs_bound;
 use akita_types::{prepare_ntt_cache, NttCacheMode};
-use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
 use std::hint::black_box;
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use jolt_field::solinas::parallel::*;
-use jolt_field::{CanonicalEncoding, Ring};
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::{CanonicalEncoding, Ring};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
@@ -80,11 +80,11 @@ fn bench_dense_root_matvec(c: &mut Criterion) {
     .unwrap();
     let rings = poly.ring_coeffs::<D>().expect("dense ring view");
     let num_live_blocks = rings.len().div_ceil(layout.blocks().positions_per_block);
-    let block_slices: Vec<&[jolt_field::CyclotomicRing<F, D>]> = (0..num_live_blocks)
+    let block_slices: Vec<&[jolt_algebra::CyclotomicRing<F, D>]> = (0..num_live_blocks)
         .map(|i| {
             let start = i * layout.blocks().positions_per_block;
             if start >= rings.len() {
-                &[] as &[jolt_field::CyclotomicRing<F, D>]
+                &[] as &[jolt_algebra::CyclotomicRing<F, D>]
             } else {
                 &rings[start..(start + layout.blocks().positions_per_block).min(rings.len())]
             }

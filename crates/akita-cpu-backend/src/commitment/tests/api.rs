@@ -13,8 +13,8 @@ use akita_params::{
     SetupMatrixCapacity, SisModulusProfileId,
 };
 use akita_types::RingVec;
+use jolt_algebra::Fp64;
 use jolt_crypto::challenge::SparseChallengeConfig;
-use jolt_field::Fp64;
 
 type F = Fp64<4294967197>;
 const D: usize = 64;
@@ -461,10 +461,10 @@ fn commitment_bytes_ignore_opening_method_and_profiles_reject_tensor_sources() {
     {
         let digits = canonical.inner().digits;
         let mut planes = vec![[0i8; D]; digits.num_digits];
-        jolt_field::CyclotomicRing::<F, D>::from_coefficients(coefficients.try_into().unwrap())
+        jolt_algebra::CyclotomicRing::<F, D>::from_coefficients(coefficients.try_into().unwrap())
             .balanced_decompose_pow2_i8_into_with_params(
                 &mut planes,
-                &jolt_field::ring::cyclotomic::BalancedDecomposePow2Params::new(
+                &jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params::new(
                     digits.num_digits,
                     digits.log_basis,
                 ),
@@ -482,12 +482,12 @@ fn commitment_bytes_ignore_opening_method_and_profiles_reject_tensor_sources() {
         .enumerate()
     {
         let expected = a_matrix.row(row).unwrap().iter().zip(&source_digits).fold(
-            jolt_field::CyclotomicRing::zero(),
+            jolt_algebra::CyclotomicRing::zero(),
             |sum, (matrix, digits)| {
                 sum + *matrix
-                    * jolt_field::CyclotomicRing::from_coefficients(std::array::from_fn(|index| {
-                        F::from_i8(digits[index])
-                    }))
+                    * jolt_algebra::CyclotomicRing::from_coefficients(std::array::from_fn(
+                        |index| F::from_i8(digits[index]),
+                    ))
             },
         );
         assert_eq!(*actual, expected, "A commitment row {row} mismatch");

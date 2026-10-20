@@ -8,8 +8,8 @@ use crate::opaque::{
 use akita_error::AkitaError;
 use akita_params::RingRelationMode;
 use akita_types::DigitBlocks;
-use jolt_field::CyclotomicRing;
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{CanonicalEncoding, Field};
 
 use super::relation_quotient::quotient_from_cyclic_and_reduced;
 
@@ -110,7 +110,7 @@ mod tests {
     use super::*;
     use crate::opaque::{ComputeBackendSetup, CpuBackend};
     use crate::AkitaProverSetup;
-    use jolt_field::Prime64Offset59;
+    use jolt_algebra::Prime64Offset59;
 
     #[test]
     fn reduced_d_rows_prepare_only_the_negacyclic_product() {

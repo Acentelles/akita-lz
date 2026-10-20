@@ -3,7 +3,7 @@ use super::{
     GrindingSite, SumcheckProtocol,
 };
 use akita_error::AkitaError;
-use jolt_field::narrowing::usize_to_u32;
+use jolt_algebra::narrowing::usize_to_u32;
 
 /// Consecutive queries whose protocol shape differs only by the round index.
 /// This is not a wire run: replay still has one distinct site for every round.

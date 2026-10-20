@@ -5,14 +5,16 @@ use std::time::Duration;
 use akita_cpu_backend::benchmark_support::mat_vec_mul_ntt_digits_i8;
 use akita_params::FlatMatrix;
 use akita_types::{prepare_ntt_cache, NttCacheMode, PreparedNttCache};
-use jolt_field::CyclotomicRing;
+use jolt_algebra::CyclotomicRing;
 use std::hint::black_box;
 
 use criterion::{
     criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, BenchmarkId, Criterion,
     Throughput,
 };
-use jolt_field::{CanonicalEncoding, Field, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59};
+use jolt_algebra::{
+    CanonicalEncoding, Field, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59,
+};
 
 type F = Prime128OffsetA7F7;
 

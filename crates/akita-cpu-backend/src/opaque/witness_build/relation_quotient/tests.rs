@@ -1,7 +1,7 @@
 use super::*;
+use jolt_algebra::Prime128OffsetA7F7 as F;
+use jolt_algebra::Zero;
 use jolt_crypto::challenge::SparseChallenge;
-use jolt_field::Prime128OffsetA7F7 as F;
-use jolt_field::Zero;
 
 fn ring<const D: usize>(offset: u64) -> CyclotomicRing<F, D> {
     CyclotomicRing::from_coefficients(std::array::from_fn(|idx| {

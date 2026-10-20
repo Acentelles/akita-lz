@@ -7,7 +7,7 @@ license = "Apache-2.0 OR MIT"
 publish = false
 
 [package.metadata.cargo-machete]
-ignored = ["jolt-field"]
+ignored = ["jolt-algebra"]
 
 [features]
 # `--features guest` is the flag the `jolt` build CLI passes when building
@@ -38,7 +38,7 @@ jolt = { package = "jolt-sdk", git = "https://github.com/a16z/jolt", rev = "f15e
 akita-recursion-glue = { path = "../glue" }
 akita-config = { path = "../../../crates/akita-config", default-features = false, features = [
 ] }
-jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false, features = [
+jolt-algebra = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false, features = [
   "asm",
   "solinas",
 ] }

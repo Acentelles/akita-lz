@@ -1,5 +1,5 @@
 use akita_error::AkitaError;
-use jolt_field::narrowing::usize_to_u64;
+use jolt_algebra::narrowing::usize_to_u64;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct SparseRingCoeff {

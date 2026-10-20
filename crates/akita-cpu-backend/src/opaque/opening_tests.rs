@@ -6,7 +6,7 @@ use akita_params::*;
 use akita_prover::backend::*;
 use akita_sumcheck::SumcheckKernel;
 use akita_types::*;
-use jolt_field::{Ext2, ExtField, Field, One, Prime128OffsetA7F7, Ring, Zero};
+use jolt_algebra::{Ext2, ExtField, Field, One, Prime128OffsetA7F7, Ring, Zero};
 use jolt_poly::UnivariatePoly;
 use jolt_transcript::{ProverTranscript, VerifierTranscript};
 use std::sync::Arc;
@@ -773,7 +773,7 @@ fn nonterminal_opening_cannot_publish_terminal_rows() {
     let point = PreparedOpeningPoint::<F, E>::from_parts(
         Vec::new(),
         RingMultiplierOpeningPoint::from_base(&outer),
-        jolt_field::CyclotomicRing::<F, 64>::one(),
+        jolt_algebra::CyclotomicRing::<F, 64>::one(),
     );
     let prepared = crate::opaque::prepared_opening::evaluation_trace(
         backend.binding(&proof.session, &context).unwrap(),
@@ -786,7 +786,7 @@ fn nonterminal_opening_cannot_publish_terminal_rows() {
             ))),
         ),
         point,
-        vec![RingVec::from_ring_elems(&[jolt_field::CyclotomicRing::<
+        vec![RingVec::from_ring_elems(&[jolt_algebra::CyclotomicRing::<
             F,
             64,
         >::one()])],

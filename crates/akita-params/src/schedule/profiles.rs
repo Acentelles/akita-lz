@@ -6,7 +6,7 @@ use crate::{
     PolynomialGroupLayout,
 };
 use akita_error::AkitaError;
-use jolt_field::checked;
+use jolt_algebra::checked;
 
 /// Physical coefficient representation authenticated by a commitment.
 ///

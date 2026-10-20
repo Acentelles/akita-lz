@@ -1,5 +1,5 @@
 use super::*;
-use jolt_field::checked;
+use jolt_algebra::checked;
 
 impl<E: Field + Ring + Unreduced> LowBasisRangeCheckProver<E> {
     /// Build the low-basis prover from the compact witness table.

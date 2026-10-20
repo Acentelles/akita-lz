@@ -350,8 +350,8 @@ pub fn decode_riscv64_scalar_q128_cache<F: Field + CanonicalEncoding, const D: u
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::CyclotomicRing;
-    use jolt_field::{Prime128Offset275 as F, Ring};
+    use jolt_algebra::CyclotomicRing;
+    use jolt_algebra::{Prime128Offset275 as F, Ring};
     use std::panic::{catch_unwind, AssertUnwindSafe};
 
     const D: usize = 64;

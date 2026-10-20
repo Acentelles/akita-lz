@@ -13,11 +13,11 @@ use akita_serialization::AkitaSerialize;
 use akita_types::AkitaExpandedSetup;
 use akita_types::{setup_prefix_coverage_eval_len, AkitaVerifierSetup, PreparedRelationAddress};
 #[cfg(test)]
-use jolt_field::ring::eval_ring_at_pows_fast;
-use jolt_field::ring::evaluate_power_sequence_mle;
+use jolt_algebra::ring::eval_ring_at_pows_fast;
+use jolt_algebra::ring::evaluate_power_sequence_mle;
 #[cfg(test)]
-use jolt_field::solinas::parallel::*;
-use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field, Ring};
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::{CanonicalDecode, CanonicalEncoding, ExtField, Field, Ring};
 use jolt_transcript::Sponge;
 
 /// Verifier counterpart to `AkitaStage3Prover`: replays the setup product
@@ -82,7 +82,11 @@ impl<E: Field> SetupSumcheckVerifier<E> {
     ) -> Result<SetupSumcheckReplay<E>, AkitaError>
     where
         F: Field + CanonicalEncoding,
-        E: ExtField<F> + Ring + AkitaSerialize + jolt_field::MulBaseUnreduced<F> + CanonicalDecode,
+        E: ExtField<F>
+            + Ring
+            + AkitaSerialize
+            + jolt_algebra::MulBaseUnreduced<F>
+            + CanonicalDecode,
     {
         let geometry = self.setup_index_weight.projection_geometry();
         let ring_d = geometry.base_ring_dim();
@@ -144,7 +148,7 @@ pub(crate) fn verify_stage3<F, E, H: Sponge>(
 ) -> Result<SetupSumcheckReplay<E>, AkitaError>
 where
     F: Field + CanonicalEncoding,
-    E: ExtField<F> + Ring + AkitaSerialize + jolt_field::MulBaseUnreduced<F> + CanonicalDecode,
+    E: ExtField<F> + Ring + AkitaSerialize + jolt_algebra::MulBaseUnreduced<F> + CanonicalDecode,
 {
     let setup_coefficient_bits = rs
         .relation_address_geometry
@@ -229,7 +233,7 @@ fn setup_mle_at_eq_tables<F, E, const D: usize>(
 ) -> Result<E, AkitaError>
 where
     F: Field,
-    E: ExtField<F> + jolt_field::MulBaseUnreduced<F>,
+    E: ExtField<F> + jolt_algebra::MulBaseUnreduced<F>,
 {
     if source_rows > setup_eval_len {
         return Err(AkitaError::InvalidSetup(
@@ -292,7 +296,7 @@ mod tests {
     use super::*;
 
     use akita_types::AkitaSetupDescriptor;
-    use jolt_field::Prime128OffsetA7F7;
+    use jolt_algebra::Prime128OffsetA7F7;
 
     type F = Prime128OffsetA7F7;
     const RING_D: usize = 64;

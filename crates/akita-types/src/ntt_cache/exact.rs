@@ -404,8 +404,8 @@ fn prepare_ifma52_tail<F: Field + CanonicalEncoding, W: PrimeWidth, const D: usi
 mod tests {
     use super::*;
     use akita_params::FlatMatrix;
-    use jolt_field::CyclotomicRing;
-    use jolt_field::Prime32Offset99;
+    use jolt_algebra::CyclotomicRing;
+    use jolt_algebra::Prime32Offset99;
 
     #[test]
     fn ifma_rebuild_retains_a_joined_tail_prefix() {

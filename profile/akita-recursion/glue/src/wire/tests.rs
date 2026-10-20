@@ -12,7 +12,7 @@ use akita_types::{
 };
 use jolt_crypto::challenge::SparseChallengeConfig;
 use jolt_crypto::lattice::derive_public_matrix_prefix;
-use jolt_field::Zero;
+use jolt_algebra::Zero;
 
 type TestCfg = fp128::OneHot;
 type TestF = fp128::Field;

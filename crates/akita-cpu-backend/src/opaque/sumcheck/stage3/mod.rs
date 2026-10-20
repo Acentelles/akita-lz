@@ -13,7 +13,7 @@ mod utils;
 use crate::opaque::OperationBinding;
 use crate::opaque::{CpuBackend, OpaqueStage3Kernel, Stage3Request};
 use akita_algebra::eq_poly::EqPolynomial;
-use jolt_field::ring::scalar_powers;
+use jolt_algebra::ring::scalar_powers;
 use jolt_poly::UnivariatePoly;
 
 use akita_error::AkitaError;
@@ -24,7 +24,7 @@ use akita_types::{
     AkitaExpandedSetup, FpExtEncoding, PreparedRelationAddress, RingRelationInstance,
     SetupContributionGroupInputs, SetupContributionPlan,
 };
-use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
 use product_table::{RectangularSetupProductTerm, SetupProductSource};
 use std::sync::Arc;
 

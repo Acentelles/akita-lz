@@ -21,12 +21,12 @@ use akita_pcs::AkitaCommitmentScheme;
 use akita_pcs::{AkitaSponge, PROOF_STREAM_PROTOCOL};
 use akita_serialization::{AkitaDeserialize, AkitaSerialize, Valid};
 use akita_types::FpExtEncoding;
-use jolt_field::solinas::parallel::*;
-use jolt_field::{
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::{
     AdditiveGroup, CanonicalBytes, CanonicalEncoding, ExtField, Field, MulBaseUnreduced,
     PseudoMersenne, Ring,
 };
-use jolt_field::{Fold, Unreduced, WithCommitAccumulator};
+use jolt_algebra::{Fold, Unreduced, WithCommitAccumulator};
 use jolt_transcript::ProverTranscript;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
@@ -67,7 +67,7 @@ fn run_prove<FF, const D: usize, Cfg: CommitmentConfig<Field = FF>>(
     <FF as Unreduced>::Wide: From<FF> + AdditiveGroup,
     Cfg::ExtField: FpExtEncoding<FF>
         + ExtField<FF>
-        + jolt_field::MulBaseUnreduced<FF>
+        + jolt_algebra::MulBaseUnreduced<FF>
         + Unreduced
         + Fold
         + AkitaSerialize
@@ -416,8 +416,8 @@ pub(crate) fn run_onehot<FF, const D: usize, Cfg: CommitmentConfig<Field = FF>>(
         + AkitaDeserialize<Context = ()>
         + AkitaSerialize
         + 'static,
-    <FF as Unreduced>::Wide: From<FF> + jolt_field::AdditiveGroup,
-    Cfg::ExtField: jolt_field::MulBaseUnreduced<FF>
+    <FF as Unreduced>::Wide: From<FF> + jolt_algebra::AdditiveGroup,
+    Cfg::ExtField: jolt_algebra::MulBaseUnreduced<FF>
         + ExtField<FF>
         + FpExtEncoding<FF>
         + Unreduced

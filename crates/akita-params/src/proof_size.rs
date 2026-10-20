@@ -92,7 +92,7 @@ impl NonterminalLevelLayout {
     /// Maximum fixed-width bytes emitted by this level.
     pub fn encoded_len(self) -> Result<usize, AkitaError> {
         let opening_payload_bytes =
-            jolt_field::checked::product([self.opening_payload_coeffs, self.base_field_bytes])
+            jolt_algebra::checked::product([self.opening_payload_coeffs, self.base_field_bytes])
                 .ok_or_else(|| AkitaError::InvalidSetup("opening payload size overflow".into()))?;
         let stage1_bytes = stage1_proof_bytes(self.stage1_shape, self.challenge_field_bytes)?;
         let stage2_bytes = sumcheck_bytes(
@@ -100,17 +100,17 @@ impl NonterminalLevelLayout {
             self.stage2_sumcheck.degree_bound(),
             self.challenge_field_bytes,
         );
-        let next_witness_bytes = jolt_field::checked::product([
-            self.next_outer_payload_coeffs,
-            self.base_field_bytes,
-        ])
-        .ok_or_else(|| AkitaError::InvalidSetup("next witness payload size overflow".into()))?;
-        let next_witness_evaluation_bytes = jolt_field::checked::product([
+        let next_witness_bytes =
+            jolt_algebra::checked::product([self.next_outer_payload_coeffs, self.base_field_bytes])
+                .ok_or_else(|| {
+                    AkitaError::InvalidSetup("next witness payload size overflow".into())
+                })?;
+        let next_witness_evaluation_bytes = jolt_algebra::checked::product([
             self.next_witness_evaluations,
             self.challenge_field_bytes,
         ])
         .ok_or_else(|| AkitaError::InvalidSetup("next witness evaluation size overflow".into()))?;
-        jolt_field::checked::sum([
+        jolt_algebra::checked::sum([
             opening_payload_bytes,
             stage1_bytes,
             stage2_bytes,

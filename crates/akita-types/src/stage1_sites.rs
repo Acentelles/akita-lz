@@ -3,7 +3,7 @@
 use crate::GrindingReplay;
 use akita_error::AkitaError;
 use akita_params::transcript_site::{ProtocolSiteId, SITE_FAMILY_STAGE1};
-use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field};
+use jolt_algebra::{CanonicalDecode, CanonicalEncoding, ExtField, Field};
 use jolt_transcript::Channel;
 
 const ROLE_CHILD_CLAIMS: u32 = 1;
@@ -63,7 +63,7 @@ mod tests {
     use crate::transcript::test_transcripts::{prover as new_prover, verifier as new_verifier};
     use crate::{ProverGrinding, VerifierGrinding};
     use akita_params::{ChallengeFieldOrder, GrindingPlan, GrindingRun, GrindingSite};
-    use jolt_field::{FpExt4, Prime32Offset99, Ring, Zero};
+    use jolt_algebra::{FpExt4, Prime32Offset99, Ring, Zero};
 
     type F = Prime32Offset99;
     type E = FpExt4<F>;

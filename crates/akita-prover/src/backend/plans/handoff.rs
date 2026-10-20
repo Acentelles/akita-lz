@@ -5,8 +5,8 @@ use akita_params::{
     CompressionChainPlan, FoldSchedule, OpeningClaimsLayout, RingRelationMode, WitnessLayout,
 };
 use akita_types::{AkitaSetupDescriptor, RingVec};
-use jolt_field::checked;
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::checked;
+use jolt_algebra::{CanonicalEncoding, Field};
 
 /// Entire work performed by a producer, including committing its successor.
 pub struct FoldExecutionRequirements<'a> {

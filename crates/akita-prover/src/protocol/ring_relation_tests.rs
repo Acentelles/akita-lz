@@ -4,8 +4,8 @@ use akita_params::{
     RelationWitnessGeometry, SisModulusProfileId, SubringCoefficientPackingGeometry,
 };
 use akita_types::{relation_rhs_coeff_len, PreparedSubringCoefficientPackingPoint};
+use jolt_algebra::{Ext2, ExtField, Prime64Offset59, Zero};
 use jolt_crypto::challenge::{SparseChallenge, SparseChallengeConfig};
-use jolt_field::{Ext2, ExtField, Prime64Offset59, Zero};
 
 type F = Prime64Offset59;
 type E = Ext2<F>;

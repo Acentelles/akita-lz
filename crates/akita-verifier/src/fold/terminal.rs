@@ -10,7 +10,7 @@ use akita_serialization::AkitaSerialize;
 use akita_types::FoldDraw;
 use akita_types::GrindingReplay;
 use akita_types::{prepare_opening_point, FpExtEncoding, RingVec};
-use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, PseudoMersenne, Ring};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, PseudoMersenne, Ring};
 use jolt_transcript::{Channel, Sponge};
 
 pub(super) fn verify_terminal_suffix<F, E, H: Sponge>(

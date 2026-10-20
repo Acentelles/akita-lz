@@ -403,7 +403,7 @@ Root commitment preserves this validation order:
    stage or transcript-dependent consumer.
 
 All shape, count, product, and range arithmetic uses checked constructors and
-`jolt_field::checked`. The verifier remains unaware of the producing backend.
+`jolt_algebra::checked`. The verifier remains unaware of the producing backend.
 
 ## Owning backend integration
 

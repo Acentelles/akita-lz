@@ -1,5 +1,5 @@
 use super::*;
-use jolt_field::checked;
+use jolt_algebra::checked;
 
 mod frontier;
 mod level_search;

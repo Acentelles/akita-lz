@@ -1,5 +1,5 @@
 use super::super::*;
-use jolt_field::cfg_try_fold_reduce;
+use jolt_algebra::cfg_try_fold_reduce;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn evaluate_base_ring_direct<F, E, const BASE_D: usize>(

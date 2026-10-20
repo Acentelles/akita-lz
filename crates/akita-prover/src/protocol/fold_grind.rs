@@ -18,8 +18,8 @@ use akita_types::GroupFoldChallenges;
 #[cfg(test)]
 use akita_types::OpeningFamily;
 use akita_types::{FoldDraw, ForkFoldDraw};
-use jolt_field::Unreduced;
-use jolt_field::{CanonicalEncoding, Field, Ring};
+use jolt_algebra::Unreduced;
+use jolt_algebra::{CanonicalEncoding, Field, Ring};
 use jolt_transcript::Sponge;
 
 #[cfg(feature = "response-model-diagnostics")]
@@ -226,7 +226,7 @@ where
     F: Field + CanonicalEncoding + akita_serialization::AkitaSerialize + Ring + Unreduced + 'static,
     <F as Unreduced>::Wide: From<F>,
     E: akita_types::FpExtEncoding<F>
-        + jolt_field::ExtField<F>
+        + jolt_algebra::ExtField<F>
         + akita_serialization::AkitaSerialize,
     B: crate::backend::OpaqueOpeningKernel<F, E>,
 {
@@ -394,7 +394,7 @@ where
     F: Field + CanonicalEncoding + akita_serialization::AkitaSerialize + Ring + Unreduced + 'static,
     <F as Unreduced>::Wide: From<F>,
     E: akita_types::FpExtEncoding<F>
-        + jolt_field::ExtField<F>
+        + jolt_algebra::ExtField<F>
         + akita_serialization::AkitaSerialize,
     B: crate::backend::OpaqueOpeningKernel<F, E>,
 {
@@ -460,7 +460,7 @@ mod tests {
     use akita_params::SisModulusProfileId;
     use jolt_crypto::challenge::SparseChallengeConfig;
 
-    type F = jolt_field::Prime128Offset275;
+    type F = jolt_algebra::Prime128Offset275;
 
     #[derive(Default)]
     struct FixedDraw {

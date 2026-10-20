@@ -29,7 +29,7 @@ use akita_serialization::AkitaSerialize;
 use akita_types::GrindingReplay;
 use akita_types::{AkitaVerifierSetup, FpExtEncoding, RingVec};
 use challenges::derive_multi_group_stage1_challenges;
-use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
 use jolt_transcript::{Channel, Sponge};
 use relation_instance::{assemble_relation_instance, validate_fold_payloads};
 

@@ -12,7 +12,7 @@ use akita_types::{
     CompressionRelationWeights, FpExtEncoding, NegativeBinarySupport,
     ReducedCompressionRelationWeights, RingRelationGroupOpeningView,
 };
-use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
 use jolt_transcript::Sponge;
 
 /// Verifier-side ring-switch output, carrying only the data needed to replay

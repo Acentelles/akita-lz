@@ -6,10 +6,10 @@ use akita_types::{
     decode_terminal_z_golomb_payload, recover_ring_subfield_inner_product, FpExtEncoding,
     PreparedOpeningPoint, RingMultiplierOpeningPoint, TerminalResponse,
 };
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, Ring};
 use jolt_crypto::challenge::{Challenges, SparseChallenge};
-use jolt_field::solinas::parallel::*;
-use jolt_field::CyclotomicRing;
-use jolt_field::{CanonicalEncoding, ExtField, Field, Ring};
 
 use crate::prepared_cache::TerminalNttCache;
 
@@ -361,7 +361,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::{One, Prime128OffsetA7F7, Zero};
+    use jolt_algebra::{One, Prime128OffsetA7F7, Zero};
 
     type F = Prime128OffsetA7F7;
 

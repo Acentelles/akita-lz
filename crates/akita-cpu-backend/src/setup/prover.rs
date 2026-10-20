@@ -9,8 +9,8 @@ use akita_types::{
     sample_akita_setup_seed, AkitaExpandedSetup, AkitaSetupDescriptor, AkitaVerifierSetup,
     SetupPrefixVerifierRegistry,
 };
+use jolt_algebra::{CanonicalEncoding, Field};
 use jolt_crypto::lattice::derive_public_matrix_prefix;
-use jolt_field::{CanonicalEncoding, Field};
 use std::sync::Arc;
 
 /// Prover setup artifact.
@@ -150,7 +150,7 @@ impl<F: Field + CanonicalEncoding + Valid + AkitaSerialize> Valid for AkitaProve
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::Prime128Offset275;
+    use jolt_algebra::Prime128Offset275;
 
     #[test]
     fn generate_with_capacity_rejects_zero_setup_len() {

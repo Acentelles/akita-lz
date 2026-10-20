@@ -12,7 +12,7 @@ orchestration lives in `akita-pcs`.
 | Crate | Role |
 |-------|------|
 | `akita-error` | Shared protocol error |
-| `jolt-field` (external; re-exports `jolt-algebra`) | Shared field traits, prime and extension fields, packed and unreduced kernels, cyclotomic ring, NTT/CRT, smooth FFT, checked integer formulas, parallel helpers |
+| `jolt-algebra` (external) | Shared field traits, prime and extension fields, packed and unreduced kernels, cyclotomic ring, NTT/CRT, smooth FFT, checked integer formulas, parallel helpers |
 | `jolt-crypto` (external, `lattice` feature) | Sparse fold challenges, operator-norm rejection, and public-matrix derivation |
 | `akita-serialization` | Serialization, validation, and compression traits |
 | `akita-algebra` | Multilinear, equality, split-equality, and offset-equality polynomial utilities |
@@ -35,10 +35,10 @@ CI enforces one-way boundaries via `scripts/check-crate-deps.sh`.
 Key structural facts:
 
 - `akita-error` is the lowest shared failure layer. It owns `AkitaError`.
-  Reusable exact `usize` formulas live in `jolt_field::checked`. These formulas
+  Reusable exact `usize` formulas live in `jolt_algebra::checked`. These formulas
   return `Option`; each caller maps failure to the `AkitaError` variant that
   describes its protocol boundary. Field arithmetic lives in the shared
-  external `jolt-field` crate.
+  external `jolt-algebra` crate.
 - `akita-planner` owns offline schedule search and artifact emission. Normal
   search is `Cfg`-free and is not on the verifier runtime dependency path. The
   optional `catalog-gen` feature enables `akita-config`, so artifact-emission
@@ -144,7 +144,7 @@ Mixed-dimension malformed proof rejection is covered by
 
 | Type | Role |
 |------|------|
-| `AkitaError`, `jolt_field::checked` | Shared protocol failures and reusable checked formulas for sizes, offsets, ranges, alignment, and exact division |
+| `AkitaError`, `jolt_algebra::checked` | Shared protocol failures and reusable checked formulas for sizes, offsets, ranges, alignment, and exact division |
 | `AkitaCommitmentScheme<Cfg>` | Stateful top-level PCS orchestration that owns one trusted catalog for setup, commitment, proving, and verification (`akita-pcs`) |
 | `AkitaProverSetup<F>` | Prover setup wrapper around a materialized prefix of the dimension-free public field stream |
 | `Commitment<F>`, `RingVec<F>` | protocol commitment and field-vector storage |

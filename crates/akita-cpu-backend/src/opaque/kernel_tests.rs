@@ -1,12 +1,12 @@
 use super::*;
 use crate::opaque::CpuBackend;
 use crate::opaque::OpeningBatchKernel;
+use jolt_algebra::{One, Ring};
 use jolt_crypto::challenge::{Challenges, SparseChallenge};
-use jolt_field::{One, Ring};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
-type F = jolt_field::Prime128Offset275;
+type F = jolt_algebra::Prime128Offset275;
 const D: usize = 4;
 static BATCH_CALLS: AtomicUsize = AtomicUsize::new(0);
 static SOURCE_TRAVERSALS: AtomicUsize = AtomicUsize::new(0);
@@ -30,8 +30,9 @@ impl OpeningBatchKernel<RecordingBatch, F, D> for CpuBackend<F, F> {
             .centered
             .iter()
             .map(|row| {
-                let eval =
-                    jolt_field::CyclotomicRing::from_coefficients([F::from_u64(row[0] as u64); D]);
+                let eval = jolt_algebra::CyclotomicRing::from_coefficients(
+                    [F::from_u64(row[0] as u64); D],
+                );
                 OpeningFoldOutput {
                     eval,
                     folded: vec![eval; row[1] as usize],
@@ -450,7 +451,7 @@ fn opening_evaluation_batches_once_in_source_order_and_rejects_bad_shapes() {
         assert_eq!(result.is_ok(), valid);
         if let Ok((_, (evals, folded))) = result {
             let expected = [20, 10].map(|value| {
-                jolt_field::CyclotomicRing::from_coefficients([F::from_u64(value); D])
+                jolt_algebra::CyclotomicRing::from_coefficients([F::from_u64(value); D])
             });
             assert_eq!(evals, expected);
             assert_eq!(folded, expected.map(|eval| vec![eval; 2]));

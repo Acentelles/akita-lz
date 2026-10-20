@@ -16,7 +16,7 @@
 use akita_error::AkitaError;
 use akita_params::sis::CommittedSourceContract;
 use akita_params::{CommittedGroupParams, OpeningClaimsLayout, WitnessLayout};
-use jolt_field::checked;
+use jolt_algebra::checked;
 use std::cell::RefCell;
 use std::collections::HashMap;
 

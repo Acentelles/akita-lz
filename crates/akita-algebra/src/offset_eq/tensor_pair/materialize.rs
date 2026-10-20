@@ -3,8 +3,8 @@
 use super::{charge_work, checked_axis_offset, EqPairTensorFamily, EqPairTensorWeights};
 use crate::offset_eq::OffsetEqWindow;
 use akita_error::AkitaError;
-use jolt_field::solinas::parallel::*;
-use jolt_field::Field;
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::Field;
 
 /// Materialize the left-address weights induced by tensor families and one
 /// equality point on the right.

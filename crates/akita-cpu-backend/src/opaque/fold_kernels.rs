@@ -7,8 +7,8 @@ use crate::opaque::{
 use crate::opaque::{CpuFoldResponses, DecomposeFoldWitness};
 use akita_error::AkitaError;
 use akita_params::RelationRowGeometry;
-use jolt_field::CyclotomicRing;
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{CanonicalEncoding, Field};
 
 /// Opening fold / decompose-fold kernel over a borrowed opening view `S`.
 ///

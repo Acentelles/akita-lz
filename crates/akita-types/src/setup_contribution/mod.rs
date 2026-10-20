@@ -9,8 +9,8 @@
 
 use akita_error::AkitaError;
 use akita_params::{CommittedGroupParams, OpeningClaimsLayout};
-use jolt_field::checked;
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::checked;
+use jolt_algebra::{CanonicalEncoding, Field};
 
 mod geometry;
 mod plan;

@@ -1,5 +1,5 @@
 use akita_error::AkitaError;
-use jolt_field::narrowing::usize_to_u32;
+use jolt_algebra::narrowing::usize_to_u32;
 
 /// Owned flat storage for sparse entries grouped by logical block.
 ///

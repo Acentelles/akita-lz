@@ -1,6 +1,6 @@
 use super::*;
 use akita_algebra::offset_eq::{eval_affine_digit_intervals, AffineWeightProduct};
-use jolt_field::ring::scalar_powers_with_stride;
+use jolt_algebra::ring::scalar_powers_with_stride;
 
 /// Validated shape shared by the closed-form and cached structured paths.
 struct StructuredGroupShape<'a, E: Field> {

@@ -11,7 +11,7 @@ use akita_types::{
     AkitaSetupDescriptor, AkitaSponge, Commitment, FpExtEncoding, OpeningClaims, ProverGrinding,
     SetupPrefixVerifierSlot,
 };
-use jolt_field::{
+use jolt_algebra::{
     AdditiveGroup, CanonicalEncoding, ExtField, Fold, MulBaseUnreduced, PseudoMersenne, Ring,
     Unreduced,
 };

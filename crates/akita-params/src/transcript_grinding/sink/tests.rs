@@ -5,7 +5,7 @@ use crate::transcript_grinding::{
 };
 use crate::ChallengeFieldOrder;
 use akita_error::AkitaError;
-use jolt_field::narrowing::usize_to_u32;
+use jolt_algebra::narrowing::usize_to_u32;
 
 fn batch(rounds: usize) -> SumcheckRoundBatch {
     SumcheckRoundBatch {

@@ -8,8 +8,8 @@ use akita_params::{
     SubringCoefficientPackingGeometry,
 };
 use akita_types::NttTransformDomain;
+use jolt_algebra::checked;
 use jolt_crypto::challenge::SparseChallengeConfig;
-use jolt_field::checked;
 
 mod grinding;
 

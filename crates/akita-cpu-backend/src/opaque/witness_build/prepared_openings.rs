@@ -5,8 +5,8 @@ use crate::opaque::OperationCtx;
 use akita_error::AkitaError;
 use akita_params::CommittedGroupParams;
 use akita_types::{DigitBlocks, RingVec};
-use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_algebra::{CanonicalEncoding, Field};
 
 enum ConsumerOpeningKind<F: Field> {
     EvaluationTrace {
@@ -24,7 +24,7 @@ pub(crate) struct PreparedOpeningWitness<F: Field> {
 }
 
 fn decompose_opening_rows<F: Field + CanonicalEncoding, const D: usize>(
-    pre_folded_e: &[&[jolt_field::CyclotomicRing<F, D>]],
+    pre_folded_e: &[&[jolt_algebra::CyclotomicRing<F, D>]],
     role_subcolumns: usize,
     depth_open: usize,
     log_basis: u32,
@@ -169,7 +169,7 @@ pub(super) fn prepare_group_opening_witness<F, E, const D: usize>(
 ) -> Result<PreparedGroupWitnessOutput<F, E>, AkitaError>
 where
     F: Field + CanonicalEncoding,
-    E: jolt_field::ExtField<F>,
+    E: jolt_algebra::ExtField<F>,
 {
     let (opening, public) =
         handle.relation_opening::<D>(level, opening_batch, geometry, group_index, group_dims)?;

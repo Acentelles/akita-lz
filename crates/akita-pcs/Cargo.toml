@@ -32,7 +32,7 @@ default = ["parallel"]
 parallel = [
   "dep:rayon",
   "akita-algebra/parallel",
-  "jolt-field/parallel",
+  "jolt-algebra/parallel",
   "akita-prover/parallel",
   "akita-cpu-backend/parallel",
   "akita-setup/parallel",
@@ -80,7 +80,7 @@ jolt-crypto = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = 
 ] }
 akita-config = { version = "0.1.0", path = "../akita-config", default-features = false }
 akita-cpu-backend = { version = "0.1.0", path = "../akita-cpu-backend", default-features = false }
-jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false, features = [
+jolt-algebra = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false, features = [
   "asm",
   "solinas",
 ] }

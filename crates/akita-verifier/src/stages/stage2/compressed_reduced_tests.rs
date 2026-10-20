@@ -12,9 +12,9 @@ use akita_params::{
 use akita_types::{
     build_reduced_compression_relation_weights, AkitaSetupDescriptor, NegativeBinarySupport,
 };
+use jolt_algebra::ring::scalar_powers;
+use jolt_algebra::{Ext2, ExtField, One, Prime64Offset59, Zero};
 use jolt_crypto::challenge::SparseChallengeConfig;
-use jolt_field::ring::scalar_powers;
-use jolt_field::{Ext2, ExtField, One, Prime64Offset59, Zero};
 
 type F = Prime64Offset59;
 type E = Ext2<F>;

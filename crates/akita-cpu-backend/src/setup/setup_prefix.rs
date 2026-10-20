@@ -9,10 +9,10 @@ use crate::opaque::DensePoly;
 use akita_error::AkitaError;
 use akita_params::SetupPrefixSlotId;
 use akita_types::{AkitaExpandedSetup, RingVec, SetupPrefixPublicCommitment};
-use jolt_field::checked;
+use jolt_algebra::checked;
 #[cfg(test)]
-use jolt_field::CyclotomicRing;
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{CanonicalEncoding, Field};
 
 pub(crate) struct ValidatedSetupPrefixCommitment<'a> {
     id: &'a SetupPrefixSlotId,
@@ -190,8 +190,8 @@ mod tests {
         OuterCommitMatrixParams, SetupMatrixCapacity, SisModulusProfileId, SisTableKey,
     };
     use akita_serialization::AkitaSerialize;
+    use jolt_algebra::Prime128OffsetA7F7 as F;
     use jolt_crypto::challenge::SparseChallengeConfig;
-    use jolt_field::Prime128OffsetA7F7 as F;
     use std::sync::Arc;
 
     type MissingExportExecutor<'a> = (

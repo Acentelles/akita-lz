@@ -14,7 +14,7 @@ orchestration lives in `akita-pcs`.
 | Crate | Role |
 |-------|------|
 | `akita-error` | Shared protocol error |
-| `jolt-field` (external; re-exports `jolt-algebra`) | Shared field traits, prime and extension fields, packed and unreduced kernels, cyclotomic ring, NTT/CRT, smooth FFT, checked integer formulas, parallel helpers |
+| `jolt-algebra` (external) | Shared field traits, prime and extension fields, packed and unreduced kernels, cyclotomic ring, NTT/CRT, smooth FFT, checked integer formulas, parallel helpers |
 | `jolt-crypto` (external, `lattice` feature) | Sparse fold challenges, operator-norm rejection, and public-matrix derivation |
 | `akita-serialization` | Serialization, validation, compression traits |
 | `akita-algebra` | Multilinear, equality, split-equality, and offset-equality polynomial utilities |
@@ -38,7 +38,7 @@ orchestration lives in `akita-pcs`.
 graph TD
   Error["akita-error"]
   Ser["akita-serialization"]
-  Field["jolt-field (external)"]
+  Field["jolt-algebra (external)"]
   Algebra["akita-algebra"]
   Transcript["jolt-transcript (external)"]
   Crypto["jolt-crypto"]
@@ -154,7 +154,7 @@ graph TD
 ## Ownership Rules
 
 - `akita-error` owns `AkitaError`. The reusable exact `usize` formulas live in
-  `jolt_field::checked`. The formulas return `Option` and do not choose a
+  `jolt_algebra::checked`. The formulas return `Option` and do not choose a
   protocol error variant. Callers map failure at the boundary where its meaning
   is known. Generic checked helpers must not be redefined in downstream crates.
 - `akita-planner` is the offline schedule search and artifact emission engine.

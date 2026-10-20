@@ -1,6 +1,6 @@
 use super::*;
 use crate::test_fixtures::test_lp;
-use jolt_field::{CanonicalEncoding, Prime128OffsetA7F7};
+use jolt_algebra::{CanonicalEncoding, Prime128OffsetA7F7};
 type F = Prime128OffsetA7F7;
 
 #[test]

@@ -401,7 +401,7 @@ fn fused_quotient_multi_column_tiles_match_schoolbook() {
 
 #[test]
 fn fused_reduced_profile_chunks_both_roles_at_zero_boundaries() {
-    use jolt_field::ntt::tables::I16_TAIL_PRIME;
+    use jolt_algebra::ntt::tables::I16_TAIL_PRIME;
     type F = Fp64<31>;
     const D: usize = 32;
     let (n_b, n_a, b_width, a_width) = (2, 2, 23, 17);

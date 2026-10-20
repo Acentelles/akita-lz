@@ -9,7 +9,7 @@ use akita_pcs::AkitaCommitmentScheme;
 use akita_prover::{BackendRegistry, FixedFoldRoute, ProverBackend, SelectedProverOpeningData};
 use akita_serialization::{AkitaSerialize, Valid};
 use akita_types::FpExtEncoding;
-use jolt_field::{
+use jolt_algebra::{
     AdditiveGroup, CanonicalEncoding, ExtField, Fold, MulBaseUnreduced, PseudoMersenne, Ring,
     Unreduced, WithCommitAccumulator,
 };

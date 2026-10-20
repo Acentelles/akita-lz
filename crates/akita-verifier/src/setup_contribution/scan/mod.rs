@@ -3,8 +3,8 @@ mod reduced;
 
 use super::*;
 use group::evaluate_base_ring_direct;
-use jolt_field::cfg_try_fold_reduce;
-use jolt_field::ring::{eval_ring_at_pows_fast, scalar_powers};
+use jolt_algebra::cfg_try_fold_reduce;
+use jolt_algebra::ring::{eval_ring_at_pows_fast, scalar_powers};
 use reduced::evaluate_groups_reduced;
 
 enum DirectScanKernel<'a, E: Field> {

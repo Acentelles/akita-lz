@@ -14,9 +14,9 @@
 //! **least-significant bit** (bit 0) and `r[n-1]` to the MSB.
 
 use akita_error::AkitaError;
-use jolt_field::checked;
+use jolt_algebra::checked;
 
-use jolt_field::Field;
+use jolt_algebra::Field;
 use std::marker::PhantomData;
 use std::mem;
 use std::panic::Location;
@@ -405,7 +405,7 @@ impl<E: Field> EqPolynomial<E> {
 /// This cuts the equality allocation from `2^n` to `2^{n-m} + 2^m` and lets a
 /// contraction `Σ_x eq(point, x) · src(x)` run as an outer loop over `x_out`
 /// (parallelizable) wrapping an inner loop over `x_in` that can defer reduction
-/// via [`jolt_field::MulBaseUnreduced`].
+/// via [`jolt_algebra::MulBaseUnreduced`].
 #[derive(Debug, Clone)]
 pub struct SplitEqEvals<E: Field> {
     /// Equality table over the high (outer) `n - m` variables, size `2^{n-m}`.
@@ -470,8 +470,8 @@ impl<E: Field> SplitEqEvals<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::Field;
-    use jolt_field::{Fp64, One, Ring, Zero};
+    use jolt_algebra::Field;
+    use jolt_algebra::{Fp64, One, Ring, Zero};
     use rand::rngs::StdRng;
     use rand::SeedableRng;
 

@@ -1,6 +1,6 @@
 use super::*;
 use akita_params::wire_limits::reserve_shape_len;
-use jolt_field::checked;
+use jolt_algebra::checked;
 
 /// D-erased storage for a sequence of ring elements as raw field-element
 /// coefficients.

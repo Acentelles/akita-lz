@@ -1,17 +1,17 @@
 //! Runtime ring-dimension NTT prepared-setup caches.
 
 use akita_error::AkitaError;
-use jolt_field::ntt::ifma52::{ifma52_enabled, IFMA52_PRIMES};
-use jolt_field::ntt::prime::PrimeWidth;
-use jolt_field::ntt::tables::{
+use jolt_algebra::ntt::ifma52::{ifma52_enabled, IFMA52_PRIMES};
+use jolt_algebra::ntt::prime::PrimeWidth;
+use jolt_algebra::ntt::tables::{
     q128_primes, validate_profile_crt_ring_degree, I16_TAIL_PRIME, Q128_MAX_RING_D, Q128_MODULUS,
     Q128_NUM_PRIMES, Q32_MAX_RING_D, Q32_MODULUS, Q32_NUM_PRIMES, Q32_PRIMES, Q64_MAX_RING_D,
     Q64_MODULUS, Q64_NUM_PRIMES, Q64_PRIMES,
 };
 #[allow(unused_imports)]
-use jolt_field::solinas::parallel::*;
-use jolt_field::{cfg_iter, CanonicalEncoding, Field, Prime128OffsetA7F7, PseudoMersenne};
-use jolt_field::{
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::{cfg_iter, CanonicalEncoding, Field, Prime128OffsetA7F7, PseudoMersenne};
+use jolt_algebra::{
     CrtCapacity, CrtNttParamSet, CyclotomicCrtNtt, I16TailParams, Ifma52NttMatrix, Ifma52Params,
     MontCoeff, NttPrime,
 };
@@ -719,7 +719,7 @@ impl<const D: usize> PreparedNttCacheRepr<D> {
         log_basis: u32,
         num_rows: usize,
         rhs: &[[i16; D]],
-    ) -> Result<Vec<jolt_field::CyclotomicRing<F, D>>, AkitaError> {
+    ) -> Result<Vec<jolt_algebra::CyclotomicRing<F, D>>, AkitaError> {
         self.validate()?;
         let prepared_tier = match self {
             Self::I16TailPair { .. } => {
@@ -941,7 +941,7 @@ impl<const D: usize> PreparedNttCache<D> {
         log_basis: u32,
         num_rows: usize,
         rhs: &[[i16; D]],
-    ) -> Result<Vec<jolt_field::CyclotomicRing<F, D>>, AkitaError> {
+    ) -> Result<Vec<jolt_algebra::CyclotomicRing<F, D>>, AkitaError> {
         self.0.mat_vec_i16(log_basis, num_rows, rhs)
     }
 }
@@ -955,7 +955,7 @@ fn mat_vec_i16_from_cache<F, const K: usize, const D: usize>(
     log_basis: u32,
     num_rows: usize,
     rhs: &[[i16; D]],
-) -> Result<Vec<jolt_field::CyclotomicRing<F, D>>, AkitaError>
+) -> Result<Vec<jolt_algebra::CyclotomicRing<F, D>>, AkitaError>
 where
     F: Field + CanonicalEncoding,
 {
@@ -972,8 +972,15 @@ where
         let tail = tail.ok_or_else(|| {
             AkitaError::InvalidSetup("prepared exact NTT cache is missing its required tail".into())
         })?;
-        jolt_field::mat_vec_i16_with_tail(neg, &tail.negacyclic, num_rows, width, rhs, &tail.params)
-            .map_err(AkitaError::from)
+        jolt_algebra::mat_vec_i16_with_tail(
+            neg,
+            &tail.negacyclic,
+            num_rows,
+            width,
+            rhs,
+            &tail.params,
+        )
+        .map_err(AkitaError::from)
     } else {
         CyclotomicCrtNtt::mat_vec_i16(neg, num_rows, width, rhs, params).map_err(AkitaError::from)
     }
@@ -995,7 +1002,7 @@ fn validate_i16_rhs<const D: usize>(log_basis: u32, rhs: &[[i16; D]]) -> Result<
         return Ok(bound);
     }
     let digits_valid =
-        jolt_field::ntt::i16_values_in_balanced_range(rhs.as_flattened(), bound as i16);
+        jolt_algebra::ntt::i16_values_in_balanced_range(rhs.as_flattened(), bound as i16);
     if !digits_valid {
         return Err(AkitaError::InvalidInput(
             "signed i16 right-hand side contains a digit outside the balanced range".into(),
@@ -1195,7 +1202,7 @@ fn convert_flat_pair<F, W, const K: usize, const D: usize>(
 )
 where
     F: Field + CanonicalEncoding,
-    W: jolt_field::PrimeWidth,
+    W: jolt_algebra::PrimeWidth,
 {
     cfg_iter!(mat.as_slice())
         .map(|ring| CyclotomicCrtNtt::from_ring_pair_with_params(ring, params))

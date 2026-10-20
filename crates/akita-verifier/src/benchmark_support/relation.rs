@@ -14,8 +14,8 @@ use akita_types::{
     relation_rhs_coeff_len, AkitaExpandedSetup, AkitaSetupDescriptor, RingMultiplierOpeningPoint,
     RingRelationGroupOpening, RingRelationInstance, RingVec,
 };
+use jolt_algebra::{CanonicalEncoding, Prime128OffsetA7F7};
 use jolt_crypto::challenge::{Challenges, SparseChallenge, SparseChallengeConfig};
-use jolt_field::{CanonicalEncoding, Prime128OffsetA7F7};
 
 /// Inputs for one exact production relation-evaluator benchmark cell.
 pub struct RelationEvaluatorBenchmarkCase {

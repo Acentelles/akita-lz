@@ -37,7 +37,7 @@ ark-serialize = { git = "https://github.com/a16z/arkworks-algebra", branch = "de
 
 # `jolt-sdk` reaches `jolt-akita` through `jolt-prover`, and Jolt pins its own
 # Akita revision. Resolve every Akita crate it names from this checkout, so the
-# harness links one Akita and one `jolt-field` (scripts/check-shared-field-identity.sh).
+# harness links one Akita and one `jolt-algebra` (scripts/check-shared-field-identity.sh).
 [patch."https://github.com/LayerZero-Labs/akita.git"]
 akita-algebra = { path = "../../crates/akita-algebra" }
 akita-challenges = { path = "../../crates/akita-challenges" }

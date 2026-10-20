@@ -1,7 +1,7 @@
 //! Relation row identities and shared layout data.
 
 use akita_error::AkitaError;
-use jolt_field::checked;
+use jolt_algebra::checked;
 
 use crate::{CommitmentRingDims, CommitmentSliceCount, CompressionChainPlan, OpeningMethod};
 

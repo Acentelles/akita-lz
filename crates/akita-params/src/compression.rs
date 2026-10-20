@@ -8,8 +8,8 @@ use crate::field_modulus;
 use crate::sis::compression::{min_compression_secure_rank, COMPRESSION_SIS_COEFF_LINF_BOUND};
 use crate::sis::{SisModulusProfileId, DEFAULT_SIS_SECURITY_POLICY};
 use akita_error::AkitaError;
-use jolt_field::checked;
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::checked;
+use jolt_algebra::{CanonicalEncoding, Field};
 
 mod chain;
 
@@ -627,7 +627,7 @@ impl<F: Field + CanonicalEncoding> CompressionTerminalPayload<F> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::{One, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59, Ring, Zero};
+    use jolt_algebra::{One, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59, Ring, Zero};
 
     fn round_trip<F: Field + CanonicalEncoding>(profile: SisModulusProfileId) {
         let field_bytes = usize::try_from(F::MODULUS_BITS).unwrap().div_ceil(8);

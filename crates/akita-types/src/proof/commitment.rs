@@ -21,7 +21,7 @@ type MatrixFields = (
 use akita_serialization::{
     AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate,
 };
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::{CanonicalEncoding, Field};
 use std::io::{Read, Write};
 
 /// D-free public commitment payload stored as flat field coefficients.
@@ -427,7 +427,7 @@ impl<F: Field + Valid + AkitaDeserialize<Context = ()>> AkitaDeserialize for Com
 #[cfg(test)]
 mod committed_group_tests {
     use super::*;
-    use jolt_field::{Fp32, Zero};
+    use jolt_algebra::{Fp32, Zero};
 
     type F = Fp32<4294967197>;
 

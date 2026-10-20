@@ -13,7 +13,7 @@ use akita_types::{
     tensor_opening_split, tensor_reduction_claim_from_rows, tensor_row_partials_from_columns,
     FpExtEncoding, PreparedOpeningPoint,
 };
-use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field, Ring};
+use jolt_algebra::{CanonicalDecode, CanonicalEncoding, ExtField, Field, Ring};
 use jolt_transcript::{Channel, Sponge};
 
 pub(crate) struct PreparedProtocolPoint<F: Field, E: Field> {
@@ -460,7 +460,7 @@ mod tests {
     use akita_params::{PolynomialGroupLayout, EXTENSION_OPENING_REDUCTION_DEGREE};
     use akita_sumcheck::SumcheckInstanceProver;
     use akita_types::{AkitaSponge, PROOF_STREAM_PROTOCOL};
-    use jolt_field::{FpExt4, Prime32Offset99, Zero};
+    use jolt_algebra::{FpExt4, Prime32Offset99, Zero};
     use jolt_poly::UnivariatePoly;
     use jolt_transcript::{ProverTranscript, VerifierTranscript};
 

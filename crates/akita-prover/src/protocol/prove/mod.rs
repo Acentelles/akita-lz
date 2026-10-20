@@ -24,9 +24,9 @@ use akita_types::{
     tensor_opening_split, tensor_reduction_claim_from_rows, tensor_row_partials_from_columns,
     Commitment,
 };
-use jolt_field::CyclotomicRing;
-use jolt_field::{CanonicalDecode, Fold, Unreduced};
-use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, PseudoMersenne, Ring};
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{CanonicalDecode, Fold, Unreduced};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, PseudoMersenne, Ring};
 use jolt_transcript::{Channel, Sponge};
 
 pub(crate) struct ExtensionOpeningReduction<E: Field> {

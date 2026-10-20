@@ -6,7 +6,7 @@ use akita_error::AkitaError;
 use akita_params::transcript_site::{ProtocolSiteId, SITE_FAMILY_SUMCHECK};
 use akita_params::{GrindingPlan, GrindingQueryKind, GrindingSite};
 use akita_sumcheck::{SumcheckProverChannel, SumcheckRole, SumcheckVerifierChannel};
-use jolt_field::{CanonicalEncoding, ExtField, Field};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field};
 use jolt_transcript::{
     Channel, Fork, ProverTranscript, SiteId, Sponge, TranscriptError, VerifierTranscript,
     FORK_SEED_LEN,

@@ -7,7 +7,7 @@ use crate::opaque::CommitInnerPlan;
 use akita_error::AkitaError;
 use akita_params::{CompressionChainPlan, CompressionChainWitness, RingRelationMode};
 use akita_types::RingVec;
-use jolt_field::Field;
+use jolt_algebra::Field;
 use std::sync::{Arc, Mutex};
 
 /// Canonical shared host material exported from one retained compression state.
@@ -122,10 +122,10 @@ impl<F: Field> PortableCompressionState<F> {
     #[cfg(test)]
     fn retained_bytes(&self) -> Result<usize, AkitaError> {
         let quotient_coefficients = match self.quotients() {
-            Some(quotients) => jolt_field::checked::sum(quotients.iter().map(RingVec::coeff_len))
+            Some(quotients) => jolt_algebra::checked::sum(quotients.iter().map(RingVec::coeff_len))
                 .ok_or_else(|| {
-                AkitaError::InvalidInput("compression material retained bytes overflow".into())
-            })?,
+                    AkitaError::InvalidInput("compression material retained bytes overflow".into())
+                })?,
             None => 0,
         };
         self.witness()
@@ -439,7 +439,7 @@ impl<F: Field> ResidentCommitmentState<F> {
             }
             None => 0,
         };
-        jolt_field::checked::sum([inner_bytes, compression_bytes]).ok_or_else(|| {
+        jolt_algebra::checked::sum([inner_bytes, compression_bytes]).ok_or_else(|| {
             AkitaError::InvalidInput("resident commitment retained-byte total overflow".into())
         })
     }
@@ -549,7 +549,7 @@ impl<F: Field> InnerRelationStateMaterial<F> {
         rows: Vec<RingVec<F>>,
     ) -> Result<Self, AkitaError> {
         let expected_coefficients =
-            jolt_field::checked::product([plan.num_live_blocks, plan.n_a, plan.ring_dimension])
+            jolt_algebra::checked::product([plan.num_live_blocks, plan.n_a, plan.ring_dimension])
                 .ok_or_else(|| AkitaError::Internal("inner-relation row length overflow".into()))?;
         if rows.len() != source_count
             || rows.iter().any(|row| {
@@ -606,11 +606,11 @@ impl<F: Field> InnerRelationStateMaterial<F> {
 
     #[cfg(test)]
     fn retained_bytes(&self) -> Result<usize, AkitaError> {
-        let coefficients = jolt_field::checked::sum(self.rows.iter().map(RingVec::coeff_len))
+        let coefficients = jolt_algebra::checked::sum(self.rows.iter().map(RingVec::coeff_len))
             .ok_or_else(|| {
                 AkitaError::InvalidInput("inner-relation coefficient total overflow".into())
             })?;
-        jolt_field::checked::product([coefficients, size_of::<F>()]).ok_or_else(|| {
+        jolt_algebra::checked::product([coefficients, size_of::<F>()]).ok_or_else(|| {
             AkitaError::InvalidInput("inner-relation retained bytes overflow".into())
         })
     }
@@ -648,7 +648,7 @@ pub(crate) trait InnerRelationMaterial<F: Field>: Send + 'static {
 
     fn terminal_message(&self) -> Result<TerminalTFieldsMessage<F>, AkitaError>
     where
-        F: jolt_field::CanonicalEncoding + akita_serialization::AkitaSerialize;
+        F: jolt_algebra::CanonicalEncoding + akita_serialization::AkitaSerialize;
 
     fn into_terminal_row(self) -> Result<RingVec<F>, AkitaError>
     where
@@ -666,7 +666,7 @@ impl<F: Field + 'static> InnerRelationMaterial<F> for InnerRelationStateMaterial
 
     fn terminal_message(&self) -> Result<TerminalTFieldsMessage<F>, AkitaError>
     where
-        F: jolt_field::CanonicalEncoding + akita_serialization::AkitaSerialize,
+        F: jolt_algebra::CanonicalEncoding + akita_serialization::AkitaSerialize,
     {
         let [row] = self.rows() else {
             return Err(AkitaError::Internal(
@@ -737,11 +737,12 @@ impl<F: Field + 'static> InnerRelationState<F> for PortableCommitmentHandle<F> {
         plan: &CommitInnerPlan,
         source_count: usize,
     ) -> Result<(), AkitaError> {
-        let expected_coefficients =
-            jolt_field::checked::product([plan.num_live_blocks, plan.n_a, plan.ring_dimension])
-                .ok_or_else(|| {
-                    AkitaError::InvalidInput("inner-relation row length overflow".into())
-                })?;
+        let expected_coefficients = jolt_algebra::checked::product([
+            plan.num_live_blocks,
+            plan.n_a,
+            plan.ring_dimension,
+        ])
+        .ok_or_else(|| AkitaError::InvalidInput("inner-relation row length overflow".into()))?;
         if self.ring_dim() != plan.ring_dimension
             || self.inner_rows().len() != source_count
             || self
@@ -797,7 +798,7 @@ impl<F: Field + 'static> InnerRelationState<F> for ResidentCommitmentState<F> {
 
 impl<F> OuterCompressionState<F> for PortableCommitmentHandle<F>
 where
-    F: Field + jolt_field::CanonicalEncoding + akita_serialization::AkitaSerialize + 'static,
+    F: Field + jolt_algebra::CanonicalEncoding + akita_serialization::AkitaSerialize + 'static,
 {
     type Material = PortableCompressionState<F>;
     #[cfg(test)]
@@ -1029,8 +1030,8 @@ mod tests {
     use super::*;
     use crate::commitment::StateOwnerCapability;
     use akita_types::AkitaSetupDescriptor;
+    use jolt_algebra::Prime64Offset59;
     use jolt_crypto::lattice::PublicMatrixSeed;
-    use jolt_field::Prime64Offset59;
 
     type F = Prime64Offset59;
 

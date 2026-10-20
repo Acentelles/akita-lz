@@ -12,9 +12,9 @@ use akita_types::{
     RingRelationGroupOpeningView, RingRelationInstance, SetupContributionGroupInputs,
     SetupContributionPlan,
 };
+use jolt_algebra::ring::scalar_powers;
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
 use jolt_crypto::challenge::Challenges;
-use jolt_field::ring::scalar_powers;
-use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
 use std::sync::Arc;
 
 pub(crate) mod evaluation;

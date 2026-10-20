@@ -22,8 +22,8 @@ use akita_params::{
     CommittedGroupParams, SetupMatrixCapacity, SisModulusProfileId, TerminalFoldParams,
 };
 use akita_types::RingVec;
+use jolt_algebra::Prime64Offset59;
 use jolt_crypto::challenge::SparseChallengeConfig;
-use jolt_field::Prime64Offset59;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 

@@ -1,7 +1,7 @@
 use super::*;
 use akita_params::MAX_I8_LOG_BASIS;
 use akita_types::{select_crt_ntt_params, ProtocolCrtNttParams};
-use jolt_field::ntt::tables::{Q128_NUM_PRIMES, Q32_NUM_PRIMES, Q64_NUM_PRIMES};
+use jolt_algebra::ntt::tables::{Q128_NUM_PRIMES, Q32_NUM_PRIMES, Q64_NUM_PRIMES};
 
 pub(super) const BALANCED_DIGIT_RHS_MAX_ABS: u64 = 1 << (MAX_I8_LOG_BASIS - 1);
 pub(super) const I8_RHS_MAX_ABS: u64 = 128;
@@ -118,10 +118,10 @@ pub(super) fn safe_crt_chunk_width<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::ntt::tables::{
+    use jolt_algebra::ntt::tables::{
         q128_primes, Q128_NUM_PRIMES, Q32_NUM_PRIMES, Q32_PRIMES, Q64_NUM_PRIMES, Q64_PRIMES,
     };
-    use jolt_field::{Fp64, Prime128Offset275, Prime32Offset99, Prime64Offset59};
+    use jolt_algebra::{Fp64, Prime128Offset275, Prime32Offset99, Prime64Offset59};
 
     #[test]
     fn q128_digit_capacity_matches_expected_scale() {

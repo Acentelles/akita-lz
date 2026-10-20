@@ -6,8 +6,8 @@ pub use materialize::materialize_eq_tensor_left;
 
 use super::MAX_COMPACT_STRIDE_TERMS;
 use akita_error::AkitaError;
-use jolt_field::checked;
-use jolt_field::Field;
+use jolt_algebra::checked;
+use jolt_algebra::Field;
 use std::sync::Arc;
 
 /// Weights carried by one affine tensor axis.

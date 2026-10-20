@@ -12,12 +12,12 @@ use super::{
     sparse_mul_acc_pm1, SignedDigitBasis, ValidatedSparseChallenge, ValidatedSparseChallenges,
 };
 use akita_error::AkitaError;
+use jolt_algebra::checked;
+use jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{CanonicalEncoding, Field};
 use jolt_crypto::challenge::SparseChallenge;
-use jolt_field::checked;
-use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
-use jolt_field::solinas::parallel::*;
-use jolt_field::CyclotomicRing;
-use jolt_field::{CanonicalEncoding, Field};
 use std::ops::Range;
 
 use crate::sources::block_digits::{

@@ -11,8 +11,8 @@ use akita_params::{ChunkedWitnessCfg, DecompositionParams, SisModulusProfileId};
 use akita_params::{OpeningClaimsLayout, PolynomialGroupLayout, ScheduleLookupKey};
 use akita_schedules::PlannerPolicy;
 use akita_serialization::Valid;
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
 use jolt_crypto::challenge::SparseChallengeConfig;
-use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -463,7 +463,7 @@ pub trait CommitmentConfig: Clone + Send + Sync + 'static {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::{Fp32, FpExt4};
+    use jolt_algebra::{Fp32, FpExt4};
 
     type Base = Fp32<251>;
     type BaseExt = FpExt4<Base>;

@@ -2,7 +2,7 @@ use super::*;
 use crate::backend::OperationCtx;
 use crate::backend::{EvaluationTraceDescription, Stage2OpeningDescription};
 use akita_types::GrindingReplay;
-use jolt_field::AdditiveGroup;
+use jolt_algebra::AdditiveGroup;
 
 use akita_params::{InnerCommitSecurityRoute, OpeningClaimsLayout};
 use akita_types::{
@@ -152,7 +152,7 @@ where
             group_lp.opening_method(),
             akita_params::OpeningMethod::EvaluationTrace
         ) {
-            let target_len = jolt_field::checked::sum([
+            let target_len = jolt_algebra::checked::sum([
                 group_alpha_bits,
                 group_lp.position_index_bits(),
                 group_lp.block_index_bits(),

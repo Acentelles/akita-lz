@@ -16,7 +16,7 @@ use akita_error::AkitaError;
 use akita_serialization::{
     AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate,
 };
-use jolt_field::checked;
+use jolt_algebra::checked;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::io::{Read, Write};

@@ -20,10 +20,10 @@ use akita_serialization::{Compress, SerializationError, Validate};
 use akita_types::AkitaExpandedSetup;
 #[cfg(feature = "disk-persistence")]
 use akita_types::{sample_akita_setup_seed, setup_seed_digest, AkitaSetupDescriptor};
+use jolt_algebra::{CanonicalEncoding, Field};
+use jolt_algebra::{Unreduced, WithCommitAccumulator};
 #[cfg(feature = "disk-persistence")]
 use jolt_crypto::lattice::PublicMatrixSeed;
-use jolt_field::{CanonicalEncoding, Field};
-use jolt_field::{Unreduced, WithCommitAccumulator};
 #[cfg(feature = "disk-persistence")]
 use std::fmt::Write as _;
 #[cfg(feature = "disk-persistence")]

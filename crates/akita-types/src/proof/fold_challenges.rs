@@ -2,8 +2,8 @@
 
 use crate::{FoldChallengeDrawDomain, FoldDraw};
 use akita_error::AkitaError;
+use jolt_algebra::{ExtField, Field};
 use jolt_crypto::challenge::Challenges;
-use jolt_field::{ExtField, Field};
 
 use crate::CoefficientPackingChallenges;
 use akita_params::{InnerCommitSecurityRoute, OpeningMethod, SubringCoefficientPackingGeometry};

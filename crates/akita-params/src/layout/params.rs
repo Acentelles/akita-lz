@@ -5,8 +5,8 @@
 //! describes one recursion level.
 
 use akita_error::AkitaError;
+use jolt_algebra::CanonicalEncoding;
 use jolt_crypto::challenge::SparseChallengeConfig;
-use jolt_field::CanonicalEncoding;
 
 use crate::descriptor_bytes::{push_u32, push_usize};
 use crate::layout::opening_layout::OpeningClaimsLayout;

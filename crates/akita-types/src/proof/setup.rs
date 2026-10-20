@@ -6,9 +6,9 @@ use akita_params::FlatMatrix;
 use akita_serialization::{
     AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate,
 };
+use jolt_algebra::{CanonicalEncoding, Field};
 use jolt_crypto::lattice::{check_public_matrix_prefix, PublicMatrixSeed};
 use jolt_crypto::CryptoError;
-use jolt_field::{CanonicalEncoding, Field};
 use std::io::{Read, Write};
 use std::sync::Arc;
 
@@ -53,7 +53,7 @@ pub struct AkitaExpandedSetup<F: Field> {
 ///
 /// ```compile_fail
 /// use akita_types::AkitaVerifierSetup;
-/// use jolt_field::Prime32Offset99;
+/// use jolt_algebra::Prime32Offset99;
 /// fn replace(setup: &mut AkitaVerifierSetup<Prime32Offset99>,
 ///            other: AkitaVerifierSetup<Prime32Offset99>) {
 ///     setup.expanded = other.expanded;
@@ -62,7 +62,7 @@ pub struct AkitaExpandedSetup<F: Field> {
 ///
 /// ```compile_fail
 /// use akita_types::AkitaVerifierSetup;
-/// use jolt_field::Prime32Offset99;
+/// use jolt_algebra::Prime32Offset99;
 /// fn replace(setup: &mut AkitaVerifierSetup<Prime32Offset99>,
 ///            other: AkitaVerifierSetup<Prime32Offset99>) {
 ///     setup.prefix_slots = other.prefix_slots;
@@ -397,11 +397,11 @@ impl<F: Field + CanonicalEncoding + Valid + AkitaDeserialize<Context = ()>> Akit
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_crypto::lattice::derive_public_matrix_prefix;
-    use jolt_field::Zero;
-    use jolt_field::{
+    use jolt_algebra::Zero;
+    use jolt_algebra::{
         Fp64, Prime128Offset275, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59,
     };
+    use jolt_crypto::lattice::derive_public_matrix_prefix;
 
     type F = Prime128OffsetA7F7;
     const D: usize = 4;

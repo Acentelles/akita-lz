@@ -5,8 +5,8 @@ use crate::{advance_eq_factored_claim, SumcheckInstanceVerifier, SumcheckKernel}
 use crate::{EqFactoredSumcheckInstanceProver, SumcheckInstanceProver};
 use akita_algebra::split_eq::GruenSplitEq;
 use akita_error::AkitaError;
-use jolt_field::checked;
-use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field};
+use jolt_algebra::checked;
+use jolt_algebra::{CanonicalDecode, CanonicalEncoding, ExtField, Field};
 use jolt_poly::{CompressedPoly, OmittedConstantPoly};
 use jolt_transcript::{Channel, ProverTranscript, SiteId, Sponge, VerifierTranscript};
 
@@ -356,7 +356,7 @@ where
 mod tests {
     use super::*;
     use akita_algebra::poly::multilinear_eval;
-    use jolt_field::{CanonicalBytes, One, Prime128Offset275 as F, Ring, Zero};
+    use jolt_algebra::{CanonicalBytes, One, Prime128Offset275 as F, Ring, Zero};
     use jolt_poly::UnivariatePoly;
     use jolt_transcript::{Blake2b512 as H, ProtocolId};
 

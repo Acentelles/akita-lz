@@ -1,14 +1,14 @@
-use jolt_field::ntt::butterfly::{forward_ntt, inverse_ntt, NttTwiddles};
-use jolt_field::tables::{
+use jolt_algebra::ntt::butterfly::{forward_ntt, inverse_ntt, NttTwiddles};
+use jolt_algebra::tables::{
     q128_primes, Q128_MODULUS, Q128_NUM_PRIMES, Q32_MODULUS, Q32_NUM_PRIMES, Q32_PRIMES,
     Q64_MODULUS, Q64_NUM_PRIMES, Q64_PRIMES,
 };
-use jolt_field::NttPrime;
-use jolt_field::{
+use jolt_algebra::NttPrime;
+use jolt_algebra::{
     CenteredMontLut, CrtNttParamSet, CyclotomicCrtNtt, CyclotomicRing, DigitMontLut, LimbQ,
     MontCoeff, NttKernelPlan,
 };
-use jolt_field::{Fp128, Fp64, Prime128Offset275, Ring, Zero};
+use jolt_algebra::{Fp128, Fp64, Prime128Offset275, Ring, Zero};
 
 #[test]
 fn limbq_from_to_u128_round_trip() {

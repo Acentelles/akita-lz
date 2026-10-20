@@ -12,7 +12,7 @@ internal-consistency failures use their own error variants.
 ## In scope
 
 - `akita-verifier`
-- Verifier-reachable code in `akita-types` (including SIS derivation and table materialization), `akita-serialization`, `akita-algebra`, `akita-sumcheck`, and verifier-used `jolt-field`, `jolt-crypto`, and `jolt-transcript` paths
+- Verifier-reachable code in `akita-types` (including SIS derivation and table materialization), `akita-serialization`, `akita-algebra`, `akita-sumcheck`, and verifier-used `jolt-algebra`, `jolt-crypto`, and `jolt-transcript` paths
 - `akita-config` policy validation and trusted artifact binding used by `batched_verify`
 - `akita-schedules` trusted artifact decoding, row identity, row resolution,
   and canonical resolved-row audit paths
@@ -57,7 +57,7 @@ nor the challenge law.
 ## Rules
 
 1. Do not add verifier-reachable `panic!`, `assert!`, `assert_eq!`, `expect`, `unwrap`, `unreachable!`, unchecked indexing/slicing, overflow-prone shape arithmetic, or unbounded allocation unless an earlier verifier boundary has clearly validated the invariant.
-2. Use `jolt_field::checked` for reusable exact `usize` formulas. These functions return `Option`; map failure to the appropriate `AkitaError` at the protocol boundary. Direct standard library `checked_*` calls remain appropriate for a single local operation.
+2. Use `jolt_algebra::checked` for reusable exact `usize` formulas. These functions return `Option`; map failure to the appropriate `AkitaError` at the protocol boundary. Direct standard library `checked_*` calls remain appropriate for a single local operation.
 3. Do not replace exact size or index arithmetic with wrapping or saturating arithmetic. Those operations hide malformed geometry instead of rejecting it.
 4. Prefer strengthening validation at deserialization, setup construction, schedule expansion, and verifier API entry points.
 5. Keep hot verifier arithmetic paths fast: do not add slow fallback evaluators, compatibility shims, or repeated defensive checks inside tight loops when the invariant can be enforced once at the boundary.

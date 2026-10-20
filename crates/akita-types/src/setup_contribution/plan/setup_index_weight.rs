@@ -2,8 +2,8 @@ use super::*;
 use akita_algebra::offset_eq::{
     materialize_eq_tensor_left, EqPairTensorAxis, EqPairTensorFamily, OffsetEqWindow,
 };
-use jolt_field::fft::field_pow;
-use jolt_field::ring::{evaluate_power_sequence_mle, scalar_powers_with_stride};
+use jolt_algebra::fft::field_pow;
+use jolt_algebra::ring::{evaluate_power_sequence_mle, scalar_powers_with_stride};
 
 struct GroupSetupIndexWeights<E> {
     projection_scales: [Option<Vec<E>>; 3],
@@ -518,7 +518,7 @@ mod projection_tests {
     use akita_algebra::offset_eq::{
         eq_eval_at_index, eval_boolean_pair_tensor_families, OffsetEqWindow,
     };
-    use jolt_field::{One, Prime128OffsetA7F7, Ring};
+    use jolt_algebra::{One, Prime128OffsetA7F7, Ring};
 
     type F = Prime128OffsetA7F7;
 

@@ -13,10 +13,10 @@ use crate::validation::validate_i8_setup_log_basis;
 use akita_error::AkitaError;
 use akita_params::{CommittedGroupParams, RelationRowGeometry};
 use akita_types::{OpeningFamily, RingRelationGroupOpening, RingVec};
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{CanonicalEncoding, Field, Ring};
 use jolt_crypto::challenge::{Challenges, SparseChallenge};
-use jolt_field::solinas::parallel::*;
-use jolt_field::CyclotomicRing;
-use jolt_field::{CanonicalEncoding, Field, Ring};
 
 #[cfg(test)]
 std::thread_local! {

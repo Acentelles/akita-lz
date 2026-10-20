@@ -5,7 +5,7 @@ use akita_params::{
     CommittedGroupParams, CompressionChainPlan, GroupCommitPhaseParams, RingRelationMode,
     SetupPrefixSlotId, SisModulusProfileId, TerminalFoldParams,
 };
-use jolt_field::checked;
+use jolt_algebra::checked;
 
 /// Checked B-stage arithmetic plan.
 #[derive(Debug, Clone, PartialEq, Eq)]

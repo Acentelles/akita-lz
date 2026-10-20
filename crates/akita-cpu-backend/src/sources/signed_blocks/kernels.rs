@@ -12,9 +12,9 @@ use crate::sources::block_digits::{DigitShape, RingValues};
 use crate::sources::dense::seam_packing_partials;
 use crate::sources::poly_helpers::{element_partitioned_decompose_fold, SignedDigitBasis};
 use akita_error::AkitaError;
+use jolt_algebra::checked;
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced};
 use jolt_crypto::challenge::SparseChallenge;
-use jolt_field::checked;
-use jolt_field::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced};
 use std::ops::Range;
 
 macro_rules! with_source {

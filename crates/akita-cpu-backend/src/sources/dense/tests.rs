@@ -2,9 +2,9 @@ use super::poly::DensePoly;
 use crate::commitment::CommitmentSource;
 use crate::opaque::RootPolyMeta;
 use akita_error::AkitaError;
-use jolt_field::CyclotomicRing;
-use jolt_field::Prime128OffsetA7F7 as F;
-use jolt_field::{CanonicalEncoding, Ring, Zero};
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::Prime128OffsetA7F7 as F;
+use jolt_algebra::{CanonicalEncoding, Ring, Zero};
 
 #[test]
 fn chunked_fold_matches_windowed_reference_and_global() {
@@ -347,8 +347,8 @@ fn fold_rejects_unsupported_digit_shapes_with_cold_and_populated_caches() {
 // The expectation is the input integer itself, independent of decomposition.
 #[test]
 fn single_digit_fold_preserves_signed_i8_i16_boundaries() {
+    use jolt_algebra::Prime64Offset59;
     use jolt_crypto::challenge::SparseChallenge;
-    use jolt_field::Prime64Offset59;
     const D: usize = 128;
     let challenge = SparseChallenge {
         positions: vec![0].into(),

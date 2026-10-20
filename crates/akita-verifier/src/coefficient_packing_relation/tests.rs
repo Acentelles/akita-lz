@@ -9,8 +9,8 @@ use akita_types::{
     CoefficientPackingFixture, CoefficientPackingGroupSemantics,
     PreparedSubringCoefficientPackingPoint, RelationWeightEvent,
 };
-use jolt_field::ring::scalar_powers;
-use jolt_field::{
+use jolt_algebra::ring::scalar_powers;
+use jolt_algebra::{
     Ext2, FpExt4, One, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59, Ring, Zero,
 };
 use std::sync::Arc;

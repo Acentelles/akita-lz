@@ -9,7 +9,7 @@
 //! loads.
 
 use akita_serialization::SerializationError;
-use jolt_field::checked;
+use jolt_algebra::checked;
 
 const SETUP_MATRIX_WIRE_ALIGNMENT: usize = 8;
 const SETUP_MATRIX_LENGTH_BYTES: usize = core::mem::size_of::<u64>();

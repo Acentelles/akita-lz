@@ -6,8 +6,8 @@ use akita_serialization::{
     AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate,
 };
 use akita_types::{SetupPrefixPublicCommitment, SetupPrefixVerifierSlot};
+use jolt_algebra::Field;
 use jolt_crypto::lattice::PublicMatrixSeed;
-use jolt_field::Field;
 use std::{
     collections::BTreeMap,
     io::{Read, Write},

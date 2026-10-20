@@ -625,8 +625,8 @@ where
         + Ring
         + ExtField<F>
         + AkitaSerialize
-        + jolt_field::Unreduced
-        + jolt_field::MulBaseUnreduced<F>,
+        + jolt_algebra::Unreduced
+        + jolt_algebra::MulBaseUnreduced<F>,
     B: crate::backend::OpaqueStage3Kernel<F, E> + crate::backend::ProverHandleFamily<F, E>,
 {
     match setup_contribution_mode {

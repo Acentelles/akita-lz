@@ -4,8 +4,8 @@ use crate::{tensor_opening_split, GrindingReplay};
 use akita_error::AkitaError;
 use akita_params::transcript_site::{ProtocolSiteId, SITE_FAMILY_EXTENSION_OPENING_REDUCTION};
 use akita_params::{GrindingSite, OpeningClaimsLayout};
-use jolt_field::checked;
-use jolt_field::{CanonicalDecode, CanonicalEncoding, ExtField, Field};
+use jolt_algebra::checked;
+use jolt_algebra::{CanonicalDecode, CanonicalEncoding, ExtField, Field};
 use jolt_transcript::Channel;
 
 const STAGE_OPENINGS: u32 = 1;
@@ -147,7 +147,7 @@ mod tests {
     use crate::transcript::test_transcripts::{prover as new_prover, verifier as new_verifier};
     use crate::{ProverGrinding, VerifierGrinding};
     use akita_params::{ChallengeFieldOrder, GrindingPlan, GrindingRun, PolynomialGroupLayout};
-    use jolt_field::{FpExt4, Prime32Offset99, Ring, Zero};
+    use jolt_algebra::{FpExt4, Prime32Offset99, Ring, Zero};
 
     type F = Prime32Offset99;
     type E = FpExt4<F>;

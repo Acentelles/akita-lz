@@ -5,7 +5,7 @@ use crate::{
 };
 use akita_error::AkitaError;
 use akita_serialization::SerializationError;
-use jolt_field::checked;
+use jolt_algebra::checked;
 
 use super::padded_setup_prefix_len;
 

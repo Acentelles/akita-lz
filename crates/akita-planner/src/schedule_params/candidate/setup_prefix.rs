@@ -1,5 +1,5 @@
 use super::*;
-use jolt_field::checked;
+use jolt_algebra::checked;
 use std::collections::HashMap;
 use std::sync::Arc;
 

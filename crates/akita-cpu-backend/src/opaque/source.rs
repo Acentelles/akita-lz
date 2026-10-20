@@ -4,8 +4,8 @@ use crate::opaque::{OpeningBatchKernel, OpeningFoldOutput};
 use akita_error::AkitaError;
 use akita_params::*;
 use akita_types::*;
-use jolt_field::CyclotomicRing;
-use jolt_field::{CanonicalEncoding, ExtField, Field, Ring};
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{CanonicalEncoding, ExtField, Field, Ring};
 type FoldedClaimEvals<F, const D: usize> =
     (Vec<CyclotomicRing<F, D>>, Vec<Vec<CyclotomicRing<F, D>>>);
 pub(super) struct PreparedExtensionOpeningGroup<E: Field> {

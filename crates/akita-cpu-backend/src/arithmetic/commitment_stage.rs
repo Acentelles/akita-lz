@@ -9,10 +9,10 @@ use crate::opaque::{CommitInnerPlan, DigitRowsComputeBackend};
 use akita_error::AkitaError;
 use akita_params::dispatch_for_field;
 use akita_types::{DigitBlocks, RingVec};
-use jolt_field::checked;
-use jolt_field::ring::CyclotomicRing;
-use jolt_field::solinas::parallel::*;
-use jolt_field::{CanonicalEncoding, Field, Unreduced, WithCommitAccumulator};
+use jolt_algebra::checked;
+use jolt_algebra::ring::CyclotomicRing;
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::{CanonicalEncoding, Field, Unreduced, WithCommitAccumulator};
 use std::mem::size_of;
 use std::sync::Arc;
 
@@ -485,7 +485,7 @@ mod tests {
     use crate::opaque::ComputeBackendSetup;
     use crate::{AkitaProverSetup, DensePoly};
     use akita_params::SetupMatrixCapacity;
-    use jolt_field::{Prime128Offset275, Ring};
+    use jolt_algebra::{Prime128Offset275, Ring};
 
     type F = Prime128Offset275;
 

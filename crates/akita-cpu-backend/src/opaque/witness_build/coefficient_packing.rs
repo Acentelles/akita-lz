@@ -11,13 +11,13 @@ use akita_params::{
     SubringCoefficientPackingGeometry,
 };
 use akita_types::DigitBlocks;
+use jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{CanonicalEncoding, Field};
 use jolt_crypto::challenge::Challenges;
-use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
-use jolt_field::CyclotomicRing;
-use jolt_field::{CanonicalEncoding, Field};
 
 /// Fold one group's canonical partials with its single sampled subring challenge batch.
-pub(crate) fn fold_coefficient_packing_group<F: Field + jolt_field::Ring>(
+pub(crate) fn fold_coefficient_packing_group<F: Field + jolt_algebra::Ring>(
     geometry: SubringCoefficientPackingGeometry,
     partials_by_claim: &[SubringCoefficientPackingPartials<F>],
     challenges: &Challenges,
@@ -265,8 +265,8 @@ mod tests {
         gadget_row_scalars, CommittedGroupParams, OpenCommitMatrixParams, OpeningClaimsLayout,
         PolynomialGroupLayout, SisModulusProfileId,
     };
+    use jolt_algebra::{Prime128OffsetA7F7, Ring, Zero};
     use jolt_crypto::challenge::{SparseChallenge, SparseChallengeConfig};
-    use jolt_field::{Prime128OffsetA7F7, Ring, Zero};
 
     type F = Prime128OffsetA7F7;
 

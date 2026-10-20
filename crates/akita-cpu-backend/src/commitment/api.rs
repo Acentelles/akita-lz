@@ -19,11 +19,11 @@ use akita_types::AkitaExpandedSetup;
 #[cfg(test)]
 use akita_types::{Commitment, CommittedGroup, FpExtEncoding};
 #[cfg(test)]
-use jolt_field::checked;
-use jolt_field::ring::cyclotomic::decompose_centering_threshold;
-use jolt_field::{CanonicalEncoding, Field};
+use jolt_algebra::checked;
+use jolt_algebra::ring::cyclotomic::decompose_centering_threshold;
+use jolt_algebra::{CanonicalEncoding, Field};
 #[cfg(test)]
-use jolt_field::{Ring, Unreduced};
+use jolt_algebra::{Ring, Unreduced};
 
 /// Ordered groups committed before the current group.
 #[derive(Debug, Clone, Copy)]

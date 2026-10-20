@@ -18,7 +18,7 @@ akita-config = { version = "0.1.0", path = "../akita-config", optional = true, d
 akita-schedules = { version = "0.1.0", path = "../akita-schedules", default-features = false }
 akita-sis-estimator = { version = "0.1.0", path = "../akita-sis-estimator", optional = true }
 akita-params = { version = "0.1.0", path = "../akita-params", default-features = false }
-jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false }
+jolt-algebra = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false }
 libm = "0.2"
 
 [features]

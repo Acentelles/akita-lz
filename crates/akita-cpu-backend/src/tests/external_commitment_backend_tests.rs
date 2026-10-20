@@ -13,8 +13,8 @@ use akita_params::{
     CommittedGroupParams, RingRelationMode, SetupMatrixCapacity, SisModulusProfileId,
 };
 use akita_types::RingVec;
+use jolt_algebra::{Prime64Offset59, Ring};
 use jolt_crypto::challenge::SparseChallengeConfig;
-use jolt_field::{Prime64Offset59, Ring};
 use std::sync::Arc;
 
 type F = Prime64Offset59;

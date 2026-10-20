@@ -1,9 +1,9 @@
 use std::ops::Range;
 
 use akita_error::AkitaError;
-use jolt_field::ring::ResidueKernelPoint;
-use jolt_field::solinas::parallel::*;
-use jolt_field::{ExtField, Field, MulBaseUnreduced, Unreduced, Zero};
+use jolt_algebra::ring::ResidueKernelPoint;
+use jolt_algebra::solinas::parallel::*;
+use jolt_algebra::{ExtField, Field, MulBaseUnreduced, Unreduced, Zero};
 
 /// One family of setup-matrix rows read as per-column ring slices borrowed
 /// from the materialized store.
@@ -301,8 +301,8 @@ impl<E> SetupColumnValues<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::ring::residue_kernel;
-    use jolt_field::{FpExt4, Prime32Offset99, Ring};
+    use jolt_algebra::ring::residue_kernel;
+    use jolt_algebra::{FpExt4, Prime32Offset99, Ring};
 
     type F = Prime32Offset99;
     type E = FpExt4<F>;

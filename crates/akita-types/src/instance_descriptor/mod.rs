@@ -30,9 +30,9 @@ use akita_serialization::{
     AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate,
     DEFAULT_MAX_SEQUENCE_LEN,
 };
+use jolt_algebra::narrowing::{usize_to_u32, usize_to_u8};
+use jolt_algebra::{CanonicalEncoding, ExtField, Field};
 use jolt_crypto::lattice::PublicMatrixSeed;
-use jolt_field::narrowing::{usize_to_u32, usize_to_u8};
-use jolt_field::{CanonicalEncoding, ExtField, Field};
 use std::io::{Read, Write};
 
 /// Compute the descriptor digest for a public matrix identity.
@@ -738,7 +738,7 @@ impl AkitaDeserialize for CallSection {
 }
 
 fn modulus_be_32<F: Field + CanonicalEncoding>() -> Result<[u8; 32], AkitaError> {
-    jolt_field::field_modulus_be_bytes::<F>().map_err(AkitaError::from)
+    jolt_algebra::field_modulus_be_bytes::<F>().map_err(AkitaError::from)
 }
 
 fn read_digest<R: Read>(mut reader: R) -> Result<DescriptorDigest, SerializationError> {

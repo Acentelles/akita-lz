@@ -4,7 +4,7 @@ use akita_error::AkitaError;
 use akita_sumcheck::{
     verify_sumcheck_rounds, SumcheckRole, SumcheckShape, SumcheckVerifierChannel,
 };
-use jolt_field::{CanonicalBytes, Prime128Offset275 as F, Ring};
+use jolt_algebra::{CanonicalBytes, Prime128Offset275 as F, Ring};
 use jolt_transcript::{Blake2b512, Channel, ProtocolId, SiteId, VerifierTranscript};
 use libfuzzer_sys::fuzz_target;
 

@@ -1,7 +1,7 @@
 use akita_error::AkitaError;
-use jolt_crypto::challenge::{Challenges, SparseChallenge, SparseChallengeConfig};
 #[cfg(feature = "parallel")]
-use jolt_field::solinas::parallel::*;
+use jolt_algebra::solinas::parallel::*;
+use jolt_crypto::challenge::{Challenges, SparseChallenge, SparseChallengeConfig};
 
 pub(super) fn validate_packing_challenge_weights(
     challenges: &Challenges,

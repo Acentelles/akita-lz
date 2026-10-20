@@ -1,4 +1,4 @@
-//! Akita's field challenges are `jolt_field::Field::random` draws on the
+//! Akita's field challenges are `jolt_algebra::Field::random` draws on the
 //! transcript's squeeze stream. This pins, for every production base field,
 //! that the draw is exact rejection sampling at the field's own width: a
 //! candidate at the modulus is rejected and the next one is used, and the
@@ -9,7 +9,7 @@
     reason = "the replayed stream is sized by the test"
 )]
 
-use jolt_field::{
+use jolt_algebra::{
     Field, One, Prime128Offset275, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59, Ring,
 };
 use rand_core::{Error, RngCore};

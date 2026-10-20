@@ -55,7 +55,7 @@ or prover implementation.
 
 | Crate | Review role |
 | --- | --- |
-| external `jolt-field` (`jolt-algebra`) | Field, ring, NTT/CRT, FFT, and checked integer arithmetic |
+| external `jolt-algebra` | Field, ring, NTT/CRT, FFT, and checked integer arithmetic |
 | `akita-algebra` | Multilinear and equality polynomial arithmetic |
 | `akita-serialization` | Canonical encoding and checked decoding |
 | external `jolt-crypto` and `jolt-transcript`, and `akita-types::transcript` | Instance binding and challenge derivation |
@@ -84,7 +84,7 @@ enforces. A planner estimate, certificate check, and runtime verifier must not
 carry separate versions of one bound.
 
 The repository follows one canonical function per concept. Generic checked
-integer formulas live in `jolt_field::checked`. Schedule validation belongs to
+integer formulas live in `jolt_algebra::checked`. Schedule validation belongs to
 the configuration and schedule admission path. Transcript labels and order
 belong to the transcript implementation. Serialization validity belongs to the
 type that owns the encoding.

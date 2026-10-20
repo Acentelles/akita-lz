@@ -5,13 +5,15 @@ use akita_cpu_backend::standalone::{
     decompose_recursive_witness, recursive_witness_from_i8_digits,
 };
 use akita_params::sis::compute_num_digits_field_width;
+use jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
+use jolt_algebra::CyclotomicRing;
 use jolt_crypto::challenge::{SparseChallenge, SparseChallengeConfig};
-use jolt_field::ring::cyclotomic::BalancedDecomposePow2Params;
-use jolt_field::CyclotomicRing;
 use std::hint::black_box;
 
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
-use jolt_field::{CanonicalEncoding, Field, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59};
+use jolt_algebra::{
+    CanonicalEncoding, Field, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59,
+};
 
 const FIELD_COEFFICIENTS: usize = 1 << 22;
 const POSITIONS_PER_BLOCK: usize = 512;

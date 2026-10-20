@@ -3,8 +3,8 @@
 #![deny(missing_docs)]
 #![warn(unreachable_pub)]
 
+use jolt_algebra::AlgebraError;
 use jolt_crypto::CryptoError;
-use jolt_field::AlgebraError;
 
 /// Errors that can occur in Akita PCS operations.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

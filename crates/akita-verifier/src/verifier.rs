@@ -4,7 +4,7 @@ use akita_config::{CommitmentConfig, TrustedScheduleCatalog};
 use akita_error::AkitaError;
 use akita_params::{OpeningScheduleSelection, ScheduleRowDigest};
 use akita_types::AkitaVerifierSetup;
-use jolt_field::CanonicalEncoding;
+use jolt_algebra::CanonicalEncoding;
 
 use crate::prepared_cache::{terminal_ntt_cache_requirement, TerminalNttCache};
 
@@ -160,8 +160,8 @@ mod tests {
         PolynomialGroupLayout, ScheduleLookupKey,
     };
     use akita_types::{AkitaExpandedSetup, AkitaSetupDescriptor, SetupPrefixVerifierRegistry};
+    use jolt_algebra::Ring;
     use jolt_crypto::lattice::PublicMatrixSeed;
-    use jolt_field::Ring;
     use std::sync::Arc;
 
     type F = <OneHot as CommitmentConfig>::Field;

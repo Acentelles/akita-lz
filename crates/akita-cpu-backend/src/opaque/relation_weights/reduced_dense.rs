@@ -9,9 +9,9 @@
 use super::*;
 use akita_params::dispatch_for_field;
 use akita_types::RingMultiplierOpeningPoint;
+use jolt_algebra::ring::ResidueKernelPoint;
+use jolt_algebra::{ExtField, MulBaseUnreduced};
 use jolt_crypto::challenge::Challenges;
-use jolt_field::ring::ResidueKernelPoint;
-use jolt_field::{ExtField, MulBaseUnreduced};
 
 fn sparse_challenge_kernel<F, E>(
     challenges: &Challenges,

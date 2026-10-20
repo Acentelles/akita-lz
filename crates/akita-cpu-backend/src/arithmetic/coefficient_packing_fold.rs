@@ -1,8 +1,8 @@
 use akita_error::AkitaError;
 use akita_params::SubringCoefficientPackingGeometry;
+use jolt_algebra::checked;
+use jolt_algebra::{ExtField, Field, Ring};
 use jolt_crypto::challenge::SparseChallenge;
-use jolt_field::checked;
-use jolt_field::{ExtField, Field, Ring};
 use std::mem;
 
 const MAX_REFERENCE_ALLOCATION_BYTES: usize = 1 << 30;

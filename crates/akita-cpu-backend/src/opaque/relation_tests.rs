@@ -29,9 +29,9 @@ use akita_types::{
     RingRelationInstance, RingVec, SetupContributionGroupInputs, SetupContributionPlan,
 };
 use akita_verifier::{DirectScan, PreparedCoefficientFunctional};
+use jolt_algebra::CyclotomicRing;
+use jolt_algebra::{Prime128OffsetA7F7, Prime64Offset59, Ring, Zero};
 use jolt_crypto::challenge::{Challenges, SparseChallenge, SparseChallengeConfig};
-use jolt_field::CyclotomicRing;
-use jolt_field::{Prime128OffsetA7F7, Prime64Offset59, Ring, Zero};
 use std::array::from_fn;
 
 type ReducedF = Prime64Offset59;
@@ -417,7 +417,9 @@ fn centered_i32_decompose_matches_ring_decompose() {
         let mut expected = vec![[0i8; D]; num_digits];
         ring.balanced_decompose_pow2_i8_into_with_params(
             &mut expected,
-            &jolt_field::ring::cyclotomic::BalancedDecomposePow2Params::new(num_digits, log_basis),
+            &jolt_algebra::ring::cyclotomic::BalancedDecomposePow2Params::new(
+                num_digits, log_basis,
+            ),
         );
         assert_eq!(
             got, expected,

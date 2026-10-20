@@ -262,11 +262,11 @@ mod tests {
                     .map(RelationRowGeometry::physical_coefficient_width)
                     .sum::<usize>()
             );
-            let v = crate::RingVec::<jolt_field::Prime128OffsetA7F7>::from_coeffs(vec![
+            let v = crate::RingVec::<jolt_algebra::Prime128OffsetA7F7>::from_coeffs(vec![
                 Default::default();
                 params.open().matrix.output_rank() * 128
             ]);
-            let u = crate::RingVec::<jolt_field::Prime128OffsetA7F7>::from_coeffs(vec![
+            let u = crate::RingVec::<jolt_algebra::Prime128OffsetA7F7>::from_coeffs(vec![
                 Default::default();
                 params.outer().matrix.output_rank() * 256
             ]);
@@ -603,8 +603,7 @@ mod tests {
                 ..
             }
         ));
-        let v =
-            crate::RingVec::<jolt_field::Prime128OffsetA7F7>::from_coeffs(vec![
+        let v = crate::RingVec::<jolt_algebra::Prime128OffsetA7F7>::from_coeffs(vec![
                 Default::default();
                 overlap
                     .open()
@@ -612,8 +611,7 @@ mod tests {
                     .output_rank()
                     * 128
             ]);
-        let u =
-            crate::RingVec::<jolt_field::Prime128OffsetA7F7>::from_coeffs(vec![
+        let u = crate::RingVec::<jolt_algebra::Prime128OffsetA7F7>::from_coeffs(vec![
                 Default::default();
                 overlap
                     .outer()
