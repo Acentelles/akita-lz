@@ -14,11 +14,8 @@ use jolt_field::{Ext2, FpExt4, Prime128OffsetA7F7, Prime32Offset99, Prime64Offse
 
 /// Minimum proof-optimized log-basis.
 ///
-/// This is also the fixed **root-fold** basis: `log_basis_search_range_at_level(0)`
-/// collapses the root to `opening_basis_range.0`. Pinning the root to `3` (rather than the
-/// smallest reachable `2`) keeps the shrink strong enough that every preset — dense
-/// and small-field included — supports the full `nv` range, and matches the value
-/// the unpinned planner already favored at the root.
+/// This is the default root-fold basis; a preset may override it separately.
+/// Pinning the default root to 3 keeps the historical search and catalog bytes.
 pub(crate) const PROOF_OPTIMIZED_LOG_BASIS_MIN: u32 = 3;
 /// Maximum proof-optimized log-basis.
 pub(crate) const PROOF_OPTIMIZED_LOG_BASIS_MAX: u32 = 6;
@@ -144,16 +141,22 @@ macro_rules! impl_proof_optimized_preset {
     ($cfg:ty, $field:ty, $ext_field:ty, $family:expr, $field_bits:expr, $log_commit_bound:expr, source = $source:ident, schedule_family = $family_name:expr, ring_dimension_schedule = $mode:expr) => {
         impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $field_bits, $log_commit_bound, $source, $family_name, ring_dimension_schedule = $mode);
     };
-    ($cfg:ty, $field:ty, $ext_field:ty, $family:expr, $field_bits:expr, $log_commit_bound:expr, source = $source:ident, schedule_family = $family_name:expr, ring_dimension_schedule = $mode:expr, root_opening_log_basis = $root:expr, monotone_opening_basis = $monotone:expr) => {
-        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $field_bits, $log_commit_bound, $source, $family_name, ring_dimension_schedule = $mode, root_opening_log_basis = $root, monotone_opening_basis = $monotone);
+    ($cfg:ty, $field:ty, $ext_field:ty, $family:expr, $field_bits:expr, $log_commit_bound:expr, source = $source:ident, schedule_family = $family_name:expr, ring_dimension_schedule = $mode:expr, root_opening_log_basis = $root:expr, monotone_opening_basis = $monotone:expr, inner_basis_range = $inner:expr) => {
+        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $field_bits, $log_commit_bound, $source, $family_name, ring_dimension_schedule = $mode, root_opening_log_basis = $root, monotone_opening_basis = $monotone, inner_basis_range = $inner);
     };
-    (@options ring_dimension_schedule = $mode:expr, root_opening_log_basis = $root:expr, monotone_opening_basis = $monotone:expr) => {
+    (@options ring_dimension_schedule = $mode:expr, root_opening_log_basis = $root:expr, monotone_opening_basis = $monotone:expr, inner_basis_range = $inner:expr) => {
         impl_proof_optimized_preset!(@ring_dimension_schedule $mode);
         fn root_opening_log_basis() -> Option<u32> { $root }
         fn monotone_opening_basis() -> bool { $monotone }
+        fn inner_basis_range() -> (u32, u32) { $inner }
     };
     (@options ring_dimension_schedule = $mode:expr) => {
         impl_proof_optimized_preset!(@ring_dimension_schedule $mode);
+        fn inner_basis_range() -> (u32, u32) {
+            $crate::proof_optimized::proof_optimized_inner_basis_range(
+                Self::sis_modulus_profile(),
+            )
+        }
     };
     (@core $cfg:ty, $field:ty, $ext_field:ty, $family:expr, $field_bits:expr, $log_commit_bound:expr, $source:ident, $family_name:expr, $($options:tt)*) => {
         impl $crate::CommitmentConfig for $cfg {
@@ -191,12 +194,6 @@ macro_rules! impl_proof_optimized_preset {
                 (
                     $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MIN,
                     $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MAX,
-                )
-            }
-
-            fn inner_basis_range() -> (u32, u32) {
-                $crate::proof_optimized::proof_optimized_inner_basis_range(
-                    Self::sis_modulus_profile(),
                 )
             }
 

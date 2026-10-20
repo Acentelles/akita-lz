@@ -7,9 +7,32 @@ where
 {
     init_rayon_pool();
     run_on_large_stack(|| {
+        if BITS >= 5 {
+            let scheme = load_workspace_scheme::<fp128::DenseSmall<BITS>>(
+                ChunkedWitnessCfg::default_non_chunked(),
+            )
+            .unwrap();
+            let row = scheme
+                .schedules()
+                .resolve_key(&akita_params::ScheduleLookupKey::single(
+                    akita_params::PolynomialGroupLayout::singleton(19),
+                ))
+                .unwrap();
+            let schedule = row.schedule();
+            let bases: Vec<_> = std::iter::once(schedule.root.params.open().digits.log_basis)
+                .chain(
+                    schedule
+                        .recursive_folds
+                        .iter()
+                        .map(|step| step.params.open().digits.log_basis),
+                )
+                .chain(std::iter::once(schedule.terminal.fold.log_basis))
+                .collect();
+            assert!(bases.windows(2).any(|pair| pair[1] < pair[0]));
+        }
         prove_verify_dense_roundtrip_with_evals::<fp128::DenseSmall<BITS>>(
             ChunkedWitnessCfg::default_non_chunked(),
-            &[14],
+            if BITS >= 5 { &[14, 19] } else { &[14] },
             b"completeness/fp128_dense_small",
             |nv, _| {
                 let mut values: Vec<F> = (0..1usize << nv)
@@ -49,5 +72,6 @@ where
 #[test]
 fn small_dense_roundtrip_and_signed_bounds() {
     check::<4>();
+    check::<5>();
     check::<6>();
 }

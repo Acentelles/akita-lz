@@ -206,6 +206,26 @@ const FP128_DENSE_MULTI_CHUNK_KEYS: &[PolynomialGroupLayout] =
 /// `fp128_onehot` grouped catalog (see [`bounded_dense_onehot_catalog_key`]); 24
 /// and 26 are the sizes where the bound's setup and next-witness savings are
 /// measured against the matching `fp128_dense` rows.
+const FP128_DENSE_SMALL_KEYS: &[PolynomialGroupLayout] = &[
+    PolynomialGroupLayout::singleton(13),
+    PolynomialGroupLayout::singleton(14),
+    PolynomialGroupLayout::singleton(15),
+    PolynomialGroupLayout::singleton(16),
+    PolynomialGroupLayout::singleton(17),
+    PolynomialGroupLayout::singleton(18),
+    PolynomialGroupLayout::singleton(19),
+    PolynomialGroupLayout::singleton(20),
+    PolynomialGroupLayout::singleton(21),
+    PolynomialGroupLayout::singleton(22),
+    PolynomialGroupLayout::singleton(23),
+    PolynomialGroupLayout::singleton(24),
+    PolynomialGroupLayout::singleton(25),
+    PolynomialGroupLayout::singleton(26),
+    PolynomialGroupLayout::singleton(27),
+    PolynomialGroupLayout::singleton(28),
+    PolynomialGroupLayout::singleton(29),
+];
+
 const FP128_DENSE_BOUNDED_KEYS: &[PolynomialGroupLayout] = &[
     PolynomialGroupLayout::singleton(14),
     PolynomialGroupLayout::singleton(24),
@@ -811,13 +831,13 @@ pub const ALL_GENERATED_FAMILIES: &[GeneratedFamily] = &[
         ChunkedWitnessCfg::default_non_chunked()
     ),
     family_row!(
-        &[PolynomialGroupLayout::singleton(14)],
+        FP128_DENSE_SMALL_KEYS,
         fp128::DenseSmall<5>,
         no_grouped_requests,
         ChunkedWitnessCfg::default_non_chunked()
     ),
     family_row!(
-        &[PolynomialGroupLayout::singleton(14)],
+        FP128_DENSE_SMALL_KEYS,
         fp128::DenseSmall<6>,
         no_grouped_requests,
         ChunkedWitnessCfg::default_non_chunked()

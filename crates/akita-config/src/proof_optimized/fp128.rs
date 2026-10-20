@@ -167,6 +167,9 @@ impl_proof_optimized_preset!(
 /// in `[-2^(K-1), 2^(K-1)-1]`; commit rejects values outside that interval.
 /// Opening witnesses retain full field width. Each width has its own
 /// `fp128_dense_small_<K>` family and the adaptive dimensions of [`Dense`].
+/// K=5 and K=6 cover arities 13 through 29, use one root source digit,
+/// pin the root opening log basis to 5, and allow decreasing recursive bases.
+/// K=3 and K=4 retain the legacy arity-14 policy.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DenseSmall<const SIGNED_BITS: u32>;
 
@@ -176,7 +179,7 @@ impl<const SIGNED_BITS: u32> DenseSmall<SIGNED_BITS> {
 }
 
 macro_rules! impl_small_dense {
-    ($bits:literal) => {
+    ($bits:literal, $root:expr, $monotone:expr) => {
         impl_proof_optimized_preset!(
             DenseSmall<$bits>,
             Field,
@@ -192,14 +195,24 @@ macro_rules! impl_small_dense {
                 potential_a_dimensions: &Dense::A_RING_DIMENSIONS,
                 potential_b_dimensions: &Dense::B_RING_DIMENSIONS,
                 potential_d_dimensions: &Dense::D_RING_DIMENSIONS,
-            }
+            },
+            root_opening_log_basis = $root,
+            monotone_opening_basis = $monotone,
+            inner_basis_range = (
+                if $bits >= 5 {
+                    $bits
+                } else {
+                    PROOF_OPTIMIZED_LOG_BASIS_MIN
+                },
+                PROOF_OPTIMIZED_INNER_LOG_BASIS_MAX
+            )
         );
     };
 }
-impl_small_dense!(3);
-impl_small_dense!(4);
-impl_small_dense!(5);
-impl_small_dense!(6);
+impl_small_dense!(3, None, true);
+impl_small_dense!(4, None, true);
+impl_small_dense!(5, Some(5), false);
+impl_small_dense!(6, Some(5), false);
 
 impl_proof_optimized_preset!(
     OneHot,

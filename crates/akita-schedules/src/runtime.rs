@@ -211,7 +211,8 @@ pub struct PlannerPolicy {
     pub sis_l2_table_digest: akita_params::SisL2TableDigest,
     pub claim_ext_degree: usize,
     pub chal_ext_degree: usize,
-    /// Inclusive A/source decomposition basis domain at every level.
+    /// Inclusive raw-source A decomposition domain. Recursive digits retain
+    /// their producer basis independently of this domain.
     pub inner_basis_range: (u32, u32),
     /// Inclusive B/D opening and folded-response basis domain.
     pub opening_basis_range: (u32, u32),
