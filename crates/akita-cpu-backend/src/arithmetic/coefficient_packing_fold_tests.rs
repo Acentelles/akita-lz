@@ -1,7 +1,7 @@
 use super::*;
 use akita_challenges::{SparseChallenge, PRODUCTION_FOLD_CHALLENGE_RING_DIMS};
 use akita_params::{basis_weights, BasisMode};
-use akita_types::PreparedSubringCoefficientPackingPoint;
+use akita_types::{PreparedSubringCoefficientPackingPoint, SubringCoefficientPackingTables};
 use jolt_field::{
     Ext2, ExtField, FpExt4, One, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59, Zero,
 };
@@ -297,23 +297,24 @@ fn prepared_point_matches_direct_opening_in_both_bases() {
             source_num_vars,
             &point,
         )
+        .and_then(SubringCoefficientPackingTables::new)
         .unwrap();
         let partials = coefficient_packing_partials::<F, E>(
             geometry,
             num_live_positions,
             num_positions_per_block,
             &source,
-            &prepared.weight_tables().unwrap().position_weights,
-            &prepared.weight_tables().unwrap().packing_weights,
+            prepared.position_weights(),
+            prepared.packing_weights(),
         )
         .unwrap();
         let got = coefficient_packing_scalar_opening::<F, E>(
             geometry,
-            prepared.num_live_blocks(),
+            prepared.point().num_live_blocks(),
             &[partials],
             &[E::one()],
-            &prepared.weight_tables().unwrap().live_block_weights,
-            &prepared.weight_tables().unwrap().tail_weights,
+            prepared.live_block_weights(),
+            prepared.tail_weights(),
         )
         .unwrap();
 

@@ -4,7 +4,9 @@ use akita_params::{
     BasisMode, CommitmentPayloadMode, OpenCommitMatrixParams, OpeningClaimsLayout, OpeningMethod,
     RelationWitnessGeometry, SisModulusProfileId, SubringCoefficientPackingGeometry,
 };
-use akita_types::{relation_rhs_coeff_len, PreparedSubringCoefficientPackingPoint};
+use akita_types::{
+    relation_rhs_coeff_len, PreparedSubringCoefficientPackingPoint, SubringCoefficientPackingTables,
+};
 use jolt_field::{Ext2, ExtField, Prime64Offset59, Zero};
 
 type F = Prime64Offset59;
@@ -110,8 +112,13 @@ fn fixture() -> (
 #[test]
 fn prepared_relation_group_rejects_stale_shape_and_claims() {
     let (params, opening_batch, relation, point) = fixture();
+    let packing = |point| {
+        OpeningFamily::SubringCoefficientPacking(
+            SubringCoefficientPackingTables::new(point).unwrap(),
+        )
+    };
     let valid = vec![PreparedRelationGroupPublic::new(
-        OpeningFamily::SubringCoefficientPacking((point.clone(), point.weight_tables().unwrap())),
+        packing(point),
         vec![E::from_u64(7), E::from_u64(11)],
     )];
     validate_prepared_relation_groups(&valid, &params, &opening_batch, &relation).unwrap();
@@ -121,7 +128,11 @@ fn prepared_relation_group_rejects_stale_shape_and_claims() {
         .collect::<Vec<_>>();
     for stale_point in [
         PreparedSubringCoefficientPackingPoint::new(
-            valid[0].coefficient_packing_point().unwrap().geometry(),
+            valid[0]
+                .coefficient_packing_tables()
+                .unwrap()
+                .point()
+                .geometry(),
             BasisMode::Lagrange,
             7,
             4,
@@ -130,7 +141,11 @@ fn prepared_relation_group_rejects_stale_shape_and_claims() {
         )
         .unwrap(),
         PreparedSubringCoefficientPackingPoint::new(
-            valid[0].coefficient_packing_point().unwrap().geometry(),
+            valid[0]
+                .coefficient_packing_tables()
+                .unwrap()
+                .point()
+                .geometry(),
             BasisMode::Lagrange,
             6,
             8,
@@ -140,10 +155,7 @@ fn prepared_relation_group_rejects_stale_shape_and_claims() {
         .unwrap(),
     ] {
         let stale = vec![PreparedRelationGroupPublic::new(
-            OpeningFamily::SubringCoefficientPacking((
-                stale_point.clone(),
-                stale_point.weight_tables().unwrap(),
-            )),
+            packing(stale_point),
             vec![E::from_u64(7), E::from_u64(11)],
         )];
         assert!(
@@ -165,23 +177,15 @@ fn prepared_relation_group_rejects_stale_shape_and_claims() {
     )
     .unwrap();
     let stale = vec![PreparedRelationGroupPublic::new(
-        OpeningFamily::SubringCoefficientPacking((
-            wrong_point.clone(),
-            wrong_point.weight_tables().unwrap(),
-        )),
+        packing(wrong_point),
         vec![E::from_u64(7), E::from_u64(11)],
     )];
     assert!(validate_prepared_relation_groups(&stale, &params, &opening_batch, &relation).is_err());
 
     let missing_claim = vec![PreparedRelationGroupPublic::new(
-        OpeningFamily::SubringCoefficientPacking((
-            valid[0].coefficient_packing_point().unwrap().clone(),
-            valid[0]
-                .coefficient_packing_point()
-                .unwrap()
-                .weight_tables()
-                .unwrap(),
-        )),
+        OpeningFamily::SubringCoefficientPacking(
+            valid[0].coefficient_packing_tables().unwrap().clone(),
+        ),
         vec![E::from_u64(7)],
     )];
     assert!(

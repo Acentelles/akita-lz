@@ -38,19 +38,13 @@ where
 /// Execute and retain the result of the packed recursive coefficient benchmark.
 pub fn recursive_witness_coefficient_packing_partials<F, E, const D: usize>(
     witness: &RecursiveWitnessBenchmark,
-    point: &akita_types::PreparedSubringCoefficientPackingPoint<E>,
-    tables: &akita_types::SubringCoefficientPackingWeights<E>,
+    tables: &akita_types::SubringCoefficientPackingTables<E>,
 ) -> Result<(), akita_error::AkitaError>
 where
     F: Field + CanonicalEncoding,
     E: ExtField<F> + MulBaseUnreduced<F> + akita_types::FpExtEncoding<F>,
 {
-    let weights = crate::arithmetic::coefficient_packing::FusedPackingWeights::new(
-        crate::opaque::SubringCoefficientPackingPlan {
-            point,
-            weights: tables,
-        },
-    )?;
+    let weights = crate::arithmetic::coefficient_packing::FusedPackingWeights::new(tables)?;
     std::hint::black_box(
         super::recursive::suffix_witness_coefficient_packing_partials::<F, E, D>(
             &witness.witness,
@@ -62,8 +56,7 @@ where
 /// Execute the dense coefficient-packing benchmark using canonical arithmetic.
 pub fn dense_coefficient_packing<F, E, const D: usize>(
     poly: &crate::DensePoly<F>,
-    point: &akita_types::PreparedSubringCoefficientPackingPoint<E>,
-    tables: &akita_types::SubringCoefficientPackingWeights<E>,
+    tables: &akita_types::SubringCoefficientPackingTables<E>,
 ) -> Result<(), akita_error::AkitaError>
 where
     F: Field + CanonicalEncoding,
@@ -71,12 +64,7 @@ where
 {
     let refs = [poly];
     let batch = <crate::DensePoly<F> as RootOpeningSource<F, D>>::opening_batch(&refs)?;
-    let weights = crate::arithmetic::coefficient_packing::FusedPackingWeights::new(
-        crate::opaque::SubringCoefficientPackingPlan {
-            point,
-            weights: tables,
-        },
-    )?;
+    let weights = crate::arithmetic::coefficient_packing::FusedPackingWeights::new(tables)?;
     std::hint::black_box(crate::sources::dense::dense_coefficient_packing_partials(
         batch, &weights,
     )?);
@@ -85,8 +73,7 @@ where
 /// Execute the sparse coefficient-packing benchmark including adaptive weight preparation.
 pub fn onehot_coefficient_packing<F, E, const D: usize>(
     poly: &crate::OneHotPoly<F, u8>,
-    point: &akita_types::PreparedSubringCoefficientPackingPoint<E>,
-    tables: &akita_types::SubringCoefficientPackingWeights<E>,
+    tables: &akita_types::SubringCoefficientPackingTables<E>,
 ) -> Result<(), akita_error::AkitaError>
 where
     F: Field + CanonicalEncoding,
@@ -96,10 +83,7 @@ where
     let batch = <crate::OneHotPoly<F, u8> as RootOpeningSource<F, D>>::opening_batch(&refs)?;
     std::hint::black_box(crate::sources::onehot::onehot_coefficient_packing_batch(
         batch,
-        crate::opaque::SubringCoefficientPackingPlan {
-            point,
-            weights: tables,
-        },
+        crate::opaque::SubringCoefficientPackingPlan { tables },
     )?);
     Ok(())
 }

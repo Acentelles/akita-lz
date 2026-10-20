@@ -227,9 +227,9 @@ where
                 relation_plan: request.relation_plan,
                 packing_semantics: match plan.linear_terms() {
                     akita_prover::backend::Stage2OpeningDescription::CoefficientPacking {
-                        semantics: batch,
+                        semantics,
                         ..
-                    } => Some(batch),
+                    } => Some(semantics),
                     akita_prover::backend::Stage2OpeningDescription::EvaluationTrace { .. } => None,
                 },
             })?;

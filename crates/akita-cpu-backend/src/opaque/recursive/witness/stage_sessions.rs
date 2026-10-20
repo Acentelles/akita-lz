@@ -397,31 +397,24 @@ where
                     output_scale,
                 )?
             }
-            crate::opaque::Stage2OpeningDescription::CoefficientPacking {
-                semantics: terms,
-                weights: tables,
-            } => {
-                let mut groups = terms.into_groups().into_iter();
-                let first_group = groups.next().ok_or_else(|| {
+            crate::opaque::Stage2OpeningDescription::CoefficientPacking { semantics, tables } => {
+                let groups = semantics.into_groups();
+                if groups.len() != tables.len() {
+                    return Err(AkitaError::Internal(
+                        "stage 2 coefficient packing plan has one table set per group".into(),
+                    ));
+                }
+                let mut groups = groups.into_iter().zip(tables);
+                let (first_group, first_tables) = groups.next().ok_or_else(|| {
                     AkitaError::Internal(
                         "validated stage 2 coefficient packing plan has no group".into(),
                     )
                 })?;
-                let first_tables =
-                    tables
-                        .get(first_group.group_index())
-                        .copied()
-                        .ok_or_else(|| {
-                            AkitaError::Internal("packing Stage 2 has no opening tables".into())
-                        })?;
                 let mut prepared = relation_range_image::prepare_coefficient_packing_linear_terms(
                     first_group,
                     first_tables,
                 )?;
-                for group in groups {
-                    let tables = tables.get(group.group_index()).copied().ok_or_else(|| {
-                        AkitaError::Internal("packing Stage 2 group has no opening tables".into())
-                    })?;
+                for (group, tables) in groups {
                     prepared.merge(
                         relation_range_image::prepare_coefficient_packing_linear_terms(
                             group, tables,

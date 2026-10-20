@@ -76,13 +76,10 @@ impl<E: Field> RelationWitnessFinalClaims<E> {
     }
 }
 
-/// Prepared public opening geometry and prover-owned coefficient-packing tables.
+/// Prepared opening geometry, with the prover's tables for coefficient packing.
 pub type PreparedRelationOpening<F, E> = akita_types::OpeningFamily<
     akita_types::PreparedOpeningPoint<F, E>,
-    (
-        akita_types::PreparedSubringCoefficientPackingPoint<E>,
-        akita_types::SubringCoefficientPackingWeights<E>,
-    ),
+    akita_types::SubringCoefficientPackingTables<E>,
 >;
 
 /// Public, witness-free opening metadata retained for Stage 2.
@@ -108,13 +105,12 @@ impl<F: Field, E: Field> PreparedRelationGroupPublic<F, E> {
         &self.scalar_openings
     }
 
-    #[cfg(test)]
-    pub(crate) fn coefficient_packing_point(
+    pub(crate) fn coefficient_packing_tables(
         &self,
-    ) -> Option<&akita_types::PreparedSubringCoefficientPackingPoint<E>> {
+    ) -> Option<&akita_types::SubringCoefficientPackingTables<E>> {
         match &self.kind {
             akita_types::OpeningFamily::EvaluationTrace(_) => None,
-            akita_types::OpeningFamily::SubringCoefficientPacking((point, _)) => Some(point),
+            akita_types::OpeningFamily::SubringCoefficientPacking(tables) => Some(tables),
         }
     }
 }

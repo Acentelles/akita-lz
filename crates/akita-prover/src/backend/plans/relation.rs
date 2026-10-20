@@ -82,7 +82,8 @@ pub enum Stage2OpeningDescription<'a, E: Field> {
     /// One ring-switch authority for both relation weights and linear terms.
     CoefficientPacking {
         semantics: akita_types::CoefficientPackingBatchSemantics<'a, E>,
-        weights: Vec<&'a akita_types::SubringCoefficientPackingWeights<E>>,
+        /// Prover tables for each semantic group, in `semantics.groups()` order.
+        tables: Vec<&'a akita_types::SubringCoefficientPackingTables<E>>,
     },
 }
 

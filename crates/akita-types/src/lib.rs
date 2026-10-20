@@ -95,7 +95,7 @@ pub use stage1_sites::{stage1_child_claims, stage1_range_image};
 pub use stage2_sites::stage2_w_eval;
 pub use stage3_sites::{stage3_claim, stage3_prefix_eval, stage3_public_slot};
 pub use subring_coefficient_packing::{
-    PreparedSubringCoefficientPackingPoint, SubringCoefficientPackingWeights,
+    PreparedSubringCoefficientPackingPoint, SubringCoefficientPackingTables,
 };
 pub use trace_weight::{
     ensure_trace_stage2_supported, prepare_evaluation_trace_group_parameters,
