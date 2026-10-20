@@ -41,10 +41,13 @@ where
     let bounded = catalog::<fp128::DenseBounded>();
     let small = small.resolve_key(&key).unwrap();
     let bounded = bounded.resolve_key(&key).unwrap();
-    assert!(
-        small.schedule().root.params.inner().digits.num_digits
-            < bounded.schedule().root.params.inner().digits.num_digits
+    let small_digits = small.schedule().root.params.inner().digits.num_digits;
+    let bounded_digits = bounded.schedule().root.params.inner().digits.num_digits;
+    eprintln!(
+        "signed width {BITS}, num_vars 14: {small_digits} inner digits \
+         (DenseBounded: {bounded_digits})"
     );
+    assert!(small_digits < bounded_digits);
 }
 
 #[test]
