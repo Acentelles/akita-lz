@@ -215,6 +215,10 @@ pub struct PlannerPolicy {
     pub inner_basis_range: (u32, u32),
     /// Inclusive B/D opening and folded-response basis domain.
     pub opening_basis_range: (u32, u32),
+    /// Root opening basis override; `None` uses the opening domain minimum.
+    pub root_opening_log_basis: Option<u32>,
+    /// Restrict each opening basis to be at least the incoming digit basis.
+    pub monotone_opening_basis: bool,
     pub witness_chunk: ChunkedWitnessCfg,
     pub recursive_setup_planning: bool,
 }
@@ -335,6 +339,13 @@ pub fn validate_policy(policy: &PlannerPolicy) -> Result<(), AkitaError> {
                 "{label} basis range [{min}, {max}] is outside 1..={supported_max}"
             )));
         }
+    }
+    if policy.root_opening_log_basis.is_some_and(|basis| {
+        !(policy.opening_basis_range.0..=policy.opening_basis_range.1).contains(&basis)
+    }) {
+        return Err(AkitaError::InvalidSetup(
+            "root opening basis is outside the opening basis range".into(),
+        ));
     }
     policy.witness_chunk.validate()?;
     if policy.witness_chunk.num_activated_levels > MAX_RECURSION_DEPTH {
@@ -941,6 +952,8 @@ mod tests {
             chal_ext_degree: 1,
             inner_basis_range: (3, 16),
             opening_basis_range: (3, 6),
+            root_opening_log_basis: None,
+            monotone_opening_basis: true,
             witness_chunk: ChunkedWitnessCfg::default(),
             recursive_setup_planning: false,
         }

@@ -42,6 +42,14 @@ impl<Cfg: RecursiveScheduleConfig> CommitmentConfig for RecursiveCommitmentConfi
         Cfg::opening_basis_range()
     }
 
+    fn root_opening_log_basis() -> Option<u32> {
+        Cfg::root_opening_log_basis()
+    }
+
+    fn monotone_opening_basis() -> bool {
+        Cfg::monotone_opening_basis()
+    }
+
     fn inner_basis_range() -> (u32, u32) {
         Cfg::inner_basis_range()
     }

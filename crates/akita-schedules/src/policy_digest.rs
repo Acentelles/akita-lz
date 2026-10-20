@@ -24,6 +24,8 @@ pub fn policy_digest(policy: &PlannerPolicy) -> [u8; 32] {
         chal_ext_degree,
         inner_basis_range,
         opening_basis_range,
+        root_opening_log_basis,
+        monotone_opening_basis,
         witness_chunk,
         recursive_setup_planning,
     } = *policy;
@@ -51,6 +53,19 @@ pub fn policy_digest(policy: &PlannerPolicy) -> [u8; 32] {
     write_u64(&mut bytes, u64::from(recursive_setup_search_policy.tag()));
     write_optional_usize(&mut bytes, setup_field_budget);
     write_u64(&mut bytes, min_offloaded_witness_contraction as u64);
+    // Preserve V1 bytes for legacy policies. Non-default opening policies use
+    // a tagged extension so neither override can alias a legacy catalog.
+    if root_opening_log_basis.is_some() || !monotone_opening_basis {
+        bytes.extend_from_slice(b"AKITA-OPENING-POLICY-V2");
+        match root_opening_log_basis {
+            Some(basis) => {
+                write_u64(&mut bytes, 1);
+                write_u64(&mut bytes, u64::from(basis));
+            }
+            None => write_u64(&mut bytes, 0),
+        }
+        write_u64(&mut bytes, u64::from(monotone_opening_basis));
+    }
     digest_descriptor_bytes(&bytes)
 }
 

@@ -144,6 +144,14 @@ macro_rules! impl_proof_optimized_preset {
     ($cfg:ty, $field:ty, $ext_field:ty, $family:expr, $field_bits:expr, $log_commit_bound:expr, source = $source:ident, schedule_family = $family_name:expr, ring_dimension_schedule = $mode:expr) => {
         impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $field_bits, $log_commit_bound, $source, $family_name, ring_dimension_schedule = $mode);
     };
+    ($cfg:ty, $field:ty, $ext_field:ty, $family:expr, $field_bits:expr, $log_commit_bound:expr, source = $source:ident, schedule_family = $family_name:expr, ring_dimension_schedule = $mode:expr, root_opening_log_basis = $root:expr, monotone_opening_basis = $monotone:expr) => {
+        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $field_bits, $log_commit_bound, $source, $family_name, ring_dimension_schedule = $mode, root_opening_log_basis = $root, monotone_opening_basis = $monotone);
+    };
+    (@options ring_dimension_schedule = $mode:expr, root_opening_log_basis = $root:expr, monotone_opening_basis = $monotone:expr) => {
+        impl_proof_optimized_preset!(@ring_dimension_schedule $mode);
+        fn root_opening_log_basis() -> Option<u32> { $root }
+        fn monotone_opening_basis() -> bool { $monotone }
+    };
     (@options ring_dimension_schedule = $mode:expr) => {
         impl_proof_optimized_preset!(@ring_dimension_schedule $mode);
     };

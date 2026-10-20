@@ -44,6 +44,12 @@ macro_rules! impl_catalog_family {
             fn opening_basis_range() -> (u32, u32) {
                 <$base as $crate::CommitmentConfig>::opening_basis_range()
             }
+            fn root_opening_log_basis() -> Option<u32> {
+                <$base as $crate::CommitmentConfig>::root_opening_log_basis()
+            }
+            fn monotone_opening_basis() -> bool {
+                <$base as $crate::CommitmentConfig>::monotone_opening_basis()
+            }
             fn inner_basis_range() -> (u32, u32) {
                 <$base as $crate::CommitmentConfig>::inner_basis_range()
             }
@@ -113,6 +119,8 @@ pub fn policy_of<Cfg: CommitmentConfig>(chunking: ChunkedWitnessCfg) -> PlannerP
         chal_ext_degree: Cfg::EXT_DEGREE,
         inner_basis_range: Cfg::inner_basis_range(),
         opening_basis_range: Cfg::opening_basis_range(),
+        root_opening_log_basis: Cfg::root_opening_log_basis(),
+        monotone_opening_basis: Cfg::monotone_opening_basis(),
         witness_chunk: chunking,
         recursive_setup_planning,
     }
@@ -418,6 +426,16 @@ pub trait CommitmentConfig: Clone + Send + Sync + 'static {
     /// Inclusive `(min, max)` B/D opening and folded-response basis range.
     #[doc(hidden)]
     fn opening_basis_range() -> (u32, u32);
+
+    /// Optional per-preset root opening basis; the default pins the domain minimum.
+    fn root_opening_log_basis() -> Option<u32> {
+        None
+    }
+
+    /// Whether recursive opening bases must be non-decreasing.
+    fn monotone_opening_basis() -> bool {
+        true
+    }
 
     /// Inclusive `(min, max)` A/source decomposition basis range.
     #[doc(hidden)]

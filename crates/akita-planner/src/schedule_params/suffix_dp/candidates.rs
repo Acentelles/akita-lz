@@ -511,6 +511,11 @@ impl<'a> CandidateDomain<'a> {
             inner_source.search_range(policy)?;
         let (allowed_min_open_basis, allowed_max_open_basis) =
             crate::policy::log_basis_search_range_at_level(policy, state.level);
+        let allowed_min_open_basis = if policy.monotone_opening_basis {
+            allowed_min_open_basis.max(state.current_lb)
+        } else {
+            allowed_min_open_basis
+        };
         let guided_bases = root_main_constraint
             .or(guide_fold)
             .map(|constraint| {
@@ -526,8 +531,7 @@ impl<'a> CandidateDomain<'a> {
         let (min_inner_basis, max_inner_basis, min_open_basis, max_open_basis) =
             if let Some((inner, open)) = guided_bases {
                 if !(allowed_min_inner_basis..=allowed_max_inner_basis).contains(&inner)
-                    || !(allowed_min_open_basis.max(state.current_lb)..=allowed_max_open_basis)
-                        .contains(&open)
+                    || !(allowed_min_open_basis..=allowed_max_open_basis).contains(&open)
                 {
                     return Err(AkitaError::UnsupportedSchedule(
                         "adapted schedule bases are outside the current planner policy".into(),
@@ -570,7 +574,7 @@ impl<'a> CandidateDomain<'a> {
             opening_layout,
             inner_source,
             inner_basis_range: min_inner_basis..=max_inner_basis,
-            opening_basis_range: min_open_basis.max(state.current_lb)..=max_open_basis,
+            opening_basis_range: min_open_basis..=max_open_basis,
             opening_work,
             fold_policy,
             require_child_fold,

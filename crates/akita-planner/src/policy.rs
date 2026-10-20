@@ -59,8 +59,37 @@ impl InnerBasisSource {
 pub(crate) fn log_basis_search_range_at_level(policy: &PlannerPolicy, level: usize) -> (u32, u32) {
     let (configured_min, max) = policy.opening_basis_range;
     if level == 0 {
-        (configured_min, configured_min)
+        let root = policy.root_opening_log_basis.unwrap_or(configured_min);
+        (root, root)
     } else {
         (configured_min, max)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn root_override_is_validated_and_both_options_bind_identity() {
+        let mut policy = akita_config::policy_of::<akita_config::proof_optimized::fp128::Dense>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        );
+        let legacy = akita_schedules::policy_digest(&policy);
+        assert_eq!(log_basis_search_range_at_level(&policy, 0), (3, 3));
+        assert_eq!(log_basis_search_range_at_level(&policy, 1), (3, 6));
+        policy.root_opening_log_basis = Some(5);
+        akita_schedules::validate_policy(&policy).unwrap();
+        assert_eq!(log_basis_search_range_at_level(&policy, 0), (5, 5));
+        assert_eq!(log_basis_search_range_at_level(&policy, 1), (3, 6));
+        let pinned = akita_schedules::policy_digest(&policy);
+        assert_ne!(legacy, pinned);
+        policy.monotone_opening_basis = false;
+        let free = akita_schedules::policy_digest(&policy);
+        assert_ne!(pinned, free);
+        policy.root_opening_log_basis = None;
+        assert_ne!(legacy, akita_schedules::policy_digest(&policy));
+        policy.root_opening_log_basis = Some(7);
+        assert!(akita_schedules::validate_policy(&policy).is_err());
     }
 }

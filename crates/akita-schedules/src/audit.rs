@@ -651,6 +651,8 @@ mod tests {
             chal_ext_degree: 1,
             inner_basis_range: (3, 16),
             opening_basis_range: (3, 6),
+            root_opening_log_basis: None,
+            monotone_opening_basis: true,
             witness_chunk: ChunkedWitnessCfg::default(),
             recursive_setup_planning: false,
         }
