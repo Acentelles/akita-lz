@@ -280,8 +280,6 @@ impl<'plan> ProverGrinding<'plan> {
     /// Attach a prover channel to its public grinding plan.
     #[must_use]
     pub fn new(state: &'plan mut ProverChannel, plan: &'plan GrindingPlan) -> Self {
-        #[cfg(feature = "logging-transcript")]
-        akita_transcript::clear_thread_events();
         Self {
             state,
             cursor: GrindingPlanCursor::new(plan),
