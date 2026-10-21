@@ -5,7 +5,7 @@
 | Author(s)     | Quang Dao, Claude              |
 | Created       | 2026-10-20                     |
 | Status        | active                         |
-| PR            |                                |
+| PR            | [#253](https://github.com/LayerZero-Labs/akita/pull/253) |
 | Supersedes    |                                |
 | Superseded-by |                                |
 | Book-chapter  | how/transcript.md              |
