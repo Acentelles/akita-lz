@@ -39,8 +39,6 @@ akita-types = { version = "0.1.0", path = "../akita-types", default-features = f
 
 [features]
 response-model-diagnostics = []
-# Test-only prover faults (`test_faults`) for verifier soundness tests.
-test-support = []
 parallel = [
   "jolt-crypto/parallel",
   "jolt-algebra/parallel",

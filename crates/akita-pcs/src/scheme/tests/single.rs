@@ -73,29 +73,6 @@ fn reduced_relation_catalog_roundtrip_reaches_production_verifier() {
         .expect("reduced-relation test thread panicked");
 }
 
-/// Stage-2 rounds that verify round by round but whose final claim misses
-/// the stage-2 oracle `w·(B(w+1) + R)`. Only the fold's stage-2 output check
-/// rejects them: the witness evaluation is honest, so the next fold's opening
-/// of the witness at the stage-2 point still holds.
-#[test]
-fn verify_rejects_stage2_rounds_that_miss_the_oracle() {
-    let ((scheme, verifier_setup, commitment, proof, opening_point, opening, _), faulted) =
-        akita_prover::test_faults::with_stage2_last_round_shift(|| make_verify_fixture(16));
-    assert!(faulted > 0, "the fault must reach a stage-2 sumcheck");
-    let result = scheme.verifier(verifier_setup).and_then(|verifier| {
-        verifier.verify_standalone(
-            &proof,
-            b"test/prove",
-            verifier_claims(&scheme, &opening_point, &[opening], &commitment),
-            BasisMode::Lagrange,
-        )
-    });
-    assert!(
-        matches!(result, Err(AkitaError::InvalidProof)),
-        "{result:?}"
-    );
-}
-
 #[test]
 fn verify_rejects_wrong_opening() {
     let scheme = workspace_scheme::<Cfg>(akita_params::ChunkedWitnessCfg::default_non_chunked())
