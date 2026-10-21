@@ -1,0 +1,276 @@
+{
+  "baseline_commit": "4bdbd42fa806a3286884d4450d2b95b58205505d",
+  "runner": {
+    "vcpus": 8,
+    "nominal_memory": "16 GB",
+    "cargo_build_jobs": 1
+  },
+  "baseline_four_workers_owner_report": {
+    "wall_seconds_range": [
+      890,
+      1000
+    ],
+    "source": "owner-provided timing; not rerun"
+  },
+  "failed_floor_off_runs": [
+    {
+      "workers": 4,
+      "row_progress": true,
+      "allocator": "default",
+      "wall_seconds": 1702.57,
+      "peak_rss_kib": 15636136,
+      "exit_code": 137,
+      "signal": 9,
+      "published": false
+    },
+    {
+      "workers": 4,
+      "row_progress": true,
+      "allocator": "MALLOC_ARENA_MAX=2 MALLOC_TRIM_THRESHOLD_=131072 MALLOC_MMAP_THRESHOLD_=131072",
+      "wall_seconds": 2540.86,
+      "peak_rss_kib": 15668604,
+      "exit_code": 137,
+      "signal": 9,
+      "published": false
+    },
+    {
+      "workers": 4,
+      "row_progress": false,
+      "allocator": "default",
+      "wall_seconds": 1423.03,
+      "peak_rss_kib": 15666788,
+      "exit_code": 137,
+      "signal": 9,
+      "published": false
+    },
+    {
+      "workers": 2,
+      "row_progress": false,
+      "allocator": "default",
+      "wall_seconds": 3619,
+      "peak_rss_kib": 15666868,
+      "exit_code": 137,
+      "signal": 9,
+      "published": false
+    }
+  ],
+  "measurement": "Remote /usr/bin/time -v around the generator invocation; exit code from the command wrapper. The two-worker failed run's wall time was printed to whole seconds.",
+  "kill_diagnosis": "Repeated SIGKILL near physical-memory capacity is consistent with OOM; kernel logs were inaccessible. GNU time printed Exit status: 0 following signal 9, but the wrapper returned 137.",
+  "baseline_two_workers": {
+    "wall_seconds": 1755.0,
+    "generator_wall_seconds": 1754.82,
+    "peak_rss_kib": 10912608,
+    "exit_code": 0,
+    "catalog_files_byte_identical": true,
+    "snapshot_keyed_rows_identical": true,
+    "snapshot_bytes_identical": false,
+    "snapshot_difference": "row ordering only",
+    "comparison_wrapper_exit_code": 1
+  },
+  "per_family_fallback": {
+    "description": "Fresh-process standard-family generation. Full rows, no explicit --final-group. Mixed worker counts; not a successful full two-worker run.",
+    "families": [
+      {
+        "family": "fp128_dense",
+        "wall_seconds": 121.47,
+        "peak_rss_kib": 2530688,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_dense_bounded",
+        "wall_seconds": 43.61,
+        "peak_rss_kib": 924444,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_dense_multi_chunk",
+        "wall_seconds": 15.32,
+        "peak_rss_kib": 212468,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_dense_multi_chunk_w8r3",
+        "wall_seconds": 18.19,
+        "peak_rss_kib": 280748,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_dense_recursive",
+        "wall_seconds": 336.35,
+        "peak_rss_kib": 4702848,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_dense_small_3",
+        "wall_seconds": 0.96,
+        "peak_rss_kib": 62256,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_dense_small_4",
+        "wall_seconds": 1.23,
+        "peak_rss_kib": 62300,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_dense_small_5",
+        "wall_seconds": 53.73,
+        "peak_rss_kib": 832624,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_dense_small_6",
+        "wall_seconds": 52.2,
+        "peak_rss_kib": 831208,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_onehot",
+        "wall_seconds": 145.61,
+        "peak_rss_kib": 1532004,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_onehot_multi_chunk",
+        "wall_seconds": 32.31,
+        "peak_rss_kib": 929100,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_onehot_multi_chunk_w2r2",
+        "wall_seconds": 20.48,
+        "peak_rss_kib": 342992,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_onehot_multi_chunk_w2r3",
+        "wall_seconds": 17.93,
+        "peak_rss_kib": 291488,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_onehot_multi_chunk_w4r2",
+        "wall_seconds": 16.55,
+        "peak_rss_kib": 266444,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_onehot_multi_chunk_w4r3",
+        "wall_seconds": 17.18,
+        "peak_rss_kib": 312056,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_onehot_multi_chunk_w8r3",
+        "wall_seconds": 32.11,
+        "peak_rss_kib": 1051128,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_onehot_recursive",
+        "wall_seconds": 111.81,
+        "peak_rss_kib": 3347388,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_onehot_recursive_multi_chunk_w2r3",
+        "wall_seconds": 92.63,
+        "peak_rss_kib": 2123264,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_onehot_recursive_multi_chunk_w4r3",
+        "wall_seconds": 82.51,
+        "peak_rss_kib": 2036808,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_onehot_recursive_multi_chunk_w8r2",
+        "wall_seconds": 130.25,
+        "peak_rss_kib": 2779540,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp128_onehot_recursive_multi_chunk_w8r3",
+        "wall_seconds": 82.05,
+        "peak_rss_kib": 1767180,
+        "exit_code": 0,
+        "workers": 4
+      },
+      {
+        "family": "fp32_dense",
+        "wall_seconds": 346.03,
+        "peak_rss_kib": 4118692,
+        "exit_code": 0,
+        "workers": 2
+      },
+      {
+        "family": "fp32_dense_recursive",
+        "wall_seconds": 1201.51,
+        "peak_rss_kib": 5894408,
+        "exit_code": 0,
+        "workers": 1
+      },
+      {
+        "family": "fp32_onehot",
+        "wall_seconds": 108.66,
+        "peak_rss_kib": 2299836,
+        "exit_code": 0,
+        "workers": 2
+      },
+      {
+        "family": "fp64_dense",
+        "wall_seconds": 423.29,
+        "peak_rss_kib": 4614612,
+        "exit_code": 0,
+        "workers": 2
+      },
+      {
+        "family": "fp64_dense_recursive",
+        "wall_seconds": 1758.09,
+        "peak_rss_kib": 7719596,
+        "exit_code": 0,
+        "workers": 1
+      },
+      {
+        "family": "fp64_onehot",
+        "wall_seconds": 116.06,
+        "peak_rss_kib": 2052536,
+        "exit_code": 0,
+        "workers": 2
+      }
+    ],
+    "wall_seconds_sum": 5378.12,
+    "largest_peak_rss_kib": 7719596,
+    "published_catalog_families": 27,
+    "published_snapshot_rows": 151
+  },
+  "required_drift_check": {
+    "workers": 2,
+    "wall_seconds": 4196,
+    "peak_rss_kib": 15666040,
+    "exit_code": 137,
+    "signal": 9,
+    "drift_ok": false
+  }
+}

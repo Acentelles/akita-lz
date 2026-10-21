@@ -1,0 +1,64 @@
+{
+  "baseline_artifact_opens": [
+    "498243 openat(AT_FDCWD, \"/home/user/akita-baseline/crates/akita-config/../../artifacts/schedules/fp32_dense.aks\", O_RDONLY|O_CLOEXEC) = 3"
+  ],
+  "baseline_source": "/home/user/akita-baseline",
+  "original_binary_diagnosis": "Compiled artifact path points at head checkout; setup policy mismatch, exit 101 even from baseline cwd.",
+  "original_baseline_binary_and_lockfile_unchanged": true,
+  "binaries": {
+    "before": {
+      "path": "/home/user/akita-root-basis-5/target/baseline-profile/release/examples/profile",
+      "sha256": "7291acd0badc873a4b27f7cf7d261e7454a194ceb70c601721593eb7b31515b2",
+      "fingerprints": [
+        {
+          "features": [
+            "parallel",
+            "profile-bench-selected",
+            "profile-ci",
+            "profile-ci-distributed",
+            "profile-ci-fp128-base",
+            "profile-ci-fp32",
+            "profile-ci-fp64",
+            "profile-ci-multi-group-direct",
+            "profile-ci-multi-group-recursive",
+            "profile-ci-multi-group-recursive-w8r2",
+            "transcript-blake2b"
+          ],
+          "rustflags": []
+        }
+      ]
+    },
+    "after": {
+      "path": "/home/user/akita-root-basis-5/target/release/examples/profile",
+      "sha256": "1d722fbb2d769f27a11628ef333150af8d55ba3fdbb590a2ea9f1050614f6c17",
+      "fingerprints": [
+        {
+          "features": [
+            "parallel",
+            "profile-bench-selected",
+            "profile-ci",
+            "profile-ci-distributed",
+            "profile-ci-fp128-base",
+            "profile-ci-fp32",
+            "profile-ci-fp64",
+            "profile-ci-multi-group-direct",
+            "profile-ci-multi-group-recursive",
+            "profile-ci-multi-group-recursive-w8r2",
+            "transcript-blake2b"
+          ],
+          "rustflags": []
+        }
+      ]
+    }
+  },
+  "baseline_rebuild": {
+    "wall_seconds": 2226.9,
+    "peak_rss_kib": 10018208,
+    "exit_code": 0,
+    "cargo_build_jobs": 1
+  },
+  "unchanged_original_baseline_files_sha256": [
+    "d078974d87d8338d1463107d4d7ff4f9397f038099c992c49e12b173f3de4de1  /home/user/akita-baseline/target/release/examples/profile",
+    "5af8c086d21973187516890b4c29dd2579739bf8b3639139d8103d2083d026e5  /home/user/akita-baseline/Cargo.lock"
+  ]
+}

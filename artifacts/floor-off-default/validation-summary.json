@@ -1,0 +1,135 @@
+{
+  "remote_checks": [
+    {
+      "command": "cargo fmt --all -- --check",
+      "exit_code": 0,
+      "wall_seconds": 2.45,
+      "peak_rss_kib": 106844,
+      "test_results": [],
+      "drift_ok": false
+    },
+    {
+      "command": "cargo clippy -p akita-config -p akita-planner -p akita-schedules -p akita-params -p akita-pcs --lib --tests -- -D warnings",
+      "exit_code": 0,
+      "wall_seconds": 0.43,
+      "peak_rss_kib": 157892,
+      "test_results": [],
+      "drift_ok": false
+    },
+    {
+      "command": "cargo test --release -p akita-planner --lib",
+      "exit_code": 0,
+      "wall_seconds": 7.11,
+      "peak_rss_kib": 64080,
+      "test_results": [
+        "test result: ok. 87 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 6.94s"
+      ],
+      "drift_ok": false
+    },
+    {
+      "command": "cargo test --release -p akita-schedules --lib",
+      "exit_code": 0,
+      "wall_seconds": 0.12,
+      "peak_rss_kib": 62108,
+      "test_results": [
+        "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ],
+      "drift_ok": false
+    },
+    {
+      "command": "cargo test --release -p akita-config --test small_dense_source --test trusted_schedule_artifact --test bounded_dense_source",
+      "exit_code": 0,
+      "wall_seconds": 0.15,
+      "peak_rss_kib": 129708,
+      "test_results": [
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s"
+      ],
+      "drift_ok": false
+    },
+    {
+      "command": "cargo test --release -p akita-pcs --test akita_fp128_e2e --no-default-features --features parallel,transcript-blake2b small_dense",
+      "exit_code": 0,
+      "wall_seconds": 0.42,
+      "peak_rss_kib": 126396,
+      "test_results": [
+        "test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 24 filtered out; finished in 0.30s"
+      ],
+      "drift_ok": false
+    },
+    {
+      "command": "cargo test --release -p akita-pcs --test akita_fp128_e2e --no-default-features --features parallel,transcript-blake2b -- --exact fp128_dense_mc",
+      "exit_code": 0,
+      "wall_seconds": 0.35,
+      "peak_rss_kib": 156136,
+      "test_results": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.23s"
+      ],
+      "drift_ok": false
+    },
+    {
+      "command": "cargo test --release -p akita-pcs --test akita_fp128_e2e --no-default-features --features parallel,transcript-blake2b -- --exact fp128_onehot_mc_catalog_resolves",
+      "exit_code": 0,
+      "wall_seconds": 0.12,
+      "peak_rss_kib": 74956,
+      "test_results": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.00s"
+      ],
+      "drift_ok": false
+    },
+    {
+      "command": "cargo test --release -p akita-pcs --test akita_fp128_e2e --no-default-features --features parallel,transcript-blake2b -- heterogeneous::bounded_",
+      "exit_code": 0,
+      "wall_seconds": 3.42,
+      "peak_rss_kib": 3556664,
+      "test_results": [
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 22 filtered out; finished in 3.29s"
+      ],
+      "drift_ok": false
+    },
+    {
+      "command": "cargo run --release -p akita-planner --features catalog-security --example catalog_security -- --check",
+      "exit_code": 0,
+      "wall_seconds": 553.68,
+      "peak_rss_kib": 63028,
+      "test_results": [],
+      "drift_ok": false
+    },
+    {
+      "command": "bash .remote/drift.sh",
+      "exit_code": 137,
+      "wall_seconds": 4196.0,
+      "peak_rss_kib": 15666040,
+      "test_results": [],
+      "drift_ok": false
+    }
+  ],
+  "documentation_guardrails": {
+    "command": "bash scripts/check-doc-guardrails.sh",
+    "exit_code": 0,
+    "mdbook": "not installed; optional build skipped by unchanged guardrail script"
+  },
+  "local_checks": [
+    {
+      "command": "test ! -d target",
+      "exit_code": 0
+    },
+    {
+      "command": "scripts/check-external-schedule-artifacts.sh",
+      "exit_code": 0
+    },
+    {
+      "command": "! git diff --quiet 4bdbd42fa -- artifacts/schedule-catalog.tsv",
+      "exit_code": 0
+    },
+    {
+      "command": "test -s docs/notes/floor-off-default.md",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ]
+}
