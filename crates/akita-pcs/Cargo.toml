@@ -111,6 +111,12 @@ akita-config = { version = "0.1.0", path = "../akita-config", default-features =
 ] }
 akita-planner = { version = "0.1.0", path = "../akita-planner", default-features = false, features = [
   "test-support",
+  "zk",
+] }
+# Test-only: sample the hiding randomness of test schedules that declare it.
+akita-cpu-backend = { version = "0.1.0", path = "../akita-cpu-backend", default-features = false, features = [
+  "test-support",
+  "zk",
 ] }
 akita-schedules = { version = "0.1.0", path = "../akita-schedules", default-features = false }
 rand = "0.8"
