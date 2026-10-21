@@ -44,7 +44,6 @@ dependencies = [
  "akita-error",
  "criterion",
  "jolt-algebra",
- "jolt-crypto",
  "jolt-transcript",
  "keccak 0.1.6",
  "num-bigint 0.5.1",
