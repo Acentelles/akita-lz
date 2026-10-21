@@ -291,10 +291,7 @@ impl<E: Field + Ring + Unreduced + Fold> SumcheckKernel<E> for RelationRangeImag
         }
         let polynomial = message.into_polynomial(previous_claim);
         #[cfg(debug_assertions)]
-        if let Some(at_zero) = self
-            .debug_dense_round_at_zero()
-            .filter(|_| !crate::hiding::witness_corrupted_by_test())
-        {
+        if let Some(at_zero) = self.debug_dense_round_at_zero() {
             debug_assert_eq!(
                 polynomial.evaluate(E::zero()),
                 at_zero,

@@ -909,13 +909,7 @@ fn emit_witness_randomness<F: Field + CanonicalEncoding>(
             ));
         }
         if !range.is_empty() {
-            out.write_at(
-                range.start,
-                &crate::hiding::witness_randomness(
-                    crate::hiding::RandomnessSection::Outer,
-                    &group.outer_randomness,
-                ),
-            )?;
+            out.write_at(range.start, &group.outer_randomness)?;
         }
     }
     let range = randomness.opening();
@@ -925,13 +919,7 @@ fn emit_witness_randomness<F: Field + CanonicalEncoding>(
         ));
     }
     if !range.is_empty() {
-        out.write_at(
-            range.start,
-            &crate::hiding::witness_randomness(
-                crate::hiding::RandomnessSection::Opening,
-                d_randomness,
-            ),
-        )?;
+        out.write_at(range.start, d_randomness)?;
     }
     Ok(())
 }

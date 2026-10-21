@@ -26,8 +26,13 @@ impl HidingRng {
         Self(Mutex::new(rng))
     }
 
+    /// No source: drawing any randomness is an error.
+    pub(crate) fn sourceless() -> Self {
+        Self(Mutex::new(None))
+    }
+
     /// A caller-provided CSPRNG.
-    #[cfg(feature = "zk")]
+    #[cfg(feature = "test-support")]
     pub(crate) fn new(rng: impl CryptoRngCore + Send + 'static) -> Self {
         Self(Mutex::new(Some(Box::new(rng))))
     }
@@ -77,76 +82,6 @@ fn sample_hiding_digits(
     Err(AkitaError::UnsupportedSchedule(
         "schedule declares hiding randomness, which needs the zk feature".into(),
     ))
-}
-
-/// The witness section one randomness vector fills.
-#[cfg_attr(not(feature = "test-support"), allow(unreachable_pub))]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum RandomnessSection {
-    /// The B randomness of the commitment a level consumes.
-    Outer,
-    /// The randomness of the level's own D image.
-    Opening,
-}
-
-/// The digits written into `section` of the next-level witness: `digits`
-/// itself, unless a test fault is pending for that section.
-pub(crate) fn witness_randomness(
-    section: RandomnessSection,
-    digits: &[i8],
-) -> std::borrow::Cow<'_, [i8]> {
-    #[cfg(feature = "test-support")]
-    if !digits.is_empty() && test_support::take(section) {
-        test_support::CORRUPTED.set(true);
-        let mut corrupted = digits.to_vec();
-        corrupted[0] = if corrupted[0] < 0 {
-            corrupted[0] + 1
-        } else {
-            corrupted[0] - 1
-        };
-        return std::borrow::Cow::Owned(corrupted);
-    }
-    #[cfg(not(feature = "test-support"))]
-    let _ = section;
-    std::borrow::Cow::Borrowed(digits)
-}
-
-/// Whether a test fault corrupted a witness this thread built since the
-/// fault was armed, so the prover's self-checks must let the corrupt witness
-/// reach the verifier. Always false outside `test-support` builds.
-pub(crate) fn witness_corrupted_by_test() -> bool {
-    #[cfg(feature = "test-support")]
-    return test_support::CORRUPTED.get();
-    #[cfg(not(feature = "test-support"))]
-    false
-}
-
-/// Fault injection for tests that show the randomness is bound by the
-/// relation of the level whose witness carries it.
-#[cfg(feature = "test-support")]
-pub mod test_support {
-    use super::RandomnessSection;
-    use std::cell::Cell;
-
-    std::thread_local! {
-        static NEXT: Cell<Option<RandomnessSection>> = const { Cell::new(None) };
-        pub(super) static CORRUPTED: Cell<bool> = const { Cell::new(false) };
-    }
-
-    /// Shift the first digit of `section`, within its alphabet, in the next
-    /// recursive witness this thread builds.
-    pub fn corrupt_next_witness_randomness(section: RandomnessSection) {
-        CORRUPTED.set(false);
-        NEXT.set(Some(section));
-    }
-
-    pub(super) fn take(section: RandomnessSection) -> bool {
-        let pending = NEXT.get() == Some(section);
-        if pending {
-            NEXT.set(None);
-        }
-        pending
-    }
 }
 
 #[cfg(all(test, feature = "zk"))]

@@ -138,8 +138,9 @@ impl<F: Field, E> CpuBackend<F, E> {
 
     /// Draw hiding randomness from `rng` instead of the operating system
     /// CSPRNG. A seeded `rng` makes hiding commitments and proofs
-    /// reproducible.
-    #[cfg(feature = "zk")]
+    /// reproducible. Test-only until a production zero-knowledge caller
+    /// exists.
+    #[cfg(feature = "test-support")]
     #[must_use]
     pub fn with_hiding_rng(mut self, rng: impl rand_core::CryptoRngCore + Send + 'static) -> Self {
         self.hiding_rng = Arc::new(crate::hiding::HidingRng::new(rng));

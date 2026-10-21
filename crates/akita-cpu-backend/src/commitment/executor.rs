@@ -54,9 +54,9 @@ pub(crate) struct CommitmentExecutor<
     pub(super) route: PreparedInnerOuterRoute<'a, F>,
     pub(super) compression: Option<PreparedCompression<'a, F>>,
     pub(super) state_policy: SP,
-    /// Source of B hiding randomness; absent for executors that never commit
-    /// with randomness.
-    pub(super) hiding_rng: Option<Arc<crate::hiding::HidingRng>>,
+    /// Source of B hiding randomness; sourceless unless the executor belongs
+    /// to a backend.
+    pub(super) hiding_rng: Arc<crate::hiding::HidingRng>,
 }
 
 impl<'a, F, SP> CommitmentExecutor<'a, F, SP>
@@ -166,7 +166,7 @@ where
             Some(compression_operation.portable_exporter()),
         ))?;
         let mut executor = builder.build()?;
-        executor.hiding_rng = Some(backend.hiding_rng.clone());
+        executor.hiding_rng = backend.hiding_rng.clone();
         Ok(executor)
     }
 }
@@ -536,14 +536,7 @@ where
                         "hiding commitment has no consuming opening alphabet".into(),
                     )
                 })?;
-                self.hiding_rng
-                    .as_ref()
-                    .ok_or_else(|| {
-                        AkitaError::UnsupportedSchedule(
-                            "commitment executor has no hiding randomness source".into(),
-                        )
-                    })?
-                    .sample(len, log_basis)?
+                self.hiding_rng.sample(len, log_basis)?
             }
         };
         if let Some(fused) = self.fused_for_plan(plan) {

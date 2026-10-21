@@ -139,7 +139,7 @@ impl<E: Field + Ring + Unreduced> RelationRangeImageProver<E> {
         // `O(lane_capacity * coeff_count)` pass, so it is gated to
         // debug/test builds and never runs in release proving.
         #[cfg(debug_assertions)]
-        if !crate::hiding::witness_corrupted_by_test() {
+        {
             let (ordinary_relation_sum, structured_relation_sum) = (0..witness_len).try_fold(
                 (E::zero(), E::zero()),
                 |(ordinary, structured), index| {

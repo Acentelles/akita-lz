@@ -168,7 +168,7 @@ where
             route,
             compression: self.compression,
             state_policy: self.state_policy,
-            hiding_rng: None,
+            hiding_rng: std::sync::Arc::new(crate::hiding::HidingRng::sourceless()),
         })
     }
 }

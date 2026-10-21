@@ -8,8 +8,6 @@ pub(crate) mod arithmetic;
 mod cache;
 pub(crate) mod commitment;
 mod hiding;
-#[cfg(feature = "test-support")]
-pub use hiding::{test_support as hiding_test_support, RandomnessSection};
 pub(crate) mod kernels;
 pub(crate) mod opaque;
 mod portable_witness;
