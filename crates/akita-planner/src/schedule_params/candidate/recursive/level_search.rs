@@ -106,10 +106,26 @@ pub(super) fn attach_recursive_setup_prefix(
             .ok_or_else(|| {
                 AkitaError::InvalidSetup("setup-prefix shared D width overflow".to_string())
             })?;
-        candidate_params.open_matrix = OpenCommitMatrixParams::try_new_with_min_rank(
-            candidate_params.open().matrix.sis_table_key(),
-            total_d_width,
-        )?;
+        // Hiding randomness stays after every group's columns and is resized
+        // for the rank the widened D matrix selects.
+        let randomness = candidate_params.open_randomness_columns;
+        let key = candidate_params.open().matrix.sis_table_key();
+        let Some((open_matrix, randomness)) = super::super::price_with_hiding_randomness(
+            randomness != 0,
+            total_d_width - randomness,
+            candidate_params.role_dims().d_d(),
+            key.modulus_profile,
+            candidate_params.open().digits.log_basis,
+            |width| OpenCommitMatrixParams::try_new_with_min_rank(key, width).ok(),
+            OpenCommitMatrixParams::output_rank,
+        )?
+        else {
+            return Err(AkitaError::UnsupportedSchedule(
+                "setup-prefix D matrix has no hiding fixed point".into(),
+            ));
+        };
+        candidate_params.open_matrix = open_matrix;
+        candidate_params.open_randomness_columns = randomness;
     }
     Ok(candidate_params)
 }

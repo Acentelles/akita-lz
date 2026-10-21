@@ -203,7 +203,22 @@ fn append_d_tensors<E: Field>(
             )
         })
         .collect::<Result<Vec<_>, _>>()?;
-    for tensor in compact_affine_unit_families(lifted, group.num_claims())? {
+    let randomness = group
+        .d_randomness_tensors()
+        .iter()
+        .map(|tensor| {
+            lift_role_tensor(
+                tensor,
+                group.d_col_range().start,
+                plan.d_physical_cols(),
+                plan.d_weights(),
+            )
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    for tensor in compact_affine_unit_families(lifted, group.num_claims())?
+        .into_iter()
+        .chain(randomness)
+    {
         push_projected_tensor(
             batches,
             group.d_ratio(),
@@ -378,6 +393,26 @@ fn build_group_b_setup_tensors<E: Field>(
                 )?);
             }
         }
+    }
+    // Hiding randomness: slice `s` reads its columns after the message
+    // columns of every physical row, from its slice-major witness span.
+    let randomness_columns = geometry.randomness_columns();
+    for (slice_index, randomness) in physical_b.randomness_tensors().iter().enumerate() {
+        if randomness_columns == 0 {
+            break;
+        }
+        let row_weights = slice_row_weights
+            .get(slice_index)
+            .ok_or_else(|| AkitaError::InvalidSetup("B slice row weights are missing".into()))?;
+        tensors.push(EqPairTensorFamily::new(
+            geometry.message_input_width(),
+            randomness.right_offset,
+            E::one(),
+            vec![
+                EqPairTensorAxis::unit(randomness_columns, 1, group.b_relation_ratio()),
+                EqPairTensorAxis::dense(physical_b.physical_input_width(), 0, row_weights.clone()),
+            ],
+        )?);
     }
     Ok(tensors)
 }

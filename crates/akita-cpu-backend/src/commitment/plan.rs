@@ -88,6 +88,14 @@ impl OuterCommitPlan {
     pub(crate) const fn geometry(&self) -> &CommitmentSliceGeometry {
         &self.geometry
     }
+
+    /// Hiding-randomness coefficients across every slice.
+    pub(crate) fn randomness_coefficient_len(&self) -> Result<usize, AkitaError> {
+        self.geometry
+            .total_randomness_columns()?
+            .checked_mul(self.ring_dimension)
+            .ok_or_else(|| AkitaError::InvalidSetup("B randomness length overflow".into()))
+    }
 }
 
 /// Shared checked plan for inner-plus-outer execution.
