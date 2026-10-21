@@ -1,7 +1,7 @@
 # Akita PCS
 
 Akita is a high-performance, modular lattice polynomial commitment scheme with transparent setup.
-Its Module-SIS binding targets 128 bits under a lattice attack model with a quantum cost, and its Fiat-Shamir challenges target a 128-bit rate per random-oracle query in the classical random-oracle model.
+Its Module-SIS instances are priced at 169 bits of quantum Core-SVP cost under a lattice attack model, and its Fiat-Shamir challenges target a 128-bit rate per random-oracle query in the classical random-oracle model.
 [Security status](book/src/intro.md#security-status) states what these targets cover.
 
 Akita is the public scheme name for this implementation. The umbrella package is `akita-pcs`.

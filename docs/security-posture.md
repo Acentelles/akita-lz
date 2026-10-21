@@ -56,12 +56,12 @@ Which catalog the operator approved is a byte authentication claim.
 Decoding and derivation are separate checks:
 
 - **Encoding validity** covers lengths, geometry, canonical field words, and residue ranges. Validated decoding enforces it and rejects malformed bytes with an error under the no-panic boundary below. Trusting an object's derivation does not relax its decoding.
-- **Derivation** is the second claim above. The paths that skip re-derivation today still enforce encoding validity: decoding of the setup-prefix registry, a supplied terminal NTT cache, and the recursion benchmark's fixed-width setup decoder.
+- **Derivation** is the second claim above. Validated decoding of the setup-prefix registry and a supplied terminal NTT cache checks encoding without recomputing their contents.
 
-Unchecked deserialization skips encoding validity as well and reduces a noncanonical field word instead of rejecting it.
-That is a stronger act: the caller vouches for every word of the bytes.
-No production path decodes preprocessing this way today.
-Such a path must be explicit at its call site and must not be reachable from proof bytes.
+Trusted in-place setup and cache views can also skip field-word or residue-range checks.
+Their explicit caller obligations are described under [Trusted in-place setup views](#trusted-in-place-setup-views) below: the deployment vouches for the words in its authenticated program image.
+Unchecked deserialization can instead reduce a noncanonical field word rather than rejecting it.
+These paths must be explicit at their call sites and must not be reachable from proof bytes.
 
 Akita also keeps cheap admission checks where an honest but faulty generator could produce data that verifies and is weaker than intended.
 The SIS audit of catalog rows is the example.
@@ -72,7 +72,7 @@ What Akita checks today, per object:
 - **Public matrix.** Validated decoding re-derives it from the seed, so the derivation claim is checked. Constructors and decoders named `trusted` or `unchecked` skip the re-derivation and rely on the caller.
 - **Schedule catalog.** Admission audits each row. The origin of the catalog bytes is not checked.
 - **Setup-prefix registry.** It is checked for encoding, for binding to the setup seed, and for slot structure. The commitments are not recomputed. The registry is structurally validated, not provenance validated.
-- **Terminal NTT cache.** The verifier derives it from the setup when it prepares the cache itself. A supplied cache is checked for identity, shape, and residue ranges, and its contents are not recomputed.
+- **Terminal NTT cache.** The verifier derives it from the setup when it prepares the cache itself. A supplied owned cache is checked for identity, shape, and residue ranges, and its contents are not recomputed. A trusted in-place view checks identity and shape while the caller vouches for residue ranges.
 
 [`specs/flat-public-matrix-and-exact-ntt-cache.md`](../specs/flat-public-matrix-and-exact-ntt-cache.md#setup-provenance-and-validation) is the design record for these claims.
 It also fixes the intended proof of derivation, a certificate chain that ends at a prefix small enough to derive directly.
@@ -112,6 +112,24 @@ Reviewers should treat these changes as security-sensitive:
 Unsafe code is allowed only where it buys concrete performance or layout control that safe Rust cannot express cleanly.
 Every unsafe block should have a local safety argument that names the invariant being relied on.
 Verifier-facing crates should avoid unsafe code unless a spec explicitly justifies it.
+
+### Trusted in-place setup views
+
+A RISC-V guest verifier reads its setup from its own program image. Copying and
+range-checking that matrix would dominate the guest's cost, so three paths view
+trusted, `'static`, little-endian setup bytes in place:
+
+- `AkitaDeserialize::borrow_many_trusted`, and the `borrow_trusted` methods built
+  on it, reinterpret field words as elements. They check length and alignment.
+  They take a `TrustedBytes` token: canonical words are the caller's
+  obligation, and constructing the token is the one `unsafe` step.
+- `view_riscv64_scalar_q128_cache` reinterprets the residue rows of a prepared
+  NTT cache. Residue ranges are a trusted-input assumption stated on
+  `TrustedTerminalCache::View`.
+- The bulk prime-field decoder reads into initialized element storage through
+  one byte view. It then applies the single-element rule to every word.
+
+Proof bytes never reach these paths.
 
 ## Resource Limits
 

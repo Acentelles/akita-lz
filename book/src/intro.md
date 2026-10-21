@@ -4,13 +4,13 @@ Akita is a lattice-based polynomial commitment scheme, or PCS, implemented in
 Rust. Akita lets a prover commit to a large table and later prove an evaluation
 of the multilinear polynomial represented by that table. The verifier checks
 the proof without receiving the whole table. Akita uses transparent setup, so
-it needs no trusted ceremony. Its production parameters target 128 bits: the
-Module-SIS binding is priced with a lattice attack model under a quantum cost,
-and the Fiat-Shamir challenges are priced in the classical random-oracle model.
+it needs no trusted ceremony. Its production parameters price every Module-SIS
+instance at NIST security category 3, the level of ML-DSA-65: 169 bits of
+quantum Core-SVP cost. Its Fiat-Shamir soundness target is 128 bits.
 [Security status](#security-status) states what each target covers.
 
 Akita's small proofs are one of its strongest advantages. Current production
-benchmarks produce opening proofs of roughly 65 to 80 KB. This contrasts with
+benchmarks produce opening proofs of roughly 75 to 90 KB. This contrasts with
 hash-based post-quantum polynomial commitment schemes, which produce proofs of
 hundreds of kilobytes at the same polynomial sizes Akita supports.
 
@@ -183,10 +183,12 @@ parameter checks.
 
 ## Security status
 
-Akita's 128-bit target is a statement about two concrete models. It is not an
-end-to-end security bound, classical or quantum.
+Akita prices Module-SIS instances at a 169-bit quantum attack cost and targets
+a 128-bit Fiat-Shamir rate in the classical random-oracle model. These are
+statements about two concrete models, not an end-to-end security bound,
+classical or quantum.
 
-- **Module-SIS binding.** Module-SIS instances are priced at a 128-bit target
+- **Module-SIS binding.** Module-SIS instances are priced at a 169-bit target
   with the ADPS16 quantum cost model. Two generated tables cover the
   commitment matrices: a coefficient-$L_\infty$ table, from a scalarized
   infinity-norm LGSA estimate, and a Euclidean table for selective-$L_2$
@@ -195,7 +197,7 @@ end-to-end security bound, classical or quantum.
   known attack family on a scalarized instance. It does not price attacks
   that exploit ring or module structure, CRT splitting, subfield projection,
   or role-specific matrix structure, and it does not show that every quantum
-  attack costs at least $2^{128}$. These estimates price the instances. They
+  attack costs at least $2^{169}$. These estimates price the instances. They
   do not account for the loss of the reduction from a successful prover to a
   Module-SIS solution.
 - **Fiat-Shamir.** Transcript checks are analyzed in the classical
@@ -247,7 +249,7 @@ PCS provers, which usually materialize an encoded word and a hash tree during
 commitment, then retain both to answer later openings. The memory for those
 objects grows linearly with the polynomial size.
 
-The 65 to 80 KB figures cover the Akita commitment proof. The host proof system
+The 75 to 90 KB figures cover the Akita commitment proof. The host proof system
 contributes its own proof data.
 
 Jolt is the first demanding host for these boundaries. It exercises Akita
