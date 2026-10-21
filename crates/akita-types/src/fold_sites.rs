@@ -5,12 +5,12 @@
 //! [`FoldSite`] and convert it with [`FoldSite::id`]. A level's scalar
 //! openings are bound once for both roles by [`bind_fold_openings`].
 
+use crate::GrindingReplay;
 use akita_error::AkitaError;
 use akita_params::transcript_site::{
     ProtocolSiteId, SITE_FAMILY_FOLD_BINDING, SITE_FAMILY_FOLD_CHALLENGE, SITE_FAMILY_NEXT_WITNESS,
     SITE_FAMILY_OPENING_PAYLOAD, SITE_FAMILY_ROOT_STATEMENT, SITE_FAMILY_TERMINAL,
 };
-use crate::GrindingReplay;
 use jolt_algebra::narrowing::usize_to_u32;
 use jolt_algebra::{CanonicalDecode, CanonicalEncoding, ExtField, Field};
 use jolt_transcript::{Channel, PrivateChannel};
@@ -166,7 +166,9 @@ where
         state.public(prefix_evaluation);
     }
     for claim in derived {
-        state.bind_derived::<F, E>(claim)?;
+        state
+            .bind_derived::<F, E>(claim)
+            .map_err(Into::<AkitaError>::into)?;
     }
     Ok(())
 }

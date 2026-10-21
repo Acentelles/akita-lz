@@ -6,7 +6,7 @@ use akita_error::AkitaError;
 use akita_params::transcript_site::{ProtocolSiteId, SITE_FAMILY_SUMCHECK};
 use akita_params::{GrindingPlan, GrindingQueryKind, GrindingSite};
 use jolt_algebra::{CanonicalEncoding, ExtField, Field};
-use jolt_sumcheck::{ProverRoundContext, SumcheckSite, VerifierRoundContext};
+use jolt_sumcheck::{ProverRoundContext, SumcheckError, SumcheckSite, VerifierRoundContext};
 use jolt_transcript::{
     Channel, Fork, PrivateChannel, ProverTranscript, SiteId, Sponge, TranscriptError,
     VerifierTranscript, FORK_SEED_LEN,
@@ -119,6 +119,36 @@ fn fold_response_site(site: GrindingSite, nonce_bits: u8) -> SiteId {
     site.site_id(u32::from(nonce_bits)).into()
 }
 
+/// A prover channel Akita runs its grinding plan over: the clear transcript,
+/// or a masked channel over it (`specs/whiteout-akita.md` §4.5).
+/// Witness-dependent messages go through its [`PrivateChannel`]; the public
+/// proof-of-work nonces and fold-response counters go to the transcript
+/// underneath.
+pub trait ProverGrindingChannel: Channel + PrivateChannel<Error: Into<AkitaError>> {
+    /// The transcript this channel writes to.
+    fn transcript_mut(&mut self) -> &mut ProverTranscript<Self::Sponge>;
+}
+
+impl<H: Sponge> ProverGrindingChannel for ProverTranscript<H> {
+    fn transcript_mut(&mut self) -> &mut Self {
+        self
+    }
+}
+
+/// The verifier's mirror of [`ProverGrindingChannel`].
+pub trait VerifierGrindingChannel<'proof>:
+    Channel + PrivateChannel<Error: Into<AkitaError>>
+{
+    /// The transcript this channel reads from.
+    fn transcript_mut(&mut self) -> &mut VerifierTranscript<'proof, Self::Sponge>;
+}
+
+impl<'proof, H: Sponge> VerifierGrindingChannel<'proof> for VerifierTranscript<'proof, H> {
+    fn transcript_mut(&mut self) -> &mut Self {
+        self
+    }
+}
+
 /// One side of grinding-plan replay over a borrowed transcript.
 ///
 /// Scheduled-query code written against this trait runs unchanged for the
@@ -126,9 +156,9 @@ fn fold_response_site(site: GrindingSite, nonce_bits: u8) -> SiteId {
 /// transcript, so it leaves the replay unusable and `finish` fails even if the
 /// caller drops the error.
 pub trait GrindingReplay {
-    /// The role-specific transcript. Witness-dependent field messages go
-    /// through its [`PrivateChannel`] seam.
-    type State: Channel + PrivateChannel<Error = TranscriptError>;
+    /// The role's channel. Witness-dependent field messages go through its
+    /// [`PrivateChannel`] seam.
+    type State: Channel + PrivateChannel<Error: Into<AkitaError>>;
 
     /// Borrow the transcript for ordinary protocol messages and challenges.
     ///
@@ -206,10 +236,10 @@ pub trait GrindingReplay {
     }
 }
 
-impl<H: Sponge> GrindingReplay for ProverGrinding<'_, H> {
-    type State = ProverTranscript<H>;
+impl<H: Sponge, C: ProverGrindingChannel<Sponge = H>> GrindingReplay for ProverGrinding<'_, H, C> {
+    type State = C;
 
-    fn state_mut(&mut self) -> &mut ProverTranscript<H> {
+    fn state_mut(&mut self) -> &mut C {
         self.state
     }
 
@@ -226,10 +256,12 @@ impl<H: Sponge> GrindingReplay for ProverGrinding<'_, H> {
     }
 }
 
-impl<'proof, H: Sponge> GrindingReplay for VerifierGrinding<'_, 'proof, H> {
-    type State = VerifierTranscript<'proof, H>;
+impl<'proof, H: Sponge, C: VerifierGrindingChannel<'proof, Sponge = H>> GrindingReplay
+    for VerifierGrinding<'_, 'proof, H, C>
+{
+    type State = C;
 
-    fn state_mut(&mut self) -> &mut VerifierTranscript<'proof, H> {
+    fn state_mut(&mut self) -> &mut C {
         self.state
     }
 
@@ -246,27 +278,30 @@ impl<'proof, H: Sponge> GrindingReplay for VerifierGrinding<'_, 'proof, H> {
     }
 }
 
-/// Prover transcript paired with exact grinding-plan progress.
-pub struct ProverGrinding<'a, H: Sponge> {
-    state: &'a mut ProverTranscript<H>,
+/// Prover channel paired with exact grinding-plan progress.
+pub struct ProverGrinding<'a, H: Sponge, C = ProverTranscript<H>> {
+    state: &'a mut C,
     cursor: GrindingPlanCursor<'a>,
     serialized_nonce_bytes: usize,
     invalid: bool,
     /// The fork seed of the fold-response search in progress, squeezed by
     /// [`begin_fold_response`](Self::begin_fold_response).
     fold_seed: Option<(GrindingSite, [u8; FORK_SEED_LEN])>,
+    /// `H` is `C`'s sponge; it names the [`Fork`]s this context returns.
+    _sponge: PhantomData<fn() -> H>,
 }
 
-impl<'a, H: Sponge> ProverGrinding<'a, H> {
-    /// Attach the caller's prover transcript to its public grinding plan.
+impl<'a, H: Sponge, C: ProverGrindingChannel<Sponge = H>> ProverGrinding<'a, H, C> {
+    /// Attach the caller's prover channel to its public grinding plan.
     #[must_use]
-    pub fn new(state: &'a mut ProverTranscript<H>, plan: &'a GrindingPlan) -> Self {
+    pub fn new(state: &'a mut C, plan: &'a GrindingPlan) -> Self {
         Self {
             state,
             cursor: GrindingPlanCursor::new(plan),
             serialized_nonce_bytes: 0,
             invalid: false,
             fold_seed: None,
+            _sponge: PhantomData,
         }
     }
 
@@ -279,8 +314,9 @@ impl<'a, H: Sponge> ProverGrinding<'a, H> {
         }
         self.state
             .site(grinding_site(site, entry.grind_bits, entry.nonce_bits));
-        let start = self.state.narg().len();
-        self.state
+        let transcript = self.state.transcript_mut();
+        let start = transcript.narg().len();
+        transcript
             .grind(entry.grind_bits)
             .map_err(|error| match error {
                 TranscriptError::GrindingExhausted => {
@@ -296,7 +332,7 @@ impl<'a, H: Sponge> ProverGrinding<'a, H> {
     }
 
     fn record_nonce_bytes(&mut self, start: usize) -> Result<usize, AkitaError> {
-        let len = self.state.narg().len() - start;
+        let len = self.state.transcript_mut().narg().len() - start;
         self.serialized_nonce_bytes = self
             .serialized_nonce_bytes
             .checked_add(len)
@@ -391,8 +427,9 @@ impl<'a, H: Sponge> ProverGrinding<'a, H> {
             ));
         }
         self.state.site(fold_response_site(site, entry.nonce_bits));
-        let start = self.state.narg().len();
-        self.state.send_nonce(counter);
+        let transcript = self.state.transcript_mut();
+        let start = transcript.narg().len();
+        transcript.send_nonce(counter);
         let encoded_bytes = self.record_nonce_bytes(start)?;
         tracing::info!(
             role = "prover",
@@ -456,23 +493,28 @@ impl<'a, H: Sponge> ProverGrinding<'a, H> {
     }
 }
 
-/// Verifier transcript paired with exact grinding-plan progress.
-pub struct VerifierGrinding<'a, 'proof, H: Sponge> {
-    state: &'a mut VerifierTranscript<'proof, H>,
+/// Verifier channel paired with exact grinding-plan progress.
+pub struct VerifierGrinding<'a, 'proof, H: Sponge, C = VerifierTranscript<'proof, H>> {
+    state: &'a mut C,
     cursor: GrindingPlanCursor<'a>,
     serialized_nonce_bytes: usize,
     invalid: bool,
+    /// `C`'s sponge and proof lifetime, which name its [`Fork`]s.
+    _transcript: PhantomData<fn() -> &'proof H>,
 }
 
-impl<'a, 'proof, H: Sponge> VerifierGrinding<'a, 'proof, H> {
-    /// Attach the caller's verifier transcript to its public grinding plan.
+impl<'a, 'proof, H: Sponge, C: VerifierGrindingChannel<'proof, Sponge = H>>
+    VerifierGrinding<'a, 'proof, H, C>
+{
+    /// Attach the caller's verifier channel to its public grinding plan.
     #[must_use]
-    pub fn new(state: &'a mut VerifierTranscript<'proof, H>, plan: &'a GrindingPlan) -> Self {
+    pub fn new(state: &'a mut C, plan: &'a GrindingPlan) -> Self {
         Self {
             state,
             cursor: GrindingPlanCursor::new(plan),
             serialized_nonce_bytes: 0,
             invalid: false,
+            _transcript: PhantomData,
         }
     }
 
@@ -485,8 +527,9 @@ impl<'a, 'proof, H: Sponge> VerifierGrinding<'a, 'proof, H> {
         }
         self.state
             .site(grinding_site(site, entry.grind_bits, entry.nonce_bits));
-        let remaining = self.state.remaining();
-        self.state.check_grind(entry.grind_bits)?;
+        let transcript = self.state.transcript_mut();
+        let remaining = transcript.remaining();
+        transcript.check_grind(entry.grind_bits)?;
         self.record_nonce_bytes(remaining)
     }
 
@@ -495,7 +538,7 @@ impl<'a, 'proof, H: Sponge> VerifierGrinding<'a, 'proof, H> {
             .serialized_nonce_bytes
             .checked_add(
                 remaining_before
-                    .checked_sub(self.state.remaining())
+                    .checked_sub(self.state.transcript_mut().remaining())
                     .ok_or(AkitaError::InvalidProof)?,
             )
             .ok_or(AkitaError::InvalidProof)?;
@@ -516,8 +559,9 @@ impl<'a, 'proof, H: Sponge> VerifierGrinding<'a, 'proof, H> {
         let entry = next_entry(&mut self.cursor, site, GrindingQueryKind::FoldResponse)?;
         self.state.site(fold_response_site(site, entry.nonce_bits));
         let seed: [u8; FORK_SEED_LEN] = self.state.challenge_bytes();
-        let remaining = self.state.remaining();
-        let counter = self.state.receive_nonce(entry.nonce_bits)?;
+        let transcript = self.state.transcript_mut();
+        let remaining = transcript.remaining();
+        let counter = transcript.receive_nonce(entry.nonce_bits)?;
         self.record_nonce_bytes(remaining)?;
         Ok(Fork::new(&seed, counter))
     }
@@ -586,19 +630,19 @@ fn grinding_sumcheck_site(
 }
 
 /// Sumcheck round context borrowing a prover grinding context.
-pub struct GrindingSumcheckProver<'context, 'a, F, E, H: Sponge> {
-    grinding: &'context mut ProverGrinding<'a, H>,
+pub struct GrindingSumcheckProver<'context, 'a, F, E, H: Sponge, C = ProverTranscript<H>> {
+    grinding: &'context mut ProverGrinding<'a, H, C>,
     protocol: akita_params::SumcheckProtocol,
     level: u32,
     stage: u32,
     _fields: PhantomData<fn() -> (F, E)>,
 }
 
-impl<'context, 'a, F, E, H: Sponge> GrindingSumcheckProver<'context, 'a, F, E, H> {
+impl<'context, 'a, F, E, H: Sponge, C> GrindingSumcheckProver<'context, 'a, F, E, H, C> {
     /// Bind one sumcheck invocation to its scheduled grinding-site coordinates.
     #[must_use]
     pub fn new(
-        grinding: &'context mut ProverGrinding<'a, H>,
+        grinding: &'context mut ProverGrinding<'a, H, C>,
         protocol: akita_params::SumcheckProtocol,
         level: u32,
         stage: u32,
@@ -613,16 +657,17 @@ impl<'context, 'a, F, E, H: Sponge> GrindingSumcheckProver<'context, 'a, F, E, H
     }
 }
 
-impl<F, E, H> ProverRoundContext<E> for GrindingSumcheckProver<'_, '_, F, E, H>
+impl<F, E, H, C> ProverRoundContext<E> for GrindingSumcheckProver<'_, '_, F, E, H, C>
 where
     F: Field + CanonicalEncoding,
     E: ExtField<F>,
     H: Sponge,
+    C: ProverGrindingChannel<Sponge = H, Error: Into<SumcheckError<E>>>,
 {
-    type Channel = ProverTranscript<H>;
+    type Channel = C;
     type Error = AkitaError;
 
-    fn channel_mut(&mut self) -> &mut ProverTranscript<H> {
+    fn channel_mut(&mut self) -> &mut C {
         self.grinding.state_mut()
     }
 
@@ -652,21 +697,29 @@ where
 }
 
 /// Sumcheck round context borrowing a verifier grinding context.
-pub struct GrindingSumcheckVerifier<'context, 'a, 'proof, F, E, H: Sponge> {
-    grinding: &'context mut VerifierGrinding<'a, 'proof, H>,
+pub struct GrindingSumcheckVerifier<
+    'context,
+    'a,
+    'proof,
+    F,
+    E,
+    H: Sponge,
+    C = VerifierTranscript<'proof, H>,
+> {
+    grinding: &'context mut VerifierGrinding<'a, 'proof, H, C>,
     protocol: akita_params::SumcheckProtocol,
     level: u32,
     stage: u32,
     _fields: PhantomData<fn() -> (F, E)>,
 }
 
-impl<'context, 'a, 'proof, F, E, H: Sponge>
-    GrindingSumcheckVerifier<'context, 'a, 'proof, F, E, H>
+impl<'context, 'a, 'proof, F, E, H: Sponge, C>
+    GrindingSumcheckVerifier<'context, 'a, 'proof, F, E, H, C>
 {
     /// Bind one sumcheck invocation to its scheduled grinding-site coordinates.
     #[must_use]
     pub fn new(
-        grinding: &'context mut VerifierGrinding<'a, 'proof, H>,
+        grinding: &'context mut VerifierGrinding<'a, 'proof, H, C>,
         protocol: akita_params::SumcheckProtocol,
         level: u32,
         stage: u32,
@@ -681,16 +734,18 @@ impl<'context, 'a, 'proof, F, E, H: Sponge>
     }
 }
 
-impl<'proof, F, E, H> VerifierRoundContext<E> for GrindingSumcheckVerifier<'_, '_, 'proof, F, E, H>
+impl<'proof, F, E, H, C> VerifierRoundContext<E>
+    for GrindingSumcheckVerifier<'_, '_, 'proof, F, E, H, C>
 where
     F: Field + CanonicalEncoding,
     E: ExtField<F>,
     H: Sponge,
+    C: VerifierGrindingChannel<'proof, Sponge = H, Error: Into<SumcheckError<E>>>,
 {
-    type Channel = VerifierTranscript<'proof, H>;
+    type Channel = C;
     type Error = AkitaError;
 
-    fn channel_mut(&mut self) -> &mut VerifierTranscript<'proof, H> {
+    fn channel_mut(&mut self) -> &mut C {
         self.grinding.state_mut()
     }
 

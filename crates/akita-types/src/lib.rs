@@ -119,7 +119,7 @@ pub use transcript::{
 };
 pub use transcript_grinding::{
     GrindingReplay, GrindingSumcheckProver, GrindingSumcheckVerifier, ProverGrinding,
-    VerifierGrinding,
+    ProverGrindingChannel, VerifierGrinding, VerifierGrindingChannel,
 };
 
 #[cfg(test)]
