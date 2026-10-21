@@ -18,28 +18,42 @@ pub use channel::ProofChannel;
 pub use nonce::{nonce_encoded_len, nonce_max_bytes, NonceAtom};
 
 /// Proof channel and proof-stream format version.
-pub const PROTOCOL_VERSION: u32 = 8;
+pub const PROTOCOL_VERSION: u32 = 9;
 
-/// Spongefish session tag.
+/// Akita protocol tag, absorbed first in every Akita sub-transcript.
 ///
 /// It names the proof-stream version, the sponge, the field-challenge codec
 /// and the proof-of-work layout, so a change to any of them changes every
-/// challenge.
+/// challenge, whether Akita runs in its own session or inside a caller's.
 #[cfg(feature = "transcript-blake2b")]
-pub const SESSION_TAG: &[u8] =
-    b"akita-pcs/native-proof-stream/v8/blake2b512/jolt-pooled-rejection-tv161/jolt-sponge-pow-leb128";
+pub const PROTOCOL_TAG: &[u8] =
+    b"akita-pcs/native-proof-stream/v9/blake2b512/jolt-pooled-rejection-tv161/jolt-sponge-pow-leb128";
 
-/// Spongefish session tag.
+/// Akita protocol tag, absorbed first in every Akita sub-transcript.
 ///
 /// It names the proof-stream version, the sponge, the field-challenge codec
 /// and the proof-of-work layout, so a change to any of them changes every
-/// challenge.
+/// challenge, whether Akita runs in its own session or inside a caller's.
 #[cfg(feature = "transcript-keccak")]
-pub const SESSION_TAG: &[u8] =
-    b"akita-pcs/native-proof-stream/v8/keccak-f1600/jolt-pooled-rejection-tv161/jolt-sponge-pow-leb128";
+pub const PROTOCOL_TAG: &[u8] =
+    b"akita-pcs/native-proof-stream/v9/keccak-f1600/jolt-pooled-rejection-tv161/jolt-sponge-pow-leb128";
+
+/// Spongefish session tag of a standalone Akita proof.
+pub const STANDALONE_SESSION_TAG: &[u8] = b"akita-pcs/standalone-session/v9";
+
+/// Spongefish session tag of the root-commitment digest.
+#[cfg(feature = "transcript-blake2b")]
+pub const COMMITMENT_DIGEST_TAG: &[u8] = b"akita-pcs/commitment-digest/v9/blake2b512";
+
+/// Spongefish session tag of the root-commitment digest.
+#[cfg(feature = "transcript-keccak")]
+pub const COMMITMENT_DIGEST_TAG: &[u8] = b"akita-pcs/commitment-digest/v9/keccak-f1600";
+
+/// Byte length of a root-commitment digest.
+pub const COMMITMENT_DIGEST_LEN: usize = 32;
 
 /// Domain tag stored in every diagnostic context record.
-pub const CONTEXT_DOMAIN: [u8; 32] = *b"akita-pcs/native-context/v8\0\0\0\0\0";
+pub const CONTEXT_DOMAIN: [u8; 32] = *b"akita-pcs/native-context/v9\0\0\0\0\0";
 
 /// Stable family identifier for standard and batched sumcheck sites.
 pub const SITE_FAMILY_SUMCHECK: u32 = 1;
@@ -65,6 +79,8 @@ pub const SITE_FAMILY_NEXT_WITNESS: u32 = 10;
 pub const SITE_FAMILY_ROOT_STATEMENT: u32 = 11;
 /// Stable family identifier for terminal response messages.
 pub const SITE_FAMILY_TERMINAL: u32 = 12;
+/// Stable family identifier for the protocol tag and descriptor.
+pub const SITE_FAMILY_INSTANCE: u32 = 13;
 
 /// Proof-stream operation kind recorded by diagnostic context metadata.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -178,30 +194,75 @@ impl ProtocolContextRecord {
     }
 }
 
-fn session_id() -> SessionId {
-    spongefish::derive_session_id::<TurboShake128>(SESSION_TAG)
+fn standalone_session_id() -> SessionId {
+    spongefish::derive_session_id::<TurboShake128>(STANDALONE_SESSION_TAG)
 }
 
-/// Spongefish instance: the caller's session bytes, then the public statement
-/// bytes, each with a `u64` little-endian length prefix.
-fn instance(session: &[u8], statement: &[u8]) -> (BytesMsg, BytesMsg) {
-    (BytesMsg(session.to_vec()), BytesMsg(statement.to_vec()))
-}
-
-/// Construct a prover channel bound to [`SESSION_TAG`], `session` and `instance`.
+/// Construct a standalone prover channel bound to [`STANDALONE_SESSION_TAG`]
+/// and the caller's length-prefixed `session` bytes.
+///
+/// The channel carries no Akita statement yet; the proof entry absorbs it with
+/// [`bind_instance`], as it does on a caller's channel.
 #[must_use]
-pub fn new_prover_channel(session: &[u8], statement: &[u8]) -> ProverChannel {
-    ProverState::new(&session_id(), &instance(session, statement))
+pub fn new_prover_channel(session: &[u8]) -> ProverChannel {
+    ProverState::new(&standalone_session_id(), &BytesMsg(session.to_vec()))
 }
 
-/// Construct a verifier channel over one proof byte string.
+/// Construct a standalone verifier channel over one proof byte string.
 #[must_use]
 pub fn new_verifier_channel<'proof>(
     session: &[u8],
-    statement: &[u8],
     proof: &'proof [u8],
 ) -> VerifierChannel<'proof> {
-    VerifierState::new(&session_id(), &instance(session, statement), proof)
+    VerifierState::new(&standalone_session_id(), &BytesMsg(session.to_vec()), proof)
+}
+
+/// Absorb the Akita protocol tag and the canonical descriptor, each as a
+/// [`BytesMsg`] with its `u64` little-endian length prefix.
+///
+/// Every Akita proof entry calls this first, on its own channel or on a
+/// caller's, so both modes bind the same statement before any challenge.
+///
+/// # Errors
+///
+/// Returns [`AkitaError::InvalidInput`] when the record size overflows; a
+/// verifier transcript is then rejected.
+pub fn bind_instance<S: ProofChannel>(state: &mut S, descriptor: &[u8]) -> Result<(), AkitaError> {
+    let mut bytes = Vec::new();
+    for part in [PROTOCOL_TAG, descriptor] {
+        bytes.extend_from_slice(BytesMsg(part.to_vec()).encode().as_ref());
+    }
+    let site = ProtocolSiteId {
+        family: SITE_FAMILY_INSTANCE,
+        ..ProtocolSiteId::default()
+    };
+    public_bytes(state, site, &bytes)
+}
+
+/// 32-byte digest of one root commitment's canonical bytes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct CommitmentDigest([u8; COMMITMENT_DIGEST_LEN]);
+
+impl CommitmentDigest {
+    /// Hash canonical commitment bytes.
+    ///
+    /// The digest is a separate Spongefish session under
+    /// [`COMMITMENT_DIGEST_TAG`] whose instance is the length-prefixed
+    /// `bytes`; it squeezes [`COMMITMENT_DIGEST_LEN`] bytes. Callers pass the
+    /// one canonical encoding of the commitment they then use.
+    #[must_use]
+    pub fn of_canonical_bytes(bytes: &[u8]) -> Self {
+        let session = spongefish::derive_session_id::<TurboShake128>(COMMITMENT_DIGEST_TAG);
+        let mut state: VerifierChannel<'_> =
+            VerifierState::new(&session, &BytesMsg(bytes.to_vec()), &[]);
+        Self(state.verifier_message())
+    }
+
+    /// Borrow the digest bytes.
+    #[must_use]
+    pub const fn as_bytes(&self) -> &[u8; COMMITMENT_DIGEST_LEN] {
+        &self.0
+    }
 }
 
 /// Permanently reject a verifier transcript after a semantic protocol failure.

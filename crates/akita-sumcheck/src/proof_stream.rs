@@ -788,7 +788,7 @@ mod tests {
             claim: claim + F::one(),
         };
         let mut channel = TestProverChannel {
-            state: new_prover_channel(b"native-sumcheck", b"fixture"),
+            state: new_prover_channel(b"native-sumcheck"),
             invocation: 7,
         };
         assert!(matches!(
@@ -811,7 +811,7 @@ mod tests {
             claim,
         };
         let mut prover = TestProverChannel {
-            state: new_prover_channel(b"native-sumcheck", b"fixture"),
+            state: new_prover_channel(b"native-sumcheck"),
             invocation: 7,
         };
         let shape = SumcheckShape::new(4, 1).unwrap();
@@ -830,7 +830,7 @@ mod tests {
             claim,
         };
         let mut verifier = TestVerifierChannel {
-            state: new_verifier_channel(b"native-sumcheck", b"fixture", &proof),
+            state: new_verifier_channel(b"native-sumcheck", &proof),
             invocation: 7,
         };
         let verifier_point = verify_sumcheck(&verifier_instance, &mut verifier, shape, 7).unwrap();
@@ -847,7 +847,7 @@ mod tests {
             claim,
         };
         let mut prover = TestProverChannel {
-            state: new_prover_channel(b"native-sumcheck", b"fixture"),
+            state: new_prover_channel(b"native-sumcheck"),
             invocation: 7,
         };
         let shape = SumcheckShape::new(4, 1).unwrap();
@@ -866,7 +866,7 @@ mod tests {
         };
 
         let mut truncated = TestVerifierChannel {
-            state: new_verifier_channel(b"native-sumcheck", b"fixture", &proof[..proof.len() - 1]),
+            state: new_verifier_channel(b"native-sumcheck", &proof[..proof.len() - 1]),
             invocation: 7,
         };
         assert_eq!(
@@ -884,7 +884,7 @@ mod tests {
         let degree = instance.degree_bound();
         let shape = SumcheckShape::new(1, degree).unwrap();
         let mut prover = TestProverChannel {
-            state: new_prover_channel(b"native-eq-sumcheck", b"fixture"),
+            state: new_prover_channel(b"native-eq-sumcheck"),
             invocation: 12,
         };
         let (prover_point, _) = prove_eq_factored_sumcheck::<F, F, _, _>(
@@ -898,7 +898,7 @@ mod tests {
 
         let expected = OneRoundEq::new(tau, coefficients);
         let mut verifier = TestVerifierChannel {
-            state: new_verifier_channel(b"native-eq-sumcheck", b"fixture", &proof),
+            state: new_verifier_channel(b"native-eq-sumcheck", &proof),
             invocation: 12,
         };
         let verifier_point = verify_eq_factored_sumcheck::<F, F, _, _>(
@@ -917,7 +917,7 @@ mod tests {
     #[test]
     fn eq_factored_rejects_empty_equality_point() {
         let mut verifier = TestVerifierChannel {
-            state: new_verifier_channel(b"native-eq-empty", b"fixture", &[]),
+            state: new_verifier_channel(b"native-eq-empty", &[]),
             invocation: 12,
         };
         assert!(matches!(
@@ -940,7 +940,7 @@ mod tests {
         let coefficients = vec![F::from_u64(3), F::from_u64(5), F::from_u64(7)];
         let instance = OneRoundEq::new(F::zero(), coefficients);
         let challenge = F::from_u64(11);
-        let mut proof_state = new_prover_channel(b"native-eq-forgery", b"fixture");
+        let mut proof_state = new_prover_channel(b"native-eq-forgery");
         send_atoms(
             &mut proof_state,
             &[
@@ -950,7 +950,7 @@ mod tests {
         );
         let proof = proof_state.narg_string().to_vec();
         let mut verifier = FixedVerifierChannel {
-            state: new_verifier_channel(b"native-eq-forgery", b"fixture", &proof),
+            state: new_verifier_channel(b"native-eq-forgery", &proof),
             challenges: vec![challenge],
         };
 
@@ -980,7 +980,7 @@ mod tests {
         let mut instance = TwoRoundEq::new(equality, coefficients);
         let input_claim = instance.input_claim();
         let mut prover = FixedProverChannel {
-            state: new_prover_channel(b"native-eq-late", b"fixture"),
+            state: new_prover_channel(b"native-eq-late"),
             challenges: point.to_vec(),
         };
         let shape = SumcheckShape::new(2, 1).unwrap();
@@ -995,7 +995,7 @@ mod tests {
         let expected = TwoRoundEq::new(equality, coefficients).evaluate(point[0], point[1]);
         let verify = |proof: &[u8]| {
             let mut verifier = FixedVerifierChannel {
-                state: new_verifier_channel(b"native-eq-late", b"fixture", proof),
+                state: new_verifier_channel(b"native-eq-late", proof),
                 challenges: point.to_vec(),
             };
             verify_eq_factored_sumcheck::<F, F, _, _>(
@@ -1027,7 +1027,7 @@ mod tests {
                 .collect::<Vec<_>>())
         }
 
-        // Pinned at protocol v8: a change here is a proof-format change.
+        // Pinned at protocol v9: a change here is a proof-format change.
         let (evaluations, claim) = fixture();
         let mut standard = DenseInstance {
             evaluations,
@@ -1035,7 +1035,7 @@ mod tests {
             claim,
         };
         let mut prover = TestProverChannel {
-            state: new_prover_channel(b"native-cutover", b"standard"),
+            state: new_prover_channel(b"native-cutover/standard"),
             invocation: 3,
         };
         let (standard_point, _) = prove_sumcheck(
@@ -1059,7 +1059,7 @@ mod tests {
         );
         let degree = normalized.degree_bound();
         let mut prover = TestProverChannel {
-            state: new_prover_channel(b"native-cutover", b"normalized"),
+            state: new_prover_channel(b"native-cutover/normalized"),
             invocation: 5,
         };
         let (normalized_point, _) = prove_eq_factored_sumcheck::<F, F, _, _>(
@@ -1070,11 +1070,7 @@ mod tests {
         )
         .unwrap();
         let mut verifier = TestVerifierChannel {
-            state: new_verifier_channel(
-                b"native-cutover",
-                b"normalized",
-                prover.state.narg_string(),
-            ),
+            state: new_verifier_channel(b"native-cutover/normalized", prover.state.narg_string()),
             invocation: 5,
         };
         let replayed = verify_eq_factored_sumcheck::<F, F, _, _>(
@@ -1099,17 +1095,17 @@ mod tests {
         ];
         #[cfg(feature = "transcript-blake2b")]
         let expected = [
-            "40000000000000000000000000000000c70bab57dd5bfcae5938eea47fb2afea8b4db9fe1bd5640d6bb82724060dfe2d05b631f53c864bb462247cc2ec4599b2",
-            "a6c2ea55f716bf6b168e3be99fecab7a3ff1b854cba9798d0f276c94f18c298e254375bdeb46664b0b121a6cda8fe6c64fffb9143ccd877ffacecdaca3807b47",
-            "48000000000000000000000000000000446b3121a52bc98420a6158ff8d75375",
-            "081bf0296f3e5e8002be3cbcebfca3e14e799d23be344921f4b68647eec42f19",
+            "40000000000000000000000000000000ed122a868c4049cb6bc24e690446bcbd4da710b57dfaa4046b3e0288b8c113d3a6f40e4b516a278542ec9c140130525e",
+            "e6838a212350d2f29ab0531a81116fef86e67edc8d16c0474db7d694ad670dfd95a7219c443bb54043f32634c913329d37f8631c416cbf6869c3df85bba6f043",
+            "4800000000000000000000000000000007101d0d0aff30353c63b99a7f527956",
+            "32637863d9c403c97a91fa466c41ce7cbdda6bedd3387c86634a919bddf2f89f",
         ];
         #[cfg(feature = "transcript-keccak")]
         let expected = [
-            "4000000000000000000000000000000025da43e372955a9e574303f512c94ad83ac0e8a13a8311ba19f9bd99179f091194ba3db0b9a1653c19a40363460d210e",
-            "b4f5d0b85ca596e7d5d040bd44b212f61fb4114c200eb97adb15cf87a30e39895a56d2170738d717e32989a56e0f67417d955e36bee47f3541b417f135c33f47",
-            "48000000000000000000000000000000940704b939c0748b5540590a27f8b345",
-            "143bc5abb5d3929406402e28793a358fa52ae7a6ca6231040785e7e4fdeef344",
+            "400000000000000000000000000000001b248659a82cd91dc65a2c0a2793411dfd2a2c4a2022fe0ecfb2d4f328a937c9ac522c79cce77c3557046c454cb8fabd",
+            "bb8861162a4b7687b1168bc2c964504791455a07f36204005ba1af5be5b7a5ce2a8f0515af757febbb6ae0f2edb857361b75664289191708d2f5176736f95df0",
+            "480000000000000000000000000000002b6ad1d53082e080650918c874e8c45d",
+            "471b10e9796c87e2429e50d492250f91409fb88690de186818c0aded437d7019",
         ];
         assert_eq!(actual, expected);
     }
