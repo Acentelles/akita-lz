@@ -88,7 +88,7 @@ The raw relation image is then the sum
 $\mathbf u = \sum_{j=0}^{\mathcal M-1}\mathbf u_j$. The large local witnesses
 $\widehat{\mathbf t}^{(j)}$ never leave $P_j$; only the short $n_B$-vectors
 $\mathbf u_j$ are summed. The aggregation machine negative-binary decomposes
-that sum through the two F maps and publishes only the 128-byte payload
+that sum through the two F maps and publishes only the 256-byte payload
 $p_F$ (criteria 1 and 2).
 
 ### The opening commitment $\mathbf v$ and the claim $y$
@@ -101,7 +101,7 @@ commitment $\mathbf v_j := \mathbf D_j\,\widehat{\mathbf e}^{(j)} \in R_q^{n_D}$
 with $\widehat{\mathbf e}^{(j)} := (\widehat{\mathbf e}_i)_{i\in\mathcal I_j}$. The
 global opening relation image is $\mathbf v = \sum_j \mathbf v_j$. The aggregation
 machine compresses that sum through the two H maps and publishes only the
-128-byte payload $p_H$. Each machine also
+256-byte payload $p_H$. Each machine also
 forms its partial claim $y_j := \sum_{i\in\mathcal I_j} b_i e_i$, and the claimed
 evaluation is $y = F(\mathbf r) = \sum_j y_j$.
 
@@ -180,8 +180,9 @@ constant number of leading rounds. Two reasons:
    tail and final rounds would inflate the proof size and the number of fold levels,
    so those rounds keep the single-response protocol.
 2. **Where the cost actually is.** Only the first few rounds are large enough to be
-   worth distributing. After they shrink the witness, the remaining rounds are cheap
-   and run fine on a single machine.
+   worth distributing. Once the scheduled recursive folds have reduced the full
+   witness, the remaining rounds are cheap and run fine on a single machine.
+   This does not require the root fold itself to shrink the witness.
 
 So the schedule fixes a constant number of distributed rounds. Those leading
 rounds retain one $\mathbf z_j$ per machine; the later rounds return to the
@@ -295,7 +296,7 @@ $\widehat{\mathbf r}$. The machines then run the ordinary inner/outer commit at 
 next level's parameters on their assigned portions and sum the **partial next-level
 relation images** into one $\mathbf u'$. The aggregation machine compresses
 $\mathbf u'$ and retains the two shared F digit vectors. The verifier sees exactly
-the single-machine recursive interface: one 128-byte extended-witness payload and
+the single-machine recursive interface: one 256-byte extended-witness payload and
 one next-level opening claim.
 
 ## Ring-switch and row-batching

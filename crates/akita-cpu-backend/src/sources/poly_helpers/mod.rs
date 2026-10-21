@@ -10,14 +10,11 @@ mod rotated_accum;
 mod windowed_accum;
 
 pub use decompose_fold_partitioned::balanced_ring_decompose_fold_partitioned;
-pub(crate) use decompose_fold_partitioned::cached_digit_decompose_fold_partitioned;
-pub(crate) use decompose_fold_partitioned::packed_tight_digit_fold_partitioned;
+pub(crate) use decompose_fold_partitioned::{element_partitioned_decompose_fold, WidePlan};
+pub(crate) use windowed_accum::{I8DigitSpan, WindowedChallenge};
 
-use crate::kernels::linear::try_centered_i8;
 #[cfg(target_arch = "aarch64")]
 use crate::kernels::neon_decompose_fold as decompose_fold_neon;
-use crate::opaque::DecomposeFoldWitness;
-use akita_algebra::ring::cyclotomic::BalancedDecomposePow2Params;
 use akita_algebra::CyclotomicRing;
 use akita_challenges::SparseChallenge;
 use akita_error::AkitaError;
@@ -30,8 +27,8 @@ use crate::kernels::avx_decompose_fold as decompose_fold_avx;
 /// Final basis facts shared by live decomposition and cached digit folds.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct SignedDigitBasis {
-    pub(super) kernel: akita_params::SignedDigitKernel,
-    pub(super) abs_bound: u64,
+    pub(crate) kernel: akita_params::SignedDigitKernel,
+    pub(crate) abs_bound: u64,
 }
 
 impl SignedDigitBasis {
@@ -149,50 +146,6 @@ fn use_simd_decompose_fold() -> bool {
         static ENABLED: OnceLock<bool> = OnceLock::new();
         *ENABLED.get_or_init(|| std::env::var("AKITA_SCALAR_NTT").map_or(true, |v| v != "1"))
     }
-}
-
-pub(crate) fn balanced_ring_decompose_fold_chunked<F, const D: usize>(
-    rings: &[CyclotomicRing<F, D>],
-    challenges: &[SparseChallenge],
-    chunk_ranges: &[std::ops::Range<usize>],
-    num_positions_per_block: usize,
-    params: &BalancedDecomposePow2Params<F>,
-) -> Result<Vec<DecomposeFoldWitness>, AkitaError>
-where
-    F: Field + CanonicalEncoding,
-{
-    chunk_ranges
-        .iter()
-        .map(|range| {
-            let ring_start = range.start * num_positions_per_block;
-            let ring_end = (range.end * num_positions_per_block).min(rings.len());
-            let coefficients = balanced_ring_decompose_fold_partitioned(
-                &rings[ring_start.min(rings.len())..ring_end],
-                &challenges[range.clone()],
-                num_positions_per_block,
-                params,
-            )?;
-            Ok(DecomposeFoldWitness::from_centered_rows(coefficients))
-        })
-        .collect::<Result<Vec<_>, AkitaError>>()
-}
-
-pub(crate) fn try_small_i8_cache_from_ring_coeffs<F: Field + CanonicalEncoding, const D: usize>(
-    coeffs: &[CyclotomicRing<F, D>],
-) -> Option<Vec<[i8; D]>> {
-    let q = (-F::one()).to_u128_checked()? + 1;
-    let half_q = q / 2;
-    let mut out = Vec::with_capacity(coeffs.len());
-
-    for ring in coeffs {
-        let mut digits = [0i8; D];
-        for (dst, coeff) in digits.iter_mut().zip(ring.coeffs.iter()) {
-            *dst = try_centered_i8(*coeff, q, half_q)?;
-        }
-        out.push(digits);
-    }
-
-    Some(out)
 }
 
 /// Scalar sparse-multiply-accumulate: accumulate `challenge * digit_plane`
@@ -540,6 +493,9 @@ where
     }
     Ok((eval, folded))
 }
+
+#[cfg(test)]
+mod fold_tests;
 
 #[cfg(test)]
 #[path = "tests.rs"]

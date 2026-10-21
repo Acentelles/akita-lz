@@ -112,19 +112,13 @@ fn alpha_and_role_dimensions_are_bound_by_the_shared_plan() {
         2,
         1,
     );
-    let at_zero = prepare(&fixture, E::zero());
-    let at_one = prepare(&fixture, E::one());
-    assert_eq!(
-        at_zero.relation_events().alpha_powers(),
-        scalar_powers(E::zero(), 64)
-    );
-    assert_eq!(
-        at_one.relation_events().alpha_powers(),
-        scalar_powers(E::one(), 64)
-    );
+    let (_, at_zero_events) = prepare(&fixture, E::zero());
+    let (_, at_one_events) = prepare(&fixture, E::one());
+    assert_eq!(at_zero_events.alpha_powers(), scalar_powers(E::zero(), 64));
+    assert_eq!(at_one_events.alpha_powers(), scalar_powers(E::one(), 64));
     assert_ne!(
-        materialize_events(at_zero.relation_events()),
-        materialize_events(at_one.relation_events())
+        materialize_events(&at_zero_events),
+        materialize_events(&at_one_events)
     );
 
     let wrong_relation = RingRelationInstance::new(
