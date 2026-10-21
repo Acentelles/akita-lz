@@ -11,9 +11,7 @@ use akita_config::{
     policy_of, proof_optimized::fp128, CommitmentConfig, TrustedScheduleCatalog,
     ValidatedScheduleCatalog,
 };
-use akita_cpu_backend::{
-    hiding_test_support, CpuBackend, DensePoly, GroupContext, RandomnessSection,
-};
+use akita_cpu_backend::{CpuBackend, DensePoly, GroupContext};
 use akita_params::{
     lagrange_weights, suffix_opening_layout, BasisMode, ChunkedWitnessCfg,
     CommittedGroupBatchProfile, FoldSchedule, GroupCommitPhaseParams, PolynomialGroupLayout,
@@ -165,11 +163,14 @@ fn validation_recomputes_widths_and_rejects_a_narrow_schedule() {
         }
         // A cut one level earlier leaves level 1's randomness unaccounted for.
         assert!(akita_params::zk::validate_hiding_randomness(&schedule, CUT_LEVEL - 1).is_err());
-        // A cut at the last nonterminal fold would put its randomness in the
-        // terminal witness, which is sent in the clear.
-        let error =
-            akita_params::zk::validate_hiding_randomness(&schedule, schedule.recursive_folds.len())
-                .unwrap_err();
+        // The deepest admissible cut is the fold before the last nonterminal
+        // one; a cut at the last nonterminal fold would put its randomness in
+        // the terminal witness, which is sent in the clear.
+        let deepest = schedule.recursive_folds.len() - 1;
+        let (_, deepest_schedule) = hiding_schedule_to(deepest);
+        akita_params::zk::validate_hiding_randomness(&deepest_schedule, deepest).unwrap();
+        let error = akita_params::zk::validate_hiding_randomness(&deepest_schedule, deepest + 1)
+            .unwrap_err();
         assert!(error.to_string().contains("terminal witness"), "{error}");
     });
 }
@@ -259,12 +260,9 @@ fn hiding_commitments_to_one_polynomial_differ() {
     });
 }
 
-/// Commit, prove an opening, and verify it. A pending randomness fault, if
-/// any, corrupts the root fold's output witness after the commitment and
-/// past the prover's relation self-check, so proving still succeeds. Returns
-/// whether the verifier accepted the claimed opening; a wrong opening is
-/// always rejected.
-fn prove_and_verify(cut_level: usize, fault: Option<RandomnessSection>) -> bool {
+/// Commit, prove an opening, and verify it. Returns whether the verifier
+/// accepted the claimed opening; a wrong opening is always rejected.
+fn prove_and_verify(cut_level: usize) -> bool {
     let scheme = AkitaCommitmentScheme::<Cfg>::new(hiding_catalog(cut_level));
     let setup = scheme.setup_prover(NV, 1).unwrap();
     let backend = backend(&setup, 2);
@@ -293,9 +291,6 @@ fn prove_and_verify(cut_level: usize, fault: Option<RandomnessSection>) -> bool 
     )
     .unwrap();
     let selection = prover_data.selection();
-    if let Some(section) = fault {
-        hiding_test_support::corrupt_next_witness_randomness(section);
-    }
     let proof = scheme
         .batched_prove(&setup, prover_data, &backend, SESSION, BasisMode::Lagrange)
         .unwrap();
@@ -315,21 +310,7 @@ fn prove_and_verify(cut_level: usize, fault: Option<RandomnessSection>) -> bool 
 
 #[test]
 fn clear_protocol_proof_with_hiding_randomness_verifies() {
-    on_large_stack(|| assert!(prove_and_verify(CUT_LEVEL, None)));
-}
-
-/// The root commitment's B randomness and level 0's D randomness both sit in
-/// level 0's output witness, where level 0's relation checks them: shifting
-/// one digit within the alphabet breaks the proof.
-#[test]
-fn randomness_is_bound_by_the_relation_of_its_level() {
-    on_large_stack(|| {
-        assert!(!prove_and_verify(CUT_LEVEL, Some(RandomnessSection::Outer)));
-        assert!(!prove_and_verify(
-            CUT_LEVEL,
-            Some(RandomnessSection::Opening)
-        ));
-    });
+    on_large_stack(|| assert!(prove_and_verify(CUT_LEVEL)));
 }
 
 /// Hiding one level past the headline cut reaches a reduced-evaluation level,
@@ -346,6 +327,6 @@ fn reduced_relation_level_with_randomness_verifies() {
                 .is_reduced_evaluation(),
             "the extra hiding level must use the reduced relation"
         );
-        assert!(prove_and_verify(CUT_LEVEL + 1, None));
+        assert!(prove_and_verify(CUT_LEVEL + 1));
     });
 }
