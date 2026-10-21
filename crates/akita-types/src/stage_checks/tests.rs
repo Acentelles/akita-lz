@@ -3,8 +3,7 @@
 //! rows they push are satisfied, a shifted claim breaks one, and the shape
 //! domain counts the lowering's products and auxiliary slots.
 
-use super::stage1::{check_range_leaf, RangeLeaf};
-use super::stage2::{check_stage2_oracle, Stage2OracleWeights};
+use super::{check_range_leaf, check_stage2_oracle, RangeLeaf, Stage2OracleWeights};
 use akita_params::DigitRangePlan;
 use jolt_algebra::{One, Prime128OffsetA7F7, Ring};
 use jolt_zk::masking::{

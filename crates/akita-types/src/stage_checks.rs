@@ -76,3 +76,7 @@ pub fn check_stage2_oracle<E: Field, D: ClaimDomain<E>>(
     );
     domain.product_into(witness_eval, factor, claim)
 }
+
+#[cfg(test)]
+#[path = "stage_checks/tests.rs"]
+mod tests;

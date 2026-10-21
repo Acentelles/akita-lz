@@ -326,6 +326,7 @@ dependencies = [
  "jolt-poly",
  "jolt-sumcheck",
  "jolt-transcript",
+ "jolt-zk",
  "rand 0.8.8",
  "tracing",
 ]
@@ -347,7 +348,6 @@ dependencies = [
  "jolt-poly",
  "jolt-sumcheck",
  "jolt-transcript",
- "jolt-zk",
  "rayon",
  "tracing",
 ]
