@@ -16,7 +16,7 @@ use akita_types::{
     AkitaVerifierSetup, FpExtEncoding, OpeningClaims, PolynomialGroupClaims, RingVec,
 };
 use jolt_algebra::{CanonicalEncoding, ExtField, Field, MulBaseUnreduced, PseudoMersenne, Ring};
-use jolt_transcript::{Channel, PrivateChannel, Sponge};
+use jolt_transcript::{Channel, Sponge};
 
 pub(super) struct SuffixVerifierState<F: Field, E: Field> {
     pub opening_point: Vec<E>,
@@ -171,10 +171,12 @@ where
             );
             grinding.state_mut().public_all(point);
         }
-        grinding
-            .state_mut()
-            .site(akita_types::FoldSite::Openings { level }.id()?.into());
-        grinding.state_mut().public_all(&openings);
+        akita_types::bind_fold_openings::<F, E, _>(
+            grinding,
+            level,
+            &openings,
+            lp.setup_prefix().is_some(),
+        )?;
         FoldClaimMaterial {
             prepared_points: prepared
                 .into_iter()
@@ -209,7 +211,7 @@ where
             .id()?
             .into(),
         );
-        state.exchange_private_base::<F>(&mut payload)?;
+        state.exchange_all(&mut payload)?;
         RingVec::from_coeffs(payload)
     };
     let prefix = finalize_claims::<F, E, _>(&opening_batch, material, grinding, level)?;

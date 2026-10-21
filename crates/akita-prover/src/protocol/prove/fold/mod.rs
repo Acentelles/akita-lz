@@ -248,10 +248,12 @@ where
         scalar_openings.extend_from_slice(prepared.scalar_openings());
     }
     if reduction.is_none() {
-        grinding
-            .state_mut()
-            .site(akita_types::FoldSite::Openings { level }.id()?.into());
-        grinding.state_mut().public_all(&scalar_openings);
+        akita_types::bind_fold_openings::<F, E, _>(
+            grinding,
+            level,
+            &scalar_openings,
+            level_params.setup_prefix().is_some(),
+        )?;
     }
     let crate::protocol::ring_relation::PreparedRingRelationOutput {
         relation:
