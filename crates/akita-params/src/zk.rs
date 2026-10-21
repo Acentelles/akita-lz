@@ -137,7 +137,8 @@ pub fn d_randomness_columns(params: &CommittedGroupParams) -> Result<usize, Akit
 /// image. Both are sized at the level's open alphabet, the one its range
 /// check proves. Preceding groups (setup prefixes, committed
 /// programs, trusted advice) and every level after the cut carry none, and a
-/// hiding level uses one witness chunk.
+/// hiding level uses one witness chunk. The cut must precede the last
+/// nonterminal fold, whose output is the terminal witness.
 ///
 /// # Errors
 ///
@@ -146,6 +147,13 @@ pub fn validate_hiding_randomness(
     schedule: &FoldSchedule,
     cut_level: usize,
 ) -> Result<(), AkitaError> {
+    // The last nonterminal fold's output is the terminal witness, sent in the
+    // clear, so a cut there would publish that fold's randomness.
+    if cut_level >= schedule.recursive_folds.len() {
+        return Err(AkitaError::InvalidSetup(format!(
+            "hiding cut level {cut_level} reaches the terminal witness"
+        )));
+    }
     let levels = std::iter::once(&schedule.root.params)
         .chain(schedule.recursive_folds.iter().map(|fold| &fold.params));
     for (level, params) in levels.enumerate() {
