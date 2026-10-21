@@ -3,12 +3,15 @@ use super::handles_and_relation::{
 };
 use super::stage_sessions::{cpu_witness_eor_session_from_witnesses, CpuExtensionOpeningSession};
 use crate::opaque::{CpuBackend, DecomposeFoldWitness};
+use crate::sources::block_digits::evaluate::{evaluate_and_fold_base, evaluate_and_fold_ring};
+use crate::sources::block_digits::{DigitShape, PackedDigits};
 use crate::sources::packed_digits::{PackedSignedDigitView, PackedSignedDigits};
-use crate::sources::poly_helpers::packed_tight_digit_fold_partitioned;
+use crate::sources::poly_helpers::element_partitioned_decompose_fold;
 use akita_algebra::CyclotomicRing;
 use akita_challenges::SparseChallenge;
-use akita_error::AkitaError;
+use akita_error::{checked, AkitaError};
 use akita_params::WitnessLayout;
+#[cfg(test)]
 use jolt_field::solinas::parallel::*;
 use jolt_field::{CanonicalEncoding, ExtField, Field};
 use std::marker::PhantomData;
@@ -267,6 +270,7 @@ pub(crate) struct SuffixWitnessView<'a, F: Field, const D: usize> {
     pub(super) digits: PackedSignedDigitView<'a>,
     pub(super) live_coeff_len: usize,
     pub(super) live_ring_elems: usize,
+    #[cfg(test)]
     pub(super) padded_ring_elems: usize,
     num_vars: usize,
     pub(super) _marker: PhantomData<F>,
@@ -297,12 +301,14 @@ impl<'a, F: Field, const D: usize> SuffixWitnessView<'a, F, D> {
             digits,
             live_coeff_len,
             live_ring_elems: live_coeff_len.div_ceil(D),
+            #[cfg(test)]
             padded_ring_elems,
             num_vars: total.trailing_zeros() as usize,
             _marker: PhantomData,
         })
     }
 
+    #[cfg(test)]
     #[inline]
     pub(super) fn block_elem(
         &self,
@@ -316,6 +322,7 @@ impl<'a, F: Field, const D: usize> SuffixWitnessView<'a, F, D> {
             .and_then(|index| self.ring_elem(index))
     }
 
+    #[cfg(test)]
     #[inline]
     pub(super) fn ring_elem(&self, index: usize) -> Option<[i8; D]> {
         (index < self.padded_ring_elems)
@@ -409,31 +416,16 @@ where
         num_positions_per_block: usize,
     ) -> Result<(CyclotomicRing<F, D>, Vec<CyclotomicRing<F, D>>), AkitaError> {
         let num_live_blocks = self.num_live_blocks(num_positions_per_block)?;
-        let folded = cfg_into_iter!(0..num_live_blocks)
-            .map(|block_idx| {
-                let mut acc = [F::zero(); D];
-                for (col_idx, &scalar) in position_weights
-                    .iter()
-                    .take(num_positions_per_block)
-                    .enumerate()
-                {
-                    let Some(ring) = self.block_elem(block_idx, col_idx, num_positions_per_block)
-                    else {
-                        break;
-                    };
-                    for (coeff, &digit) in acc.iter_mut().zip(ring.iter()) {
-                        if digit != 0 {
-                            *coeff += scalar * F::from_i8(digit);
-                        }
-                    }
-                }
-                CyclotomicRing::from_coefficients(acc)
-            })
-            .collect::<Vec<_>>();
-        Ok(crate::sources::poly_helpers::fused_evaluate_and_fold_base(
-            folded,
+        evaluate_and_fold_base::<F, _, D>(
+            &PackedDigits {
+                digits: self.digits,
+                num_rings: self.digits.len() / D,
+            },
             live_block_weights,
-        ))
+            position_weights,
+            num_positions_per_block,
+            num_live_blocks,
+        )
     }
 
     pub(crate) fn evaluate_and_fold_ring(
@@ -443,31 +435,15 @@ where
         num_positions_per_block: usize,
     ) -> Result<(CyclotomicRing<F, D>, Vec<CyclotomicRing<F, D>>), AkitaError> {
         let num_live_blocks = self.num_live_blocks(num_positions_per_block)?;
-        let folded = cfg_into_iter!(0..num_live_blocks)
-            .map(|block_idx| {
-                let mut acc = CyclotomicRing::<F, D>::zero();
-                for (col_idx, scalar) in position_weights
-                    .iter()
-                    .take(num_positions_per_block)
-                    .enumerate()
-                {
-                    let Some(digits) = self.block_elem(block_idx, col_idx, num_positions_per_block)
-                    else {
-                        break;
-                    };
-                    let ring = CyclotomicRing::<F, D>::from_coefficients(
-                        digits.map(|digit| F::from_i8(digit)),
-                    );
-                    ring.mul_accumulate_sparse_rhs_into(scalar, &mut acc);
-                }
-                acc
-            })
-            .collect::<Vec<_>>();
-        Ok(
-            crate::sources::poly_helpers::fused_evaluate_and_fold_materialized(
-                folded,
-                live_block_weights,
-            ),
+        evaluate_and_fold_ring::<F, _, D>(
+            &PackedDigits {
+                digits: self.digits,
+                num_rings: self.digits.len() / D,
+            },
+            live_block_weights,
+            position_weights,
+            num_positions_per_block,
+            num_live_blocks,
         )
     }
 
@@ -506,13 +482,22 @@ where
             ));
         }
 
-        let coeff_accum = packed_tight_digit_fold_partitioned::<D>(
-            self.digits,
-            self.live_ring_elems,
+        let mut chunks = element_partitioned_decompose_fold::<_, D>(
+            &PackedDigits {
+                digits: self.digits,
+                num_rings: self.live_ring_elems,
+            },
             challenges,
+            std::slice::from_ref(&(0..challenges.len())),
             num_positions_per_block,
+            DigitShape {
+                num_digits: 1,
+                log_basis: 1,
+            },
         )?;
-        Ok(DecomposeFoldWitness::from_centered_rows(coeff_accum))
+        Ok(DecomposeFoldWitness::from_centered_rows(
+            chunks.pop().unwrap_or_default(),
+        ))
     }
 
     #[tracing::instrument(skip_all, name = "SuffixWitnessView::decompose_fold_chunked")]
@@ -529,42 +514,36 @@ where
                 "recursive chunked fold plan disagrees with tight witness geometry".into(),
             ));
         }
-        chunk_ranges
-            .iter()
-            .map(|range| {
-                let ring_start = range
-                    .start
-                    .checked_mul(num_positions_per_block)
-                    .ok_or_else(|| {
-                        AkitaError::Internal("witness fold chunk ring start overflow".into())
-                    })?
-                    .min(self.live_ring_elems);
-                let ring_end = range
-                    .end
-                    .checked_mul(num_positions_per_block)
-                    .ok_or_else(|| {
-                        AkitaError::Internal("witness fold chunk ring end overflow".into())
-                    })?
-                    .min(self.live_ring_elems);
-                let digit_start = ring_start.checked_mul(D).ok_or_else(|| {
-                    AkitaError::Internal("witness fold chunk digit start overflow".into())
-                })?;
-                let digit_end = ring_end.checked_mul(D).ok_or_else(|| {
-                    AkitaError::Internal("witness fold chunk digit end overflow".into())
-                })?;
-                let coefficients = packed_tight_digit_fold_partitioned::<D>(
-                    self.digits.slice(digit_start..digit_end)?,
-                    ring_end - ring_start,
-                    challenges.get(range.clone()).ok_or_else(|| {
-                        AkitaError::Internal(
-                            "witness fold chunk challenge range is out of bounds".into(),
-                        )
-                    })?,
-                    num_positions_per_block,
-                )?;
-                Ok(DecomposeFoldWitness::from_centered_rows(coefficients))
-            })
-            .collect()
+        for range in chunk_ranges {
+            checked::product([range.start, num_positions_per_block]).ok_or_else(|| {
+                AkitaError::Internal("witness fold chunk ring start overflow".into())
+            })?;
+            checked::product([range.end, num_positions_per_block]).ok_or_else(|| {
+                AkitaError::Internal("witness fold chunk ring end overflow".into())
+            })?;
+            challenges.get(range.clone()).ok_or_else(|| {
+                AkitaError::Internal("witness fold chunk challenge range is out of bounds".into())
+            })?;
+        }
+        element_partitioned_decompose_fold::<_, D>(
+            &PackedDigits {
+                digits: self.digits,
+                num_rings: self.live_ring_elems,
+            },
+            challenges,
+            chunk_ranges,
+            num_positions_per_block,
+            DigitShape {
+                num_digits: 1,
+                log_basis: 1,
+            },
+        )
+        .map(|chunks| {
+            chunks
+                .into_iter()
+                .map(DecomposeFoldWitness::from_centered_rows)
+                .collect()
+        })
     }
 }
 

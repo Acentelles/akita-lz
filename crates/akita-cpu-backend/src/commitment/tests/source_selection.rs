@@ -138,7 +138,7 @@ fn route_selection_is_homogeneous_and_external_first() {
     let sources: [&dyn CommitmentSource<F>; 2] = [&first, &second];
     let resolved = compile_commitment_request(&plan(), &sources, &capabilities)
         .unwrap()
-        .materialize()
+        .materialize(None)
         .unwrap();
     assert!(resolved.iter().all(|source| source.external().is_none()));
     assert_eq!(first.preparations.load(Ordering::SeqCst), 0);
@@ -147,7 +147,7 @@ fn route_selection_is_homogeneous_and_external_first() {
     let sources: [&dyn CommitmentSource<F>; 2] = [&first, &second];
     let resolved = compile_commitment_request(&plan(), &sources, &capabilities)
         .unwrap()
-        .materialize()
+        .materialize(None)
         .unwrap();
     assert!(resolved.iter().all(|source| source.external().is_some()));
     assert_eq!(first.preparations.load(Ordering::SeqCst), 1);
@@ -214,6 +214,6 @@ fn one_hot_chunk_must_exactly_partition_the_logical_domain() {
 
     let result = compile_commitment_request(&plan(), &sources, &capabilities)
         .unwrap()
-        .materialize();
+        .materialize(None);
     assert!(matches!(result, Err(AkitaError::InvalidInput(_))));
 }
