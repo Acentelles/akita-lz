@@ -42,10 +42,12 @@ before its group messages. Its difficulty is the least `g` with
 challenge set size. That is 2 to 10 bits on the standard profile.
 
 On the standard fp128 one-hot recursive profile (`nv = 36`) the verifier's
-sparse-challenge hashing drops from about 2600 Keccak permutations to about
-430, and the prover's from about 2600 to about 2160 (the proof of work
-replaces most of what the prover saves). The proof grows by the proof-of-work
-nonces, about 11 bytes. Measured whole-proof counts are in
+sparse-challenge hashing drops from 2601 Keccak permutations to about 420. The
+prover drew every challenge twice (preview and live), about 5200
+permutations; it now pays about 840 for the two message squeezes plus about
+1736 expected for the proof of work. Whole proofs: the verifier goes from 3822
+to 1642 permutations, and the prover from a mean of 16658 to 13900. The proof
+grows by the proof-of-work nonces, about 11 bytes. Details are in
 [Measured effect](#measured-effect).
 
 ## Intent
@@ -520,9 +522,29 @@ Ranked recommendation:
 
 ## Measured effect
 
-To be filled from the sandbox measurement: Keccak permutations per proof
-(prover and verifier separately) on `AKITA_MODE=onehot_fp128 AKITA_NUM_VARS=36
-AKITA_SETUP_MODE=recursive` with the Keccak sponge, before and after.
+Keccak permutations per proof on `AKITA_MODE=onehot_fp128 AKITA_NUM_VARS=36
+AKITA_SETUP_MODE=recursive` with the Keccak sponge, counted by instrumented
+copies of the `keccak` crates (every Keccak-f[1600] call, including the old
+SHAKE256 sampler). "Before" is `c94abf699`, the base of this change. The
+prover count varies from proof to proof because every proof of work in the
+plan has a random search length, so each side proves the same witness under
+12 different transcript labels.
+
+| | Before | After |
+|---|---|---|
+| Verifier (exact) | 3822 (sponge 1219, SHAKE256 sampler 2601, other 2) | 1642 (sponge 1640, other 2) |
+| Prover, mean of 12 proofs | 16658 (range 14705 to 19941) | 13900 (range 10927 to 16322) |
+
+The prover's mean drop, about 2760 with a standard error of about 700,
+matches the prediction: the 5200 sampler permutations go away, and the two
+message squeezes (about 840) and the fold proofs of work (about 1736) come in.
+
+Fold-response candidates per fold on the same 12 proofs: every fold accepted
+its first candidate except fold 4, which needed two candidates in 3 of 12
+proofs (mean 1.25). The expected proof-of-work cost per proof is therefore
+`sum over folds of (mean candidates) * 2^g`, about 1736 permutations, with
+`g = 10, 9, 7, 5, 4, 3, 2, 3` for folds 0 to 7. The live prover does not
+repeat the search for the accepted candidate.
 
 ## Code changes
 
