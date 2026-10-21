@@ -239,7 +239,11 @@ fn fold_preview_matches_live_prover_and_verifier() {
         FOLD_CHALLENGE_SEED_LEN as u64,
     );
     let payloads = [[5u8, 8, 13], [21, 34, 55]];
-    let nonce = 300u32;
+    // An arbitrary 12-bit candidate of at least 128, so its LEB128 encoding
+    // takes two bytes, drawn from an unrelated transcript.
+    let draw =
+        new_prover_channel(b"fold-preview/candidate", b"fixture").verifier_message::<[u8; 32]>();
+    let nonce = (u32::from(u16::from_le_bytes([draw[0], draw[1]])) & 0x0fff) | 0x80;
     let mut prover = new_prover_channel(b"fold-preview", b"fixture");
     let mut preview = FoldPreview::new(&prover, nonce);
     let previewed = payloads.map(|payload| preview.fold_root(&payload));
