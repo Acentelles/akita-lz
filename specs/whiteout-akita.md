@@ -185,10 +185,15 @@ Each policy reads the target:
 - **Modeled cap.** It is not used at levels ≤ `cut_level`: ZK planning sets
   `modeled_linf_cap = None` there, so `candidate.rs:172-177` takes the policy's
   digits. A 1/40 per-attempt cap is never a one-shot bound.
+- **Admission.** `ZkOpeningSchedule`'s constructor rejects a row whose
+  `num_digits_fold` at any level ≤ `cut_level` is below the `OneShot` policy's
+  digits. Until a planner path emits ZK rows, that check is what pins the
+  one-shot sizing.
 
 The parameters are `security_bits = 136` and `masked_folds = cut_level + 1 = 2`,
 so δ_fold ≤ 2^−136 in total. With the paper's other terms (§6.2), W2-c
-computes the total zero-knowledge bound and asserts it below 2^−128:
+computes the total zero-knowledge bound below 2^−128. The paper gives no
+value for Q_tot (Q6), so the test asserts only the terms it can compute:
 
 ```text
 δ_LHL + T_att·ε/M + 2δ_fold + (T_att·Q_tot + T_att²)/2^ν
@@ -435,8 +440,10 @@ The stage-1 leaf check and the stage-2 oracle check at every level are written
 once, generic over `D: ClaimDomain<F>`. This is a fixup to M2b, where the stage
 verifiers already moved onto jolt-sumcheck. The clear verifier uses the value
 domain, so there is no parallel masked formula and no Akita copy of the
-trait. Akita depends only on jolt-transcript, which it already uses, and not
-on jolt-zk.
+trait. The checks live in akita-types so the prover can run them in
+`ValuesDomain`. Akita's normal dependencies reach only jolt-transcript, which
+it already uses. jolt-zk is a dev-dependency for the masked-domain tests
+until the `zk` feature lands; the extracted pin must contain M6b.
 
 At b = 8 with the Linf route, the paper's lowering gives these rows per
 masked level:
@@ -444,7 +451,7 @@ masked level:
 | Check | Clear formula | Lowering | Products | Aux |
 |---|---|---|---|---|
 | stage-1 leaf (`stage1.rs:186-190`) | claim = Σ_{k≤4} c_k·ri^k | `u = product(ri, ri)`; `product_into(u, c₄u + c₃ri + c₂, claim − c₁ri − c₀)` | 2 | 1 |
-| stage-2 oracle (`stage2.rs:248-335`) | claim = w·(B(w+1) + R) + const | `product_into(w, B(w+1) + R, claim − const)` | 1 | 0 |
+| stage-2 oracle (`stage2.rs:248-335`) | claim = w·(B(w+1) + R) | `product_into(w, B(w+1) + R, claim)` | 1 | 0 |
 
 In the stage-2 row, B collects both w(w+1) sites: the virtual term
 `batch·eq·w(w+1)` (`stage2.rs:329`) and the binary term `bb·binW·w(w+1)`
@@ -472,9 +479,10 @@ converted once with `match_endianness` (`LOW_TO_HIGH` → `HIGH_TO_LOW`; A18, I4
     (fixup to M6b) for stage 1, inside the `RowsDomain` used for §4.4's
     checks. The returned running claim is the `claim` in those formulas.
 - **Channels.**
-  - `GrindingReplay::State` becomes generic: `ProverGrinding<'a, C>` and
-    `VerifierGrinding<'a, 'p, C>` over `C: Channel + PrivateChannel` with
-    `C::Error: Into<AkitaError>`. This is a fixup to M2b.
+  - `GrindingReplay::State` becomes generic: `ProverGrinding<'a, H, C>` and
+    `VerifierGrinding<'a, 'p, H, C>` over `C: Channel<Sponge = H> + PrivateChannel`
+    with `C::Error: Into<AkitaError>`. This is a fixup to M2b. `C` defaults
+    to the clear transcript so existing call sites stay unchanged.
   - In masked mode, C is the prover adapter over `CommittedPads::send`
     (fixup to M6b) or jolt-zk's `MaskedVerifier`.
   - Jolt's prover lends `&mut CommittedPads` to the opening for levels
@@ -812,6 +820,10 @@ The numbering continues the W4 note's A1–A23.
 - **Q4, compression above 8 KiB.** The cost script's `FCHAIN_MAX_IMAGE = 884`
   disagrees with Akita's 512-coefficient cap. Should the model count the
   split chain (§5.4)?
+- **Q6, Q_tot.** `05_security.tex:316` defines Q_tot, which bounds the
+  distinguisher's and the honest algorithms' oracle queries together, but
+  §6.2 gives no value. At Q_tot = 2^100 the term is about 2^−148.6. What
+  value should the evaluation assume?
 - **Answered.** Q3: 3 products and 1 auxiliary slot per masked level (§4.4).
   Q5: 2^−950 is per fold.
 
