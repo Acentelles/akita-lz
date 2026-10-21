@@ -26,6 +26,8 @@ pub use protocol::execution;
 mod opening;
 pub mod protocol;
 mod setup;
+#[cfg(feature = "test-support")]
+pub mod test_faults;
 
 pub use backend::{
     AcceptedFoldHandle, CommitmentHandleMetadata, CommitmentMaterialMetadata,

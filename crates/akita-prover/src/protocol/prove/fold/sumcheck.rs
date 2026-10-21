@@ -595,17 +595,20 @@ where
         level,
         0,
     );
+    let mut rounds = akita_sumcheck::FusedRounds(&mut kernel);
+    #[cfg(feature = "test-support")]
+    let mut rounds = crate::test_faults::LastRoundShift::new(&mut rounds);
     let SingleReduction {
         challenges: sumcheck_challenges,
         output_claim: claim,
-    } = prove_single::<F, E, AkitaError, _>(
-        &mut akita_sumcheck::FusedRounds(&mut kernel),
-        &instance,
-        &mut channel,
-    )?;
+    } = prove_single::<F, E, AkitaError, _>(&mut rounds, &instance, &mut channel)?;
+    #[cfg(feature = "test-support")]
+    let fault = rounds.armed();
+    #[cfg(not(feature = "test-support"))]
+    let fault = false;
     let final_output =
         crate::backend::OpaqueStage2Kernel::finish_stage2(ctx.backend(), session_handle)?;
-    if claim != final_output.final_claim() {
+    if !fault && claim != final_output.final_claim() {
         return Err(AkitaError::Internal(
             "stage 2 backend final claim differs from sumcheck output".into(),
         ));
