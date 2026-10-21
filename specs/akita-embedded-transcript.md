@@ -293,12 +293,20 @@ A caller that embeds Akita must:
 4. **End of verification.** Stop on any error from Akita. After its own last
    message, pass its state to `PendingEof::check_eof`.
 5. **Commitments before dependent challenges.** Bind each root commitment
-   before any of its own challenges that depend on it. Absorbing the
-   commitment's `CommitmentDigest` is enough. That digest covers the profile,
-   so the caller must know each commitment's profile when it absorbs it; for
-   Jolt, that means resolving the schedule selection at stage 0. Akita does
-   not rely on this step for its own soundness, because it absorbs the digest
-   again.
+   before any of its own challenges that depend on it, in one of two ways:
+   - Absorb the commitment's `CommitmentDigest`. That digest covers the
+     profile, so the caller must know each commitment's profile when it
+     absorbs it.
+   - Absorb the commitment's canonical rows in a length-framed encoding,
+     together with the public data that fixes its profile. This is enough
+     only when that public data selects exactly one schedule row, so the
+     same row bytes cannot be read under a second profile. Jolt does this:
+     it absorbs each commitment's layout digest, flavor, variable and
+     polynomial counts and rows, and its trusted catalog holds one row per
+     layout and shape.
+
+   Akita does not rely on this step for its own soundness, because it
+   absorbs the digest again.
 6. **Canonical encoding.** Absorb its own messages in canonical,
    length-framed encodings. This is the caller's own soundness rule, listed
    here because the two protocols share one sponge.
