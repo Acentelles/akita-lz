@@ -17,10 +17,11 @@ use akita_types::GrindingReplay;
 use akita_types::{
     batch_l2_virtual_evaluations, FpExtEncoding, PhysicalResponsePlan, RelationRangeImagePlan,
 };
+use akita_types::{check_range_leaf, RangeLeaf};
 use jolt_algebra::{CanonicalDecode, CanonicalEncoding, ExtField, Field, Ring};
 use jolt_poly::Point;
 use jolt_sumcheck::{verify_single, SingleFormat, SingleInstance};
-use jolt_transcript::{ClaimDomain, ClaimMismatch, ClearDomain, Sponge};
+use jolt_transcript::{ClaimMismatch, ClearDomain, Sponge};
 pub(crate) struct Stage1VerifyOutput<E: Field> {
     pub(crate) point: Vec<E>,
     pub(crate) range_image_evaluation: E,
@@ -196,49 +197,6 @@ impl<E: Field + Ring + AkitaSerialize> Stage1Verifier<E> {
             physical_l2_virtual_evaluations: None,
         })
     }
-}
-
-/// The batched range-leaf polynomial `Σ_{k≤4} c_k·X^k`. Every supported
-/// digit basis has a leaf of degree at most four
-/// ([`DigitRangePlan::leaf_degree`]).
-pub(crate) struct RangeLeaf<E>([E; 5]);
-
-impl<E: Field> RangeLeaf<E> {
-    /// The leaf with `coefficients` in ascending degree, zero-padded.
-    pub(crate) fn new(coefficients: &[E]) -> Result<Self, AkitaError> {
-        let mut padded = [E::zero(); 5];
-        padded
-            .get_mut(..coefficients.len())
-            .ok_or_else(|| {
-                AkitaError::InvalidSetup("stage-1 range leaf exceeds degree four".into())
-            })?
-            .copy_from_slice(coefficients);
-        Ok(Self(padded))
-    }
-}
-
-/// The stage-1 leaf check `claim = Σ_{k≤4} c_k·ri^k` on the range image `ri`,
-/// written once for every claim domain (`specs/whiteout-akita.md` §4.4). It
-/// lowers as `u = ri²` and `u·(c₄u + c₃ri + c₂) = claim − c₁ri − c₀`: two
-/// products and one auxiliary slot in a masked domain, a comparison in the
-/// clear one.
-pub(crate) fn check_range_leaf<E: Field, D: ClaimDomain<E>>(
-    domain: &mut D,
-    leaf: &RangeLeaf<E>,
-    range_image: D::Value,
-    claim: D::Value,
-) -> Result<(), D::Error> {
-    let [c0, c1, c2, c3, c4] = leaf.0;
-    let square = domain.product(range_image.clone(), range_image.clone())?;
-    let factor = domain.add(
-        &domain.add(&domain.scale(&square, c4), &domain.scale(&range_image, c3)),
-        &domain.constant(c2),
-    );
-    let target = domain.add(
-        &domain.add(&claim, &domain.scale(&range_image, -c1)),
-        &domain.constant(-c0),
-    );
-    domain.product_into(square, factor, target)
 }
 
 pub(crate) struct Stage1Replay<'a, E: Field> {

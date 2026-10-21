@@ -14,6 +14,7 @@ use akita_algebra::{
 use akita_error::AkitaError;
 use akita_serialization::AkitaSerialize;
 use akita_types::AkitaVerifierSetup;
+use akita_types::{check_stage2_oracle, Stage2OracleWeights};
 use akita_types::{
     AkitaExpandedSetup, CompressionRelationWeights, FpExtEncoding, NegativeBinarySupport,
     OpeningFamily, ReducedCompressionRelationWeights,
@@ -21,7 +22,7 @@ use akita_types::{
 use jolt_algebra::solinas::parallel::*;
 use jolt_algebra::{CanonicalDecode, CanonicalEncoding, ExtField, Field, MulBaseUnreduced, Ring};
 use jolt_sumcheck::{verify_single, SingleFormat, SingleInstance};
-use jolt_transcript::{ClaimDomain, ClaimMismatch, ClearDomain, Sponge};
+use jolt_transcript::{ClaimMismatch, ClearDomain, Sponge};
 
 pub(crate) struct EvaluationTraceStage2<E: Field> {
     pub(crate) trace: PreparedEvaluationTrace<E>,
@@ -326,33 +327,6 @@ where
                 + physical_l2_weight,
         })
     }
-}
-
-/// The public weights of the stage-2 oracle `w·(B(w+1) + R)` at one point.
-/// `B` collects both `w(w+1)` terms (the batched virtual claim and the
-/// compression binary constraint); `R` collects every term linear in `w`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct Stage2OracleWeights<E> {
-    /// `B`, the weight of `w(w+1)`.
-    pub(crate) binary: E,
-    /// `R`, the weight of `w`.
-    pub(crate) linear: E,
-}
-
-/// The stage-2 output check `claim = w·(B(w+1) + R)`, written once for every
-/// claim domain (`specs/whiteout-akita.md` §4.4): one product row with no
-/// auxiliary slot in a masked domain, a comparison in the clear one.
-pub(crate) fn check_stage2_oracle<E: Field, D: ClaimDomain<E>>(
-    domain: &mut D,
-    weights: &Stage2OracleWeights<E>,
-    witness_eval: D::Value,
-    claim: D::Value,
-) -> Result<(), D::Error> {
-    let factor = domain.add(
-        &domain.scale(&witness_eval, weights.binary),
-        &domain.constant(weights.binary + weights.linear),
-    );
-    domain.product_into(witness_eval, factor, claim)
 }
 
 /// Stage 2 sumcheck rounds and the prover's witness evaluation, before the
