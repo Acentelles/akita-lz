@@ -165,6 +165,12 @@ fn validation_recomputes_widths_and_rejects_a_narrow_schedule() {
         }
         // A cut one level earlier leaves level 1's randomness unaccounted for.
         assert!(akita_params::zk::validate_hiding_randomness(&schedule, CUT_LEVEL - 1).is_err());
+        // A cut at the last nonterminal fold would put its randomness in the
+        // terminal witness, which is sent in the clear.
+        let error =
+            akita_params::zk::validate_hiding_randomness(&schedule, schedule.recursive_folds.len())
+                .unwrap_err();
+        assert!(error.to_string().contains("terminal witness"), "{error}");
     });
 }
 
