@@ -77,12 +77,8 @@ where
         basis,
         root_lp,
     )?;
-    akita_types::bind_fold_openings::<F, E, _>(
-        grinding,
-        0,
-        &openings,
-        root_lp.setup_prefix().is_some(),
-    )?;
+    // Schedule validation admits no setup prefix at the root.
+    akita_types::bind_fold_openings::<F, E, _>(grinding, 0, None, &openings)?;
     let payload_geometry = relation_layout.opening_payload_geometry()?;
     let opening_payload = {
         let mut payload =

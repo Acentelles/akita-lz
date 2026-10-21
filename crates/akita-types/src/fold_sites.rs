@@ -128,42 +128,33 @@ impl FoldSite {
 /// Binds a fold level's scalar openings, in group order, at its
 /// [`FoldSite::Openings`] site.
 ///
-/// With `setup_prefix`, the first opening is the setup-prefix evaluation: the
-/// evaluation of a public setup slot at a public point, so it stays public.
-/// Every other opening is a statement claim (level 0) or the predecessor's
-/// witness evaluation, which the verifier derives from earlier messages, so
-/// it goes through [`PrivateChannel::bind_derived`]. Clear mode absorbs both
-/// kinds as public values, so the sponge input equals one `public_all`.
+/// `prefix` is the setup-prefix evaluation, present when the level consumes
+/// a setup prefix: the evaluation of a public setup slot at a public point,
+/// so it stays public. `derived` holds every other opening, the statement
+/// claims (level 0) or the predecessor's witness evaluation, which the
+/// verifier derives from earlier messages, so each goes through
+/// [`PrivateChannel::bind_derived`]. Clear mode absorbs both kinds as public
+/// values, so the sponge input equals one `public_all` of the group-ordered
+/// openings.
 ///
 /// # Errors
 ///
-/// [`AkitaError::InvalidSize`] when `setup_prefix` is set and `openings` is
-/// empty; otherwise the channel's error.
+/// The channel's error.
 pub fn bind_fold_openings<F, E, G>(
     grinding: &mut G,
     level: u32,
-    openings: &[E],
-    setup_prefix: bool,
+    prefix: Option<&E>,
+    derived: &[E],
 ) -> Result<(), AkitaError>
 where
     F: Field + CanonicalEncoding,
     E: ExtField<F> + CanonicalDecode,
     G: GrindingReplay,
 {
-    let (prefix_evaluation, derived) = if setup_prefix {
-        let (prefix_evaluation, derived) =
-            openings.split_first().ok_or(AkitaError::InvalidSize {
-                expected: 1,
-                actual: 0,
-            })?;
-        (Some(prefix_evaluation), derived)
-    } else {
-        (None, openings)
-    };
     let state = grinding.state_mut();
     state.site(FoldSite::Openings { level }.id()?.into());
-    if let Some(prefix_evaluation) = prefix_evaluation {
-        state.public(prefix_evaluation);
+    if let Some(prefix) = prefix {
+        state.public(prefix);
     }
     for claim in derived {
         state
