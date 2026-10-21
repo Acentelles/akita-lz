@@ -79,7 +79,6 @@ dependencies = [
  "akita-error 0.1.0",
  "akita-transcript 0.1.0",
  "jolt-field 0.1.0 (git+https://github.com/a16z/jolt?rev=7e8ce196f1020dcdd289c324689a79395ec67e55)",
- "keccak 0.1.6",
  "serde",
  "smallvec",
 ]
