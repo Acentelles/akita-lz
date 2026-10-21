@@ -60,7 +60,7 @@ fn range_leaf_rows_hold_on_honest_values_and_break_on_a_shifted_claim() {
     let coefficients = plan
         .batch_leaf_polynomials(&[F::one()], &plan.leaf_coeffs::<F>())
         .unwrap();
-    let leaf = RangeLeaf::new(&coefficients).unwrap();
+    let leaf = RangeLeaf::new(plan, &coefficients).unwrap();
     let range_image = F::from_u64(0x1234_5678_9abc_def1);
     let claim = plan.evaluate_leaf_polynomial(&coefficients, range_image);
 
