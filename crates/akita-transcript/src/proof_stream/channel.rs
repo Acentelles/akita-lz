@@ -1,6 +1,9 @@
 //! Role-generic access to one end of the proof channel.
 
-use super::{invalid_proof, prover_context, reject, verifier_context, ProtocolContextRecord};
+use super::{
+    invalid_proof, prover_context, receive_atoms, reject, send_atoms, verifier_context,
+    ProtocolContextRecord,
+};
 use crate::{ProverChannel, VerifierChannel, FOLD_CHALLENGE_SEED_LEN};
 use akita_error::AkitaError;
 use jolt_transcript::{ChallengeCodec, ProverTranscript, VerifierTranscript};
@@ -26,6 +29,16 @@ pub trait ProofChannel {
     /// Returns [`AkitaError::InvalidProof`] when the verifier cannot decode the
     /// next message. The prover never fails.
     fn exchange<T: Encoding + FromNarg>(&mut self, message: &mut T) -> Result<(), AkitaError>;
+
+    /// Emit (prover) or read and absorb (verifier) a schedule-fixed group of
+    /// atoms as one proof message. An empty group makes no absorb call.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AkitaError::InvalidProof`] when the verifier cannot decode the
+    /// group. The prover never fails.
+    fn exchange_group<T: Encoding + FromNarg>(&mut self, atoms: &mut [T])
+        -> Result<(), AkitaError>;
 
     /// Draw one challenge message of `len` field elements.
     ///
@@ -69,6 +82,14 @@ impl ProofChannel for ProverChannel {
         Ok(())
     }
 
+    fn exchange_group<T: Encoding + FromNarg>(
+        &mut self,
+        atoms: &mut [T],
+    ) -> Result<(), AkitaError> {
+        send_atoms(self, atoms);
+        Ok(())
+    }
+
     fn challenges<E: ChallengeCodec>(&mut self, len: usize) -> Result<Vec<E>, AkitaError> {
         ProverTranscript::field_challenges(self, len).map_err(|_| {
             AkitaError::InvalidSetup(
@@ -98,6 +119,17 @@ impl ProofChannel for VerifierChannel<'_> {
 
     fn exchange<T: Encoding + FromNarg>(&mut self, message: &mut T) -> Result<(), AkitaError> {
         *message = self.prover_message::<T>().map_err(invalid_proof)?;
+        Ok(())
+    }
+
+    fn exchange_group<T: Encoding + FromNarg>(
+        &mut self,
+        atoms: &mut [T],
+    ) -> Result<(), AkitaError> {
+        let received = receive_atoms::<T>(self, atoms.len())?;
+        for (slot, atom) in atoms.iter_mut().zip(received) {
+            *slot = atom;
+        }
         Ok(())
     }
 

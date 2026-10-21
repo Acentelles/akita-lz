@@ -308,40 +308,50 @@ where
     }
 }
 
-/// Emit one canonical field atom and absorb the same bytes.
-pub fn send_field<F: CanonicalEncoding>(state: &mut ProverChannel, value: F) {
-    state.prover_message(&FieldAtom::new(value));
+/// Concatenate the canonical encodings of `atoms`.
+fn encode_atoms<T: Encoding>(atoms: &[T]) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    for atom in atoms {
+        bytes.extend_from_slice(atom.encode().as_ref());
+    }
+    bytes
 }
 
-/// Receive one canonical field atom, rejecting noncanonical representatives.
-pub fn receive_field<F: CanonicalEncoding>(
+/// Emit `atoms` as one proof message. An empty group makes no absorb call.
+pub fn send_atoms<T: Encoding>(state: &mut ProverChannel, atoms: &[T]) {
+    if atoms.is_empty() {
+        return;
+    }
+    state.prover_message_as(atoms, encode_atoms);
+}
+
+/// Receive `count` canonical atoms as one proof message, absorbing exactly the
+/// bytes read. An empty group makes no absorb call.
+///
+/// # Errors
+///
+/// Returns [`AkitaError::InvalidProof`] and rejects the transcript when the
+/// allocation cannot be reserved or an atom is missing or noncanonical.
+pub fn receive_atoms<T: FromNarg>(
     state: &mut VerifierChannel<'_>,
-) -> Result<F, AkitaError> {
+    count: usize,
+) -> Result<Vec<T>, AkitaError> {
+    let mut atoms = Vec::new();
+    if atoms.try_reserve_exact(count).is_err() {
+        return Err(reject(state));
+    }
+    if count == 0 {
+        return Ok(atoms);
+    }
     state
-        .prover_message::<FieldAtom<F>>()
-        .map(FieldAtom::into_inner)
-        .map_err(invalid_proof)
-}
-
-/// Emit one extension-field proof atom as ordered canonical base coordinates.
-pub fn send_extension<F, E>(state: &mut ProverChannel, value: E)
-where
-    F: Field + CanonicalEncoding,
-    E: ExtField<F>,
-{
-    state.prover_message(&ExtensionAtom::<F, E>::new(value));
-}
-
-/// Receive one extension-field proof atom from canonical base coordinates.
-pub fn receive_extension<F, E>(state: &mut VerifierChannel<'_>) -> Result<E, AkitaError>
-where
-    F: Field + CanonicalEncoding,
-    E: ExtField<F>,
-{
-    state
-        .prover_message::<ExtensionAtom<F, E>>()
-        .map(ExtensionAtom::into_inner)
-        .map_err(invalid_proof)
+        .prover_message_as(|reader| {
+            for _ in 0..count {
+                atoms.push(T::from_narg(reader)?);
+            }
+            Ok(())
+        })
+        .map_err(invalid_proof)?;
+    Ok(atoms)
 }
 
 fn group_record(
@@ -471,9 +481,8 @@ where
     );
     let record = state.guard(record)?;
     state.context(record);
-    for &value in values {
-        state.public(&value.to_bytes_le_vec());
-    }
+    let atoms: Vec<FieldAtom<F>> = values.iter().copied().map(FieldAtom::new).collect();
+    public_atoms(state, &atoms);
     Ok(())
 }
 
@@ -496,10 +505,16 @@ where
     );
     let record = state.guard(record)?;
     state.context(record);
-    for value in values {
-        state.public(ExtensionAtom::<F, E>::new(*value).encode().as_ref());
-    }
+    let atoms: Vec<ExtensionAtom<F, E>> = values.iter().copied().map(ExtensionAtom::new).collect();
+    public_atoms(state, &atoms);
     Ok(())
+}
+
+/// Absorb `atoms` as one public message. An empty group makes no absorb call.
+pub fn public_atoms<T: Encoding, S: ProofChannel>(state: &mut S, atoms: &[T]) {
+    if !atoms.is_empty() {
+        state.public(&encode_atoms(atoms));
+    }
 }
 
 /// Emit a fixed-count group of canonical base-field proof atoms.
@@ -517,9 +532,8 @@ pub fn send_field_group<F: CanonicalEncoding>(
             F::NUM_BYTES,
         )?,
     );
-    for &value in values {
-        send_field(state, value);
-    }
+    let atoms: Vec<FieldAtom<F>> = values.iter().copied().map(FieldAtom::new).collect();
+    send_atoms(state, &atoms);
     Ok(())
 }
 
@@ -537,14 +551,10 @@ pub fn receive_field_group<F: CanonicalEncoding>(
     );
     let record = state.guard(record)?;
     verifier_context(state, record);
-    let mut values = Vec::new();
-    if values.try_reserve_exact(value_count).is_err() {
-        return Err(reject(state));
-    }
-    for _ in 0..value_count {
-        values.push(receive_field(state)?);
-    }
-    Ok(values)
+    Ok(receive_atoms::<FieldAtom<F>>(state, value_count)?
+        .into_iter()
+        .map(FieldAtom::into_inner)
+        .collect())
 }
 
 /// Allocate `count` zeroed extension slots for an in-place exchange.
@@ -593,9 +603,10 @@ where
     );
     let record = state.guard(record)?;
     state.context(record);
-    for value in values {
-        let mut atom = ExtensionAtom::<F, E>::new(*value);
-        state.exchange(&mut atom)?;
+    let mut atoms: Vec<ExtensionAtom<F, E>> =
+        values.iter().copied().map(ExtensionAtom::new).collect();
+    state.exchange_group(&mut atoms)?;
+    for (value, atom) in values.iter_mut().zip(atoms) {
         *value = atom.into_inner();
     }
     Ok(())

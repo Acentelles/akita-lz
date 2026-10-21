@@ -32,9 +32,9 @@ pub use proof_stream::FoldPreview;
 pub use proof_stream::{
     exchange_extension_group, ext_challenge, ext_challenges, extension_slots, fold_root,
     new_prover_channel, new_verifier_channel, nonce_encoded_len, nonce_max_bytes, prover_context,
-    public_bytes, public_extensions, public_fields, receive_bounded_bytes, receive_byte_group,
-    receive_extension, receive_field, receive_field_group, reject, send_bounded_bytes,
-    send_byte_group, send_extension, send_field, send_field_group, verifier_context, ExtensionAtom,
+    public_atoms, public_bytes, public_extensions, public_fields, receive_atoms,
+    receive_bounded_bytes, receive_byte_group, receive_field_group, reject, send_atoms,
+    send_bounded_bytes, send_byte_group, send_field_group, verifier_context, ExtensionAtom,
     FieldAtom, NonceAtom, ProofChannel, ProtocolContextRecord, ProtocolMessageKind, ProtocolSiteId,
     CONTEXT_DOMAIN, PROTOCOL_VERSION, SESSION_TAG, SITE_FAMILY_EXTENSION_OPENING_REDUCTION,
     SITE_FAMILY_FOLD_BINDING, SITE_FAMILY_FOLD_CHALLENGE, SITE_FAMILY_NEXT_WITNESS,

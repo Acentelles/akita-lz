@@ -102,11 +102,12 @@ fn session_tag_names_the_backend_and_codecs() {
 #[test]
 fn field_round_trip_and_eof() {
     let mut prover = new_prover_channel(b"session", b"instance");
-    send_field(&mut prover, F::from_u64(42));
+    send_atoms(&mut prover, &[FieldAtom::new(F::from_u64(42))]);
     let proof = prover.narg_string().to_vec();
 
     let mut verifier = new_verifier_channel(b"session", b"instance", &proof);
-    assert_eq!(receive_field::<F>(&mut verifier).unwrap(), F::from_u64(42));
+    let received = receive_atoms::<FieldAtom<F>>(&mut verifier, 1).unwrap();
+    assert_eq!(received[0].into_inner(), F::from_u64(42));
     verifier.check_eof().unwrap();
 }
 
@@ -172,7 +173,7 @@ fn extension_groups_and_challenges_replay() {
 #[test]
 fn noncanonical_atoms_poison_the_verifier() {
     let mut verifier = new_verifier_channel(b"poison", b"fixture", &[u8::MAX; 4]);
-    assert!(receive_field::<F>(&mut verifier).is_err());
+    assert!(receive_atoms::<FieldAtom<F>>(&mut verifier, 1).is_err());
     assert!(ext_challenge::<F, _>(&mut verifier, site(1, 0)).is_err());
     assert!(verifier.check_eof().is_err());
 
@@ -184,7 +185,7 @@ fn noncanonical_atoms_poison_the_verifier() {
     noncanonical[4..8].fill(u8::MAX);
     for proof in [&encoded[..encoded.len() - 1], &noncanonical[..]] {
         let mut verifier = new_verifier_channel(b"poison", b"fixture", proof);
-        assert!(receive_extension::<F, E>(&mut verifier).is_err());
+        assert!(receive_atoms::<ExtensionAtom<F, E>>(&mut verifier, 1).is_err());
         assert!(verifier.check_eof().is_err());
     }
 }
@@ -269,7 +270,7 @@ fn fold_preview_matches_live_prover_and_verifier() {
 fn transcript_has_a_known_answer() {
     let mut prover = new_prover_channel(b"kat/session", b"kat/instance");
     public_bytes(&mut prover, site(1, 0), b"public-message").unwrap();
-    send_field(&mut prover, F::from_u64(7));
+    send_atoms(&mut prover, &[FieldAtom::new(F::from_u64(7))]);
     let challenges = ext_challenges::<E, _>(&mut prover, site(1, 1), 2).unwrap();
     let root = prover.verifier_message::<[u8; 32]>();
     let rendered = format!("{challenges:?} {root:?}");
@@ -278,4 +279,66 @@ fn transcript_has_a_known_answer() {
     #[cfg(feature = "transcript-keccak")]
     let expected = "[FpExt4 { coeffs: [Fp32(3770045623), Fp32(4043972479), Fp32(1064707005), Fp32(1809737648)] }, FpExt4 { coeffs: [Fp32(144613157), Fp32(1405106022), Fp32(265045174), Fp32(89133769)] }] [212, 229, 74, 168, 108, 171, 107, 187, 52, 192, 240, 83, 74, 231, 216, 17, 51, 48, 203, 217, 38, 116, 156, 62, 10, 58, 11, 68, 176, 211, 187, 106]";
     assert_eq!(rendered, expected);
+}
+
+#[test]
+fn atom_group_is_one_message_equal_to_atomwise_messages() {
+    let values: Vec<FieldAtom<F>> = (0..5).map(|i| FieldAtom::new(F::from_u64(i + 3))).collect();
+    let mut grouped = new_prover_channel(b"group", b"fixture");
+    send_atoms(&mut grouped, &values);
+    let mut atomwise = new_prover_channel(b"group", b"fixture");
+    for value in &values {
+        atomwise.prover_message(value);
+    }
+    assert_eq!(grouped.narg_string(), atomwise.narg_string());
+    assert_eq!(
+        grouped.verifier_message::<[u8; 32]>(),
+        atomwise.verifier_message::<[u8; 32]>()
+    );
+
+    let proof = atomwise.narg_string().to_vec();
+    let mut verifier = new_verifier_channel(b"group", b"fixture", &proof);
+    let received = receive_atoms::<FieldAtom<F>>(&mut verifier, values.len()).unwrap();
+    assert_eq!(received, values);
+    verifier.check_eof().unwrap();
+}
+
+/// An empty group makes no absorb call, so it leaves the sponge unchanged
+/// at the start and directly after a squeeze, on every sponge backend.
+#[test]
+fn empty_groups_make_no_absorb_call() {
+    let reference = |squeeze_first: bool| {
+        let mut state = new_prover_channel(b"empty", b"fixture");
+        if squeeze_first {
+            let _ = state.verifier_message::<[u8; 32]>();
+        }
+        state.verifier_message::<[u8; 32]>()
+    };
+    for squeeze_first in [false, true] {
+        let mut state = new_prover_channel(b"empty", b"fixture");
+        if squeeze_first {
+            let _ = state.verifier_message::<[u8; 32]>();
+        }
+        send_atoms::<FieldAtom<F>>(&mut state, &[]);
+        public_fields::<F, _>(&mut state, site(2, 0), &[]).unwrap();
+        public_extensions::<F, E, _>(&mut state, site(2, 1), &[]).unwrap();
+        assert!(state.narg_string().is_empty());
+        assert_eq!(
+            state.verifier_message::<[u8; 32]>(),
+            reference(squeeze_first)
+        );
+
+        let mut verifier = new_verifier_channel(b"empty", b"fixture", &[]);
+        if squeeze_first {
+            let _ = verifier.verifier_message::<[u8; 32]>();
+        }
+        assert!(receive_atoms::<FieldAtom<F>>(&mut verifier, 0)
+            .unwrap()
+            .is_empty());
+        assert_eq!(
+            verifier.verifier_message::<[u8; 32]>(),
+            reference(squeeze_first)
+        );
+        verifier.check_eof().unwrap();
+    }
 }

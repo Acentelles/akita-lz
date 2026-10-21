@@ -5,8 +5,9 @@ use crate::{advance_eq_factored_claim, SumcheckInstanceVerifier, SumcheckKernel}
 use crate::{EqFactoredSumcheckInstanceProver, SumcheckInstanceProver};
 use akita_error::{checked, narrowing::usize_to_u64, AkitaError};
 use akita_transcript::{
-    prover_context, receive_extension, send_extension, verifier_context, FieldAtom,
-    ProtocolContextRecord, ProtocolMessageKind, ProtocolSiteId, ProverChannel, VerifierChannel,
+    prover_context, public_atoms, receive_atoms, send_atoms, verifier_context, ExtensionAtom,
+    FieldAtom, ProofChannel, ProtocolContextRecord, ProtocolMessageKind, ProtocolSiteId,
+    ProverChannel, VerifierChannel,
 };
 use jolt_field::{CanonicalEncoding, ExtField, Field};
 use jolt_poly::{CompressedPoly, OmittedConstantPoly};
@@ -148,55 +149,26 @@ where
     })
 }
 
-fn public_claim_prover<F, E>(
-    state: &mut ProverChannel,
-    site: ProtocolSiteId,
-    claim: E,
-) -> Result<(), AkitaError>
+/// Absorb a sumcheck input claim as one public message of base coordinates.
+fn public_claim<F, E, S>(state: &mut S, site: ProtocolSiteId, claim: E) -> Result<(), AkitaError>
 where
     F: Field + CanonicalEncoding,
     E: ExtField<F>,
+    S: ProofChannel,
 {
-    let coefficients = claim.to_base_vec();
-    prover_context(
-        state,
-        context(
-            site,
-            SumcheckRole::Claim,
-            coefficients.len(),
-            field_bytes::<F>(coefficients.len())?,
-            0,
-        )?,
-    );
-    for coefficient in coefficients {
-        state.public_message(&FieldAtom::new(coefficient));
-    }
-    Ok(())
-}
-
-fn public_claim_verifier<F, E>(
-    state: &mut VerifierChannel<'_>,
-    site: ProtocolSiteId,
-    claim: E,
-) -> Result<(), AkitaError>
-where
-    F: Field + CanonicalEncoding,
-    E: ExtField<F>,
-{
-    let coefficients = claim.to_base_vec();
-    verifier_context(
-        state,
-        context(
-            site,
-            SumcheckRole::Claim,
-            coefficients.len(),
-            field_bytes::<F>(coefficients.len())?,
-            0,
-        )?,
-    );
-    for coefficient in coefficients {
-        state.public_message(&FieldAtom::new(coefficient));
-    }
+    let coefficients: Vec<FieldAtom<F>> = claim
+        .to_base_vec()
+        .into_iter()
+        .map(FieldAtom::new)
+        .collect();
+    state.context(context(
+        site,
+        SumcheckRole::Claim,
+        coefficients.len(),
+        field_bytes::<F>(coefficients.len())?,
+        0,
+    )?);
+    public_atoms(state, &coefficients);
     Ok(())
 }
 
@@ -221,7 +193,7 @@ where
     let degree_bound = shape.degree_bound();
     let mut claim = prover.input_claim();
     let claim_site = channel.sumcheck_site(invocation, 0, SumcheckRole::Claim);
-    public_claim_prover::<F, E>(channel.state_mut(), claim_site, claim)?;
+    public_claim::<F, E, _>(channel.state_mut(), claim_site, claim)?;
 
     let mut challenges = Vec::with_capacity(num_rounds);
     for round in 0..num_rounds {
@@ -259,9 +231,13 @@ where
                 0,
             )?,
         );
-        for coefficient in compressed.coeffs_except_linear_term() {
-            send_extension::<F, E>(channel.state_mut(), *coefficient);
-        }
+        let atoms: Vec<ExtensionAtom<F, E>> = compressed
+            .coeffs_except_linear_term()
+            .iter()
+            .copied()
+            .map(ExtensionAtom::new)
+            .collect();
+        send_atoms(channel.state_mut(), &atoms);
         let challenge = channel.round_challenge(invocation, round_id)?;
         claim = compressed.eval_from_hint(&claim, &challenge);
         prover.bind_challenge(round, challenge)?;
@@ -311,7 +287,7 @@ where
     let num_rounds = shape.num_rounds();
     let degree_bound = shape.degree_bound();
     let claim_site = channel.sumcheck_site(invocation, 0, SumcheckRole::Claim);
-    public_claim_verifier::<F, E>(channel.state_mut(), claim_site, claim)?;
+    public_claim::<F, E, _>(channel.state_mut(), claim_site, claim)?;
 
     let mut challenges = Vec::with_capacity(num_rounds);
     for round in 0..num_rounds {
@@ -328,13 +304,11 @@ where
                 0,
             )?,
         );
-        let mut coefficients = Vec::new();
-        coefficients
-            .try_reserve_exact(degree_bound)
-            .map_err(|_| AkitaError::InvalidProof)?;
-        for _ in 0..degree_bound {
-            coefficients.push(receive_extension::<F, E>(channel.state_mut())?);
-        }
+        let coefficients: Vec<E> =
+            receive_atoms::<ExtensionAtom<F, E>>(channel.state_mut(), degree_bound)?
+                .into_iter()
+                .map(ExtensionAtom::into_inner)
+                .collect();
         let compressed = CompressedPoly::new(coefficients);
         let challenge = channel.round_challenge(invocation, round_id)?;
         claim = compressed.eval_from_hint(&claim, &challenge);
@@ -365,7 +339,7 @@ where
     let degree_bound = shape.degree_bound();
     let mut claim = prover.input_claim();
     let claim_site = channel.sumcheck_site(invocation, 0, SumcheckRole::Claim);
-    public_claim_prover::<F, E>(channel.state_mut(), claim_site, claim)?;
+    public_claim::<F, E, _>(channel.state_mut(), claim_site, claim)?;
     let mut challenges = Vec::with_capacity(num_rounds);
 
     for round in 0..num_rounds {
@@ -393,9 +367,13 @@ where
                 0,
             )?,
         );
-        for coefficient in poly.coefficients() {
-            send_extension::<F, E>(channel.state_mut(), *coefficient);
-        }
+        let atoms: Vec<ExtensionAtom<F, E>> = poly
+            .coefficients()
+            .iter()
+            .copied()
+            .map(ExtensionAtom::new)
+            .collect();
+        send_atoms(channel.state_mut(), &atoms);
         let challenge = channel.round_challenge(invocation, round_id)?;
         claim = advance_eq_factored_claim(claim, prover.current_tau(), &poly, challenge);
         challenges.push(challenge);
@@ -456,7 +434,7 @@ where
     let degree_bound = shape.degree_bound();
     let mut claim = input_claim;
     let claim_site = channel.sumcheck_site(invocation, 0, SumcheckRole::Claim);
-    public_claim_verifier::<F, E>(channel.state_mut(), claim_site, claim)?;
+    public_claim::<F, E, _>(channel.state_mut(), claim_site, claim)?;
     let mut challenges = Vec::with_capacity(equality_point.len());
 
     // The normalized claim already carries the bound equality factors. Replay
@@ -475,13 +453,11 @@ where
                 0,
             )?,
         );
-        let mut coefficients = Vec::new();
-        coefficients
-            .try_reserve_exact(degree_bound)
-            .map_err(|_| AkitaError::InvalidProof)?;
-        for _ in 0..degree_bound {
-            coefficients.push(receive_extension::<F, E>(channel.state_mut())?);
-        }
+        let coefficients: Vec<E> =
+            receive_atoms::<ExtensionAtom<F, E>>(channel.state_mut(), degree_bound)?
+                .into_iter()
+                .map(ExtensionAtom::into_inner)
+                .collect();
         let poly = OmittedConstantPoly::new(coefficients);
         let challenge = channel.round_challenge(invocation, round_id)?;
         claim = advance_eq_factored_claim(claim, tau, &poly, challenge);
@@ -965,8 +941,13 @@ mod tests {
         let instance = OneRoundEq::new(F::zero(), coefficients);
         let challenge = F::from_u64(11);
         let mut proof_state = new_prover_channel(b"native-eq-forgery", b"fixture");
-        send_extension::<F, F>(&mut proof_state, instance.claim());
-        send_extension::<F, F>(&mut proof_state, F::from_u64(101));
+        send_atoms(
+            &mut proof_state,
+            &[
+                ExtensionAtom::<F, F>::new(instance.claim()),
+                ExtensionAtom::new(F::from_u64(101)),
+            ],
+        );
         let proof = proof_state.narg_string().to_vec();
         let mut verifier = FixedVerifierChannel {
             state: new_verifier_channel(b"native-eq-forgery", b"fixture", &proof),
