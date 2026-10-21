@@ -107,8 +107,13 @@ fn unsupported_fold_group_log_basis_is_rejected_not_panicking() {
 fn out_of_range_digit_depths_are_rejected_before_digit_formulas() {
     let edited = format!("digit depth {} ", u64::MAX);
     let root_fold = edited_artifact::<fp128::Dense>(|value| {
-        value["rows"][0]["schedule"]["root"]["params"]["groups"]["entries"][0]["opening"]
-            ["num_digits_fold"] = u64::MAX.into();
+        // A grouped row may sort first; its final group is the last entry.
+        let final_group = value["rows"][0]["schedule"]["root"]["params"]["groups"]["entries"]
+            .as_array_mut()
+            .expect("root groups")
+            .last_mut()
+            .expect("root final group");
+        final_group["opening"]["num_digits_fold"] = u64::MAX.into();
     });
     assert_digit_range_rejection::<fp128::Dense>(&root_fold, "root final group", "fold", &edited);
     let terminal_fold = edited_artifact::<fp128::Dense>(|value| {

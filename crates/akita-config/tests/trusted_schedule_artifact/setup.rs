@@ -42,7 +42,8 @@ fn recursive_prefix_fixture<Cfg: CommitmentConfig>(
 
 #[test]
 fn recursive_prefix_slot_id_fixture() {
-    // These setup-prefix identities bind the generated schedule and policy.
+    // These setup-prefix identities are derived from the generated catalogs.
+    // Regenerating with the floor-off default preserves both fixtures.
     let onehot = recursive_prefix_fixture::<RecursiveCommitmentConfig<fp128::OneHot>>(
         akita_params::ChunkedWitnessCfg::default_non_chunked(),
     );
