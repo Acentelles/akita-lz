@@ -8,3 +8,6 @@ pub(crate) mod ring_switch;
 pub(crate) mod stage1;
 pub(crate) mod stage2;
 pub(crate) mod stage3;
+
+#[cfg(test)]
+mod claim_domain_tests;
