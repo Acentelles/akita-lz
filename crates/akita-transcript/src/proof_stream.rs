@@ -685,13 +685,46 @@ pub fn verifier_context(_state: &mut VerifierChannel<'_>, record: ProtocolContex
 /// it cannot express the work and payloads between the nonce and each
 /// message. The preview instead runs the same calls on a detached prover
 /// state built from a copy of the sponge, so it cannot mutate the live
-/// argument string or the prover's private randomness. The live prover
-/// replays the accepted candidate through the real channel and compares the
-/// challenges, so a preview that diverged from the channel fails loudly
-/// instead of producing a different proof.
+/// argument string or the prover's private randomness. The accepted
+/// candidate's proof of work is carried to the live channel as a
+/// [`FoldWork`], so the live prover does not search again. The live prover
+/// then draws the challenges through the real channel and compares them, so a
+/// preview that diverged from the channel fails loudly instead of producing a
+/// different proof.
 #[cfg(feature = "prover")]
 pub struct FoldPreview {
     state: ProverChannel,
+    nonce: u32,
+    work: Option<FoldWork>,
+}
+
+/// The fold's proof of work as found on a [`FoldPreview`]: the sponge right
+/// after the work and the argument bytes the work sent.
+#[cfg(feature = "prover")]
+pub struct FoldWork {
+    nonce: u32,
+    sponge: crate::TranscriptSponge,
+    argument: Vec<u8>,
+}
+
+#[cfg(feature = "prover")]
+impl FoldWork {
+    /// The fold-response nonce this work follows.
+    #[must_use]
+    pub const fn nonce(&self) -> u32 {
+        self.nonce
+    }
+
+    /// Carry the work to the live channel, which has just sent the same
+    /// fold-response nonce: send the work's argument bytes one prover message
+    /// each, as Jolt's `grind` does, then take the preview's sponge, which
+    /// already holds the work's check.
+    pub fn commit(self, state: &mut ProverChannel) {
+        for byte in &self.argument {
+            state.prover_message(byte);
+        }
+        state.duplex_sponge_state = self.sponge;
+    }
 }
 
 #[cfg(feature = "prover")]
@@ -701,7 +734,11 @@ impl FoldPreview {
     pub fn new(state: &ProverChannel, nonce: u32) -> Self {
         let mut state = ProverChannel::from(state.duplex_sponge_state.clone());
         state.public_message(&NonceAtom::new(nonce));
-        Self { state }
+        Self {
+            state,
+            nonce,
+            work: None,
+        }
     }
 
     /// Run Jolt's `grind(bits)` on the detached state, exactly as the live
@@ -713,8 +750,32 @@ impl FoldPreview {
     /// [`MAX_GRINDING_BITS`](crate::MAX_GRINDING_BITS) or the search finds no
     /// nonce (probability at most `e^-128` for an ideal sponge).
     pub fn grind(&mut self, bits: u32) -> Result<(), AkitaError> {
+        if self.work.is_some() {
+            return Err(AkitaError::Internal(
+                "fold preview ran its proof of work twice".into(),
+            ));
+        }
         jolt_transcript::ProverTranscript::grind(&mut self.state, bits)
-            .map_err(|_| AkitaError::InvalidSetup("fold preview proof of work failed".into()))
+            .map_err(|_| AkitaError::InvalidSetup("fold preview proof of work failed".into()))?;
+        self.work = Some(FoldWork {
+            nonce: self.nonce,
+            sponge: self.state.duplex_sponge_state.clone(),
+            argument: self.state.narg_string().to_vec(),
+        });
+        Ok(())
+    }
+
+    /// Take the proof of work found by [`grind`](Self::grind), for
+    /// [`FoldWork::commit`] on the live channel.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AkitaError::Internal`] when `grind` has not run or the work
+    /// was already taken.
+    pub fn take_work(&mut self) -> Result<FoldWork, AkitaError> {
+        self.work
+            .take()
+            .ok_or_else(|| AkitaError::Internal("fold preview has no proof of work".into()))
     }
 
     /// Absorb one public fold payload, squeeze a challenge message of `len`

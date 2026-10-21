@@ -97,9 +97,10 @@ where
     let family = params.fold_challenge_family()?;
     let point_indices = [0usize];
     let site = akita_params::GrindingSite::FoldResponse { level };
-    let (nonce, (fold_handle, challenges, encoding, diagnostics)) =
+    let (nonce, (work, fold_handle, challenges, encoding, diagnostics)) =
         first_jointly_accepted_nonce(FOLD_RESPONSE_ATTEMPTS, |nonce| {
             let mut preview_state = grinding.preview_fold_response(site, nonce)?;
+            let work = preview_state.take_work()?;
             let mut preview = PreviewFoldDraw::new(&mut preview_state);
             let Some(challenges) =
                 preview.draw_fold_challenges(&family, 0, params.blocks.live_blocks, 1)?
@@ -126,6 +127,7 @@ where
                     fold_handle,
                     diagnostics,
                 } => Ok(Some((
+                    work,
                     fold_handle,
                     challenges,
                     crate::backend::ValidatedTerminalZEncodingPlan::from_probe(&plan),
@@ -133,7 +135,7 @@ where
                 ))),
             }
         })?;
-    grinding.commit_fold_response(site, nonce)?;
+    grinding.commit_fold_response(site, work)?;
     let mut live = ProverFoldDraw::new(grinding.state_mut(), level, 0);
     let live_challenges = live.draw_fold_challenges(&family, 0, params.blocks.live_blocks, 1)?;
     if live_challenges.as_ref() != Some(&challenges) {
@@ -143,7 +145,7 @@ where
     }
     grinding.record_fold_challenges(level, 0, params.blocks.live_blocks)?;
     #[cfg(not(feature = "response-model-diagnostics"))]
-    let _ = diagnostics;
+    let _ = (nonce, diagnostics);
     #[cfg(feature = "response-model-diagnostics")]
     if response_model_diagnostics_enabled() {
         let sparse = &params.fold_challenge_config;
@@ -226,11 +228,12 @@ where
         ));
     }
     let site = akita_params::GrindingSite::FoldResponse { level };
-    let (nonce, mut candidate_outputs) =
+    let (nonce, (work, mut candidate_outputs)) =
         first_jointly_accepted_nonce(max_grind_attempts, |nonce| {
             let mut candidate_outputs = Vec::with_capacity(groups.len());
-            {
+            let work = {
                 let mut preview_state = grinding.preview_fold_response(site, nonce)?;
+                let work = preview_state.take_work()?;
                 let mut preview = PreviewFoldDraw::new(&mut preview_state);
                 for prepared_group in groups {
                     let group = &prepared_group.input;
@@ -293,11 +296,12 @@ where
                     };
                     candidate_outputs.push(output);
                 }
-            }
-            Ok(Some(candidate_outputs))
+                work
+            };
+            Ok(Some((work, candidate_outputs)))
         })?;
 
-    grinding.commit_fold_response(site, nonce)?;
+    grinding.commit_fold_response(site, work)?;
     {
         let _span = tracing::info_span!("fold_grind_live_replay").entered();
         for (prepared_group, output) in groups.iter().zip(candidate_outputs.iter_mut()) {

@@ -27,8 +27,6 @@ pub use logging::{
 };
 #[cfg(feature = "logging-transcript")]
 pub use proof_stream::finish_proof_ranges;
-#[cfg(feature = "prover")]
-pub use proof_stream::FoldPreview;
 pub use proof_stream::{
     exchange_extension_group, ext_challenge, ext_challenges, extension_slots,
     fold_challenge_message, new_prover_channel, new_verifier_channel, nonce_encoded_len,
@@ -42,6 +40,8 @@ pub use proof_stream::{
     SITE_FAMILY_PHYSICAL_L2, SITE_FAMILY_ROOT_STATEMENT, SITE_FAMILY_STAGE1, SITE_FAMILY_STAGE2,
     SITE_FAMILY_STAGE3, SITE_FAMILY_SUMCHECK, SITE_FAMILY_TERMINAL,
 };
+#[cfg(feature = "prover")]
+pub use proof_stream::{FoldPreview, FoldWork};
 
 /// Sponge backend selected by the active transcript feature.
 #[cfg(feature = "transcript-blake2b")]

@@ -273,26 +273,34 @@ fn fold_preview_matches_live_prover_and_verifier() {
     let mut prover = new_prover_channel(b"fold-preview", b"fixture");
     let mut preview = FoldPreview::new(&prover, nonce);
     preview.grind(WORK_BITS).unwrap();
+    let work = preview.take_work().unwrap();
+    assert_eq!(work.nonce(), nonce);
     let previewed = [0, 1].map(|i| {
         preview
             .challenge_message(&payloads[i], lens[i], copy)
             .unwrap()
     });
-    prover_context(&mut prover, nonce_record);
-    prover.prover_message(&NonceAtom::new(nonce));
-    prover.grind(WORK_BITS).unwrap();
-    let live = [0, 1].map(|i| {
-        fold_challenge_message(
-            &mut prover,
-            message_record(lens[i]),
-            &payloads[i],
-            lens[i],
-            copy,
-        )
-        .unwrap()
+    // One live prover searches again; the other commits the preview's work.
+    // Both must produce the same argument and challenges.
+    let mut searched = new_prover_channel(b"fold-preview", b"fixture");
+    for (state, work) in [(&mut searched, None), (&mut prover, Some(work))] {
+        prover_context(state, nonce_record);
+        state.prover_message(&NonceAtom::new(nonce));
+        match work {
+            None => state.grind(WORK_BITS).unwrap(),
+            Some(work) => work.commit(state),
+        }
+    }
+    let [searched_live, live] = [&mut searched, &mut prover].map(|state| {
+        [0, 1].map(|i| {
+            fold_challenge_message(state, message_record(lens[i]), &payloads[i], lens[i], copy)
+                .unwrap()
+        })
     });
     assert_eq!(previewed, live);
+    assert_eq!(searched_live, live);
     let proof = prover.narg_string().to_vec();
+    assert_eq!(searched.narg_string(), proof.as_slice());
     assert!(proof.len() > 2);
 
     let mut verifier = new_verifier_channel(b"fold-preview", b"fixture", &proof);

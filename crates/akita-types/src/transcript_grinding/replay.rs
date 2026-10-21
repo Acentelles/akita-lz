@@ -12,7 +12,7 @@ use akita_transcript::{
     GRINDING_NONCE_SLACK_BITS, SITE_FAMILY_SUMCHECK,
 };
 #[cfg(feature = "prover")]
-use akita_transcript::{prover_context, FoldPreview, ProverChannel, ProverTranscript};
+use akita_transcript::{prover_context, FoldPreview, FoldWork, ProverChannel, ProverTranscript};
 use std::marker::PhantomData;
 
 #[derive(Clone, Copy)]
@@ -308,6 +308,21 @@ impl<'plan> ProverGrinding<'plan> {
         site: GrindingSite,
         kind: GrindingQueryKind,
     ) -> Result<(), AkitaError> {
+        self.proof_of_work(site, kind, |state, bits| {
+            state.grind(bits).map_err(|_| {
+                AkitaError::Internal("transcript proof of work failed to find a nonce".into())
+            })
+        })
+    }
+
+    /// Consume the next proof-of-work entry and let `work` produce it on the
+    /// live channel: a fresh search, or a nonce already found on a preview.
+    fn proof_of_work(
+        &mut self,
+        site: GrindingSite,
+        kind: GrindingQueryKind,
+        work: impl FnOnce(&mut ProverChannel, u32) -> Result<(), AkitaError>,
+    ) -> Result<(), AkitaError> {
         let entry = next_entry(&mut self.cursor, site, kind)?;
         let bits = pow_bits(entry).ok_or_else(|| {
             AkitaError::Internal("grinding entry nonce width differs from grind_bits + 7".into())
@@ -319,9 +334,7 @@ impl<'plan> ProverGrinding<'plan> {
             grinding_records(site, entry.grind_bits, entry.nonce_bits);
         let start = self.state.narg_string().len();
         prover_context(&mut self.state, nonce_record);
-        self.state.grind(bits).map_err(|_| {
-            AkitaError::Internal("transcript proof of work failed to find a nonce".into())
-        })?;
+        work(&mut self.state, bits)?;
         prover_context(&mut self.state, check_record);
         let nonce_bytes = self.state.narg_string().len() - start;
         self.serialized_nonce_bytes = self
@@ -333,15 +346,15 @@ impl<'plan> ProverGrinding<'plan> {
         Ok(())
     }
 
-    /// Emit the next scheduled fold-response nonce as a canonical message,
-    /// then run the fold's proof of work, which protects every fold-challenge
-    /// message drawn after it.
+    /// Emit the accepted fold-response nonce as a canonical message, then the
+    /// fold's proof of work found on its preview, which protects every
+    /// fold-challenge message drawn after it.
     pub fn commit_fold_response(
         &mut self,
         site: GrindingSite,
-        counter: u32,
+        work: FoldWork,
     ) -> Result<(), AkitaError> {
-        let result = self.commit_fold_response_inner(site, counter);
+        let result = self.commit_fold_response_inner(site, work);
         self.invalid |= result.is_err();
         result
     }
@@ -349,8 +362,9 @@ impl<'plan> ProverGrinding<'plan> {
     fn commit_fold_response_inner(
         &mut self,
         site: GrindingSite,
-        counter: u32,
+        work: FoldWork,
     ) -> Result<(), AkitaError> {
+        let counter = work.nonce();
         let entry = next_entry(&mut self.cursor, site, GrindingQueryKind::FoldResponse)?;
         if !value_fits(counter, entry.nonce_bits) {
             return Err(AkitaError::InvalidInput(
@@ -377,18 +391,23 @@ impl<'plan> ProverGrinding<'plan> {
             encoded_bytes = nonce_encoded_len(counter),
             "native fold response nonce"
         );
-        self.grind_query_inner(
+        self.proof_of_work(
             GrindingSite::FoldChallengeWork {
                 level: site.level(),
             },
             GrindingQueryKind::FoldChallengeWork,
+            |state, _bits| {
+                work.commit(state);
+                Ok(())
+            },
         )
     }
 
     /// Preview a fold-response candidate from the current public state
     /// without advancing either the live state or the grinding plan: absorb
-    /// the candidate nonce, then run the fold's proof of work as the live
-    /// prover will.
+    /// the candidate nonce, then run the fold's proof of work. Pass the
+    /// accepted preview's [`FoldPreview::take_work`] to
+    /// [`commit_fold_response`](Self::commit_fold_response).
     pub fn preview_fold_response(
         &self,
         site: GrindingSite,

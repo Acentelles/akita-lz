@@ -427,7 +427,7 @@ breaks soundness. Its findings and their resolution:
 | Prover aborted when a pool ran out | It moves to the next fold-response nonce |
 | Plan validation priced every proof of work against the field | New run kind that records and validates `K_l` |
 | Payload domain not bumped | `akita/fold-challenge-round/v2` |
-| Blake2b caveat, doubled prover work, verifier early stop, squeeze limit, sign invariant | Stated in this spec; the length limit is enforced |
+| Blake2b caveat, doubled prover work, verifier early stop, squeeze limit, sign invariant | Stated in this spec; the length limit is enforced; the live prover reuses the preview's work instead of searching again |
 
 ## Prover parallelism
 
@@ -441,14 +441,18 @@ accepted. The verifier, which usually runs without threads, stops at the
 
 Each fold-response candidate runs the fold proof of work on a detached prover
 state built from a copy of the sponge (Spongefish's `ProverState::from`), by
-calling Jolt's own `grind`; Akita has no second copy of the search. The live
-prover then repeats `grind` for the accepted candidate, because Jolt has no
-call that commits a known nonce. Every candidate therefore pays about `2^g`
-permutations, and the accepted one pays it twice: on the standard profile,
-about `2 * 1732` expected permutations per proof plus `1732` per rejected
-fold-response candidate. The live replay compares its challenges with the
-preview's, so a divergence is an honest-prover error, never a different
-proof.
+calling Jolt's own `grind`; Akita has no second copy of the search. The
+preview keeps the sponge right after the work and the argument bytes the work
+sent (`FoldWork`). For the accepted candidate, the live prover sends the
+fold-response nonce, sends those argument bytes one prover message each (as
+`grind` does), and takes the preview's sponge, which already holds the work's
+check. The live prover therefore never searches again, and no Jolt API change
+is needed: Spongefish exposes the sponge state under the `yolocrypto` feature
+that the preview already uses. Every candidate pays about `2^g` expected
+permutations for the work, the accepted one included, and nothing more. The
+live prover then draws the challenges through the real channel and compares
+them with the preview's, so a divergence is an honest-prover error, never a
+different proof.
 
 ## Protocol and byte effects
 

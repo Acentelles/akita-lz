@@ -41,8 +41,13 @@ fn grinding_roundtrip_uses_inline_canonical_nonces_and_eof() {
     let prover_challenge = prover
         .grinded_ext_challenge::<F>(GrindingSite::EvaluationBatch { level: 0 })
         .unwrap();
+    let work = prover
+        .preview_fold_response(GrindingSite::FoldResponse { level: 0 }, 7)
+        .unwrap()
+        .take_work()
+        .unwrap();
     prover
-        .commit_fold_response(GrindingSite::FoldResponse { level: 0 }, 7)
+        .commit_fold_response(GrindingSite::FoldResponse { level: 0 }, work)
         .unwrap();
     prover.record_fold_challenges(0, 0, 2).unwrap();
     let proof = prover.finish().unwrap();
@@ -233,21 +238,27 @@ fn grinding_rejects_out_of_range_response_and_incomplete_plan() {
         preview_prover.preview_fold_response(GrindingSite::FoldResponse { level: 1 }, 0),
         Err(AkitaError::InvalidInput(_))
     ));
-    preview_prover
+    let mut preview = preview_prover
         .preview_fold_response(GrindingSite::FoldResponse { level: 0 }, 0)
         .unwrap();
+    let work = preview.take_work().unwrap();
+    assert!(matches!(preview.take_work(), Err(AkitaError::Internal(_))));
     preview_prover
-        .commit_fold_response(GrindingSite::FoldResponse { level: 0 }, 0)
+        .commit_fold_response(GrindingSite::FoldResponse { level: 0 }, work)
         .unwrap();
     preview_prover.finish().unwrap();
 
+    // Work committed at a site the plan does not expect is rejected and
+    // poisons the replay.
     let state = new_prover_channel(b"native-grinding", b"fixture");
     let mut prover = ProverGrinding::new(state, &plan);
+    let work = prover
+        .preview_fold_response(GrindingSite::FoldResponse { level: 0 }, 0)
+        .unwrap()
+        .take_work()
+        .unwrap();
     assert!(matches!(
-        prover.commit_fold_response(
-            GrindingSite::FoldResponse { level: 0 },
-            akita_params::FOLD_RESPONSE_ATTEMPTS,
-        ),
+        prover.commit_fold_response(GrindingSite::FoldResponse { level: 1 }, work),
         Err(AkitaError::InvalidInput(_))
     ));
     assert!(matches!(prover.finish(), Err(AkitaError::InvalidInput(_))));
@@ -420,16 +431,18 @@ fn fold_candidate_replays_all_groups_as_one_transaction() {
     let nonce = 7;
     let state = new_prover_channel(b"native-fold-transaction", b"fixture");
     let mut prover = ProverGrinding::new(state, &plan);
-    let preview = {
+    let (work, preview) = {
         let mut preview_state = prover.preview_fold_response(site, nonce).unwrap();
-        draw(&mut |group, blocks, claims| {
+        let work = preview_state.take_work().unwrap();
+        let preview = draw(&mut |group, blocks, claims| {
             PreviewFoldDraw::new(&mut preview_state)
                 .draw_fold_challenges(&family, group, blocks, claims)
                 .unwrap()
                 .unwrap()
-        })
+        });
+        (work, preview)
     };
-    prover.commit_fold_response(site, nonce).unwrap();
+    prover.commit_fold_response(site, work).unwrap();
     let live = draw(&mut |group, blocks, claims| {
         let challenges = ProverFoldDraw::new(prover.state_mut(), 3, group as u32)
             .draw_fold_challenges(&family, group, blocks, claims)
