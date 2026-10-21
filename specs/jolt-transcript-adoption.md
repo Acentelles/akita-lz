@@ -40,6 +40,10 @@ Akita challenge and proof-of-work step goes through Jolt's audited code.
   the canonical descriptor bytes, each with a `u64` little-endian length
   prefix. Tests: `session_tag_names_the_backend_and_codecs`,
   `session_and_statement_are_framed_separately`.
+- **Default sponge.** Every crate's `default` feature set selects
+  `transcript-keccak`. `transcript-blake2b` stays available as an opt-in
+  feature, and exactly one backend must be enabled. CI runs the default
+  builds with Keccak and the transcript semantics suites with both.
 - **Challenge bias.** Each challenge message has total variation at most
   `2^-161` from uniform, charged as `2^-160`. A site that draws several
   challenges draws them in one message (`ext_challenges`). Codec exhaustion is

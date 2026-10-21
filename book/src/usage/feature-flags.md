@@ -9,7 +9,7 @@ rows are external runtime artifacts, not Cargo features. The default
 | Feature | What it provides |
 | --- | --- |
 | `parallel` | Rayon execution across field arithmetic, setup, proving, sumcheck, and verification |
-| `transcript-blake2b` | The default Spongefish transcript backend |
+| `transcript-keccak` | The default Spongefish transcript backend |
 
 The normal build uses both:
 
@@ -26,7 +26,7 @@ Keep the default transcript while removing Rayon:
 ```bash
 cargo build -p akita-pcs --release \
   --no-default-features \
-  --features transcript-blake2b
+  --features transcript-keccak
 ```
 
 This build produces the same protocol results. It changes local execution and
@@ -53,12 +53,14 @@ Backend routing requires no Cargo feature; see [backend routing](../how/architec
 
 ## Transcript backends
 
-Production builds enable exactly one transcript backend.
+Production builds enable exactly one transcript backend. Keccak is the
+default; Blake2b stays available as an opt-in feature. To select Blake2b,
+build with `--no-default-features` and enable `transcript-blake2b`.
 
 | Feature | Backend |
 | --- | --- |
-| `transcript-blake2b` | Blake2b based Spongefish transcript with SHA3 support |
-| `transcript-keccak` | Keccak based Spongefish transcript |
+| `transcript-keccak` | Keccak based Spongefish transcript (default) |
+| `transcript-blake2b` | Blake2b based Spongefish transcript (opt-in) |
 
 The transcript backend is part of proof compatibility. Prover and verifier
 must use the same backend and protocol revision.

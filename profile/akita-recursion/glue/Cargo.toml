@@ -10,7 +10,7 @@ readme = "../../../README.md"
 publish = false
 
 [features]
-default = ["transcript-blake2b"]
+default = ["transcript-keccak"]
 transcript-blake2b = [
   "akita-config/transcript-blake2b",
   "akita-types/transcript-blake2b",
@@ -40,7 +40,7 @@ akita-params = { version = "0.1.0", path = "../../../crates/akita-params", defau
 akita-challenges = { version = "0.1.0", path = "../../../crates/akita-challenges", default-features = false }
 akita-config = { version = "0.1.0", path = "../../../crates/akita-config", default-features = false, features = [
   "test-support",
-  "transcript-blake2b",
+  "transcript-keccak",
 ] }
 
 [lints.rust]

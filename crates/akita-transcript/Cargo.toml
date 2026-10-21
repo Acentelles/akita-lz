@@ -20,7 +20,7 @@ jolt-transcript = { version = "=0.1.0", git = "https://github.com/a16z/jolt", re
 spongefish = { version = "=0.8.0", default-features = false }
 
 [features]
-default = ["transcript-blake2b"]
+default = ["transcript-keccak"]
 logging-transcript = []
 transcript-blake2b = ["jolt-transcript/transcript-blake2b"]
 transcript-keccak = ["jolt-transcript/transcript-keccak"]

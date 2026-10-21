@@ -26,7 +26,7 @@ shake = "0.1.0"
 tracing = "0.1"
 
 [features]
-default = ["transcript-blake2b"]
+default = ["transcript-keccak"]
 test-support = ["akita-params/test-support"]
 # Prover-side grinding replay, which searches on a copy of the sponge state.
 prover = ["akita-transcript/prover", "akita-challenges/prover"]

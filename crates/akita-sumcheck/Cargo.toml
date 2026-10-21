@@ -20,7 +20,7 @@ akita-serialization = { version = "0.1.0", path = "../akita-serialization" }
 akita-transcript = { version = "0.1.0", path = "../akita-transcript", default-features = false }
 
 [features]
-default = ["transcript-blake2b"]
+default = ["transcript-keccak"]
 transcript-blake2b = ["akita-transcript/transcript-blake2b"]
 transcript-keccak = ["akita-transcript/transcript-keccak"]
 parallel = ["akita-algebra/parallel", "jolt-field/parallel"]
