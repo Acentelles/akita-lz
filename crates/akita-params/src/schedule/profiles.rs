@@ -295,33 +295,6 @@ impl GroupCommitPhaseParams {
         Ok(())
     }
 
-    /// Require the full-field-width inner decomposition of a setup-prefix commitment.
-    ///
-    /// A setup prefix commits the public stream, whose coefficients are uniform
-    /// field elements. Only a full-width inner decomposition represents them; a
-    /// shallower depth keeps the low digits and drops the carry, so the
-    /// commitment would bind a truncated image of the setup. Schedule admission
-    /// and the setup-prefix commit path both call this check.
-    pub fn validate_setup_prefix_digit_depth(&self) -> Result<(), AkitaError> {
-        let log_basis = self.inner.digits.log_basis;
-        if log_basis == 0 || log_basis >= u128::BITS {
-            return Err(AkitaError::InvalidSetup(
-                "setup-prefix inner basis is out of range".into(),
-            ));
-        }
-        let full_width = crate::sis::compute_num_digits_field_width(
-            self.inner.matrix.sis_modulus_profile().field_bits(),
-            log_basis,
-        );
-        if self.inner.digits.num_digits != full_width {
-            return Err(AkitaError::InvalidSetup(format!(
-                "setup-prefix inner digit depth {} does not cover the full field width ({full_width} digits)",
-                self.inner.digits.num_digits
-            )));
-        }
-        Ok(())
-    }
-
     /// Validate this profile as a commitment to one complete setup prefix.
     ///
     /// `natural_len` is only the support of the later setup-index weight. The
@@ -329,6 +302,17 @@ impl GroupCommitPhaseParams {
     /// block geometry must cover every ring in that domain without a partial
     /// block or an omitted tail.
     pub fn validate_setup_prefix_geometry(&self, natural_len: usize) -> Result<(), AkitaError> {
+        let field_bits = self.inner.matrix.sis_modulus_profile().field_bits();
+        self.inner.digits.validate(field_bits)?;
+        let full_width =
+            crate::sis::compute_num_digits_field_width(field_bits, self.inner.digits.log_basis);
+        if self.inner.digits.num_digits != full_width {
+            return Err(AkitaError::InvalidSetup(format!(
+                "setup-prefix inner digit depth {} does not cover the full field width ({full_width} digits)",
+                self.inner.digits.num_digits
+            )));
+        }
+
         if self.group.num_polynomials() != 1 {
             return Err(AkitaError::InvalidSetup(
                 "setup-prefix commitment profile must be singleton".into(),

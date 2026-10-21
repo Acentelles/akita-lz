@@ -111,7 +111,10 @@ fn dense_recursive_artifacts_cover_benchmark_sizes_and_offload_setup() {
 #[test]
 fn row_admission_rejects_a_setup_prefix_without_full_width_inner_digits() {
     type RecursiveOneHot = RecursiveCommitmentConfig<fp128::OneHot>;
-    let row = row_with_setup_prefix::<RecursiveOneHot>(|_| true);
+    let row = row_with_setup_prefix::<RecursiveOneHot>(
+        |_| true,
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    );
     let (fold_index, prefix) = row
         .schedule()
         .recursive_folds
@@ -121,11 +124,10 @@ fn row_admission_rejects_a_setup_prefix_without_full_width_inner_digits() {
         .expect("recursive setup prefix");
     prefix
         .profile
-        .validate_setup_prefix_digit_depth()
+        .validate_setup_prefix_geometry(prefix.setup_natural_len.expect("setup prefix support"))
         .expect("generated prefixes use the full field width");
 
-    // A consistent-width profile with one inner digit passes every structural
-    // group check; only the depth pin rejects it.
+    // Preserve matrix geometry while truncating the setup decomposition.
     let mut truncated = prefix;
     truncated.profile.inner.digits.num_digits = 1;
     truncated.profile.inner.matrix = truncated
@@ -134,20 +136,32 @@ fn row_admission_rejects_a_setup_prefix_without_full_width_inner_digits() {
         .matrix
         .try_with_input_width(truncated.profile.blocks.positions_per_block)
         .expect("one-digit A width");
-    truncated
-        .validate()
-        .expect("structural group checks accept the truncated depth");
+    assert!(truncated.validate().is_err());
+    let slot = truncated.slot_id().expect("setup prefix slot");
+    assert!(akita_serialization::Valid::check(&slot).is_err());
+    assert!(akita_params::setup_prefix_slot_field_elements(&slot).is_err());
+    for log_basis in [0, 128, u32::MAX] {
+        let mut invalid = prefix.profile;
+        invalid.inner.digits.log_basis = log_basis;
+        assert!(invalid
+            .validate_setup_prefix_geometry(slot.natural_len)
+            .is_err());
+    }
     assert!(truncated
         .profile
-        .validate_setup_prefix_digit_depth()
+        .validate_setup_prefix_geometry(prefix.setup_natural_len.expect("setup prefix support"))
         .is_err());
 
-    let error = mutated_row_admission_error::<RecursiveOneHot>(&row, |schedule| {
-        schedule.recursive_folds[fold_index]
-            .params
-            .set_setup_prefix(Some(truncated))
-            .expect("preserve recursive group topology");
-    });
+    let error = mutated_row_admission_error::<RecursiveOneHot>(
+        &row,
+        |schedule| {
+            schedule.recursive_folds[fold_index]
+                .params
+                .set_setup_prefix(Some(truncated))
+                .expect("preserve recursive group topology");
+        },
+        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+    );
     assert!(
         error.to_string().contains("full field width"),
         "unexpected admission error: {error}"
