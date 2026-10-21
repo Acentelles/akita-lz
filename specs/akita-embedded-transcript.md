@@ -129,12 +129,11 @@ In embedded mode the "session" row is the caller's own session.
     each in canonical little-endian form. A deserialized group is
     re-serialized for its digest; the input bytes are never hashed directly.
   - The digest tag names the protocol version and the sponge.
-  - The deserializer always checks the group's profile and row lengths, in
-    both validation modes. Under `Validate::Yes`, which verifier-reachable
-    decoding uses, it also rejects noncanonical coefficients, so each
-    commitment has exactly one encoding. Under `Validate::No` the field
-    decoder reduces a noncanonical coefficient; the digest then covers the
-    reduced value the group holds, which is the value the protocol uses.
+  - The deserializer always checks the group's profile and row lengths.
+    Proof-input code decodes with `Validate::Yes` (a CI guard forbids
+    `Validate::No` there), which also rejects noncanonical coefficients, so
+    each commitment has exactly one encoding. The digest always covers the
+    re-encoded group as held in memory, never the input bytes.
   - The verifier computes every digest from the bytes it then uses. The rows
     that `verify_root` uses as commitment payloads come from the same
     `CommittedGroup` as the digest it absorbs.

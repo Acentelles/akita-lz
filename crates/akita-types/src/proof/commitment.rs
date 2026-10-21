@@ -520,8 +520,8 @@ mod committed_group_tests {
         bytes
     }
 
-    fn decode(bytes: &[u8], validate: Validate) -> Result<CommittedGroup<F>, SerializationError> {
-        CommittedGroup::<F>::deserialize_with_mode(bytes, Compress::No, validate, &())
+    fn decode(bytes: &[u8]) -> Result<CommittedGroup<F>, SerializationError> {
+        CommittedGroup::<F>::deserialize_with_mode(bytes, Compress::No, Validate::Yes, &())
     }
 
     #[test]
@@ -532,9 +532,7 @@ mod committed_group_tests {
             *group.digest(),
             CommitmentDigest::of_canonical_bytes(&bytes)
         );
-        for validate in [Validate::Yes, Validate::No] {
-            assert_eq!(decode(&bytes, validate).unwrap().digest(), group.digest());
-        }
+        assert_eq!(decode(&bytes).unwrap().digest(), group.digest());
     }
 
     /// The decoder hashes the group it decoded, so a changed row gives the
@@ -545,7 +543,7 @@ mod committed_group_tests {
         let mut bytes = canonical_bytes(&group);
         let last = bytes.len() - 4;
         bytes[last..].copy_from_slice(&5u32.to_le_bytes());
-        let decoded = decode(&bytes, Validate::Yes).unwrap();
+        let decoded = decode(&bytes).unwrap();
         assert_ne!(decoded.digest(), group.digest());
         let mut coefficients = group.rows().coeffs().to_vec();
         *coefficients.last_mut().unwrap() = F::from_u64(5);
@@ -561,31 +559,19 @@ mod committed_group_tests {
         );
     }
 
-    /// Under `Validate::Yes` each commitment has one encoding, so it has one
-    /// digest. `Validate::No` reduces a noncanonical coefficient, and the
-    /// digest then covers the reduced value the group holds, never the input
-    /// bytes.
+    /// Each commitment has one encoding, so it has one digest: the decoder
+    /// rejects a noncanonical coefficient and a short row.
     #[test]
     fn noncanonical_commitment_bytes_are_rejected() {
         let group = group();
         let mut bytes = canonical_bytes(&group);
         let last = bytes.len() - 4;
         bytes[last..].copy_from_slice(&4_294_967_197u32.to_le_bytes());
-        assert!(decode(&bytes, Validate::Yes).is_err());
-        let reduced = decode(&bytes, Validate::No).unwrap();
-        assert_eq!(*reduced.rows().coeffs().last().unwrap(), F::from_u64(0));
-        assert_ne!(
-            *reduced.digest(),
-            CommitmentDigest::of_canonical_bytes(&bytes)
-        );
-        assert_eq!(
-            *reduced.digest(),
-            CommitmentDigest::of_canonical_bytes(&canonical_bytes(&reduced))
-        );
+        assert!(decode(&bytes).is_err());
 
         let mut short = canonical_bytes(&group);
         short.truncate(short.len() - 4);
-        assert!(decode(&short, Validate::Yes).is_err());
+        assert!(decode(&short).is_err());
     }
 
     #[test]
