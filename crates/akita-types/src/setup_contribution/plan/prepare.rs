@@ -99,7 +99,11 @@ impl<E: Field> SetupContributionPlan<E> {
             let d_physical_cols = d_cursor
                 .checked_add(level_params.open_randomness_columns)
                 .ok_or_else(|| AkitaError::InvalidSetup("setup D width overflow".into()))?;
-            if d_physical_cols != level_params.open().matrix.input_width() {
+            // Randomness columns sit right after the last opening column, so
+            // a level with D randomness fixes the D width exactly.
+            if level_params.open_randomness_columns != 0
+                && d_physical_cols != level_params.open().matrix.input_width()
+            {
                 return Err(AkitaError::InvalidSetup(
                     "setup D columns and randomness disagree with the D matrix width".into(),
                 ));
