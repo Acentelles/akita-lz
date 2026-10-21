@@ -5,7 +5,7 @@
 | Author(s)     | Quang Dao, Claude              |
 | Created       | 2026-10-20                     |
 | Status        | implemented (draft PR)         |
-| PR            |                                |
+| PR            | [#255](https://github.com/LayerZero-Labs/akita/pull/255) |
 | Supersedes    | The indexed coordinate sampler formerly specified in [transcript-grinding](transcript-grinding.md) |
 | Superseded-by |                                |
 | Book-chapter  | how/transcript.md              |
