@@ -54,6 +54,9 @@ pub(crate) struct CommitmentExecutor<
     pub(super) route: PreparedInnerOuterRoute<'a, F>,
     pub(super) compression: Option<PreparedCompression<'a, F>>,
     pub(super) state_policy: SP,
+    /// Source of B hiding randomness; absent for executors that never commit
+    /// with randomness.
+    pub(super) hiding_rng: Option<Arc<crate::hiding::HidingRng>>,
 }
 
 impl<'a, F, SP> CommitmentExecutor<'a, F, SP>
@@ -162,7 +165,9 @@ where
             CompressionOperationCapabilities::cpu::<F>(),
             Some(compression_operation.portable_exporter()),
         ))?;
-        builder.build()
+        let mut executor = builder.build()?;
+        executor.hiding_rng = Some(backend.hiding_rng.clone());
+        Ok(executor)
     }
 }
 
@@ -523,10 +528,24 @@ where
         )?;
         // The randomness width is part of the plan, so a clear plan samples
         // nothing and keeps the commitment deterministic.
-        let randomness = crate::hiding::sample_hiding_digits(
-            uncompressed.outer().randomness_coefficient_len()?,
-            uncompressed.outer().log_basis_outer(),
-        )?;
+        let randomness = match uncompressed.outer().randomness_coefficient_len()? {
+            0 => Vec::new(),
+            len => {
+                let log_basis = uncompressed.outer().randomness_log_basis().ok_or_else(|| {
+                    AkitaError::UnsupportedSchedule(
+                        "hiding commitment has no consuming opening alphabet".into(),
+                    )
+                })?;
+                self.hiding_rng
+                    .as_ref()
+                    .ok_or_else(|| {
+                        AkitaError::UnsupportedSchedule(
+                            "commitment executor has no hiding randomness source".into(),
+                        )
+                    })?
+                    .sample(len, log_basis)?
+            }
+        };
         if let Some(fused) = self.fused_for_plan(plan) {
             if !randomness.is_empty() {
                 return Err(AkitaError::UnsupportedSchedule(
@@ -702,11 +721,15 @@ where
         &self,
         backend: &CpuBackend<F, E>,
         profile: GroupCommitPhaseParams,
+        randomness_log_basis: Option<u32>,
         sources: &[&dyn CommitmentSource<F>],
         accepted: Option<AcceptedReach>,
     ) -> Result<(CommittedGroup<F>, PortableCommitmentHandle<F>), AkitaError>
 where {
-        let plan = CommitmentExecutionPlan::for_root(&profile)?;
+        let mut plan = CommitmentExecutionPlan::for_root(&profile)?;
+        if let Some(log_basis) = randomness_log_basis {
+            plan = plan.with_randomness_log_basis(log_basis);
+        }
         self.trace_route(plan.mode());
         let (image, outer_image, outer_randomness) = self
             .execute_uncompressed_stages(&plan, sources, accepted)?
@@ -718,7 +741,7 @@ where {
         let rows = exporter.consume_inner_rows(binding.inner_plan(), image)?;
         let rows = InnerRelationStateMaterial::from_binding(&binding, rows)?.into_rows();
         let (committed_group, compression_state) =
-            backend.compress_root_outer_image(profile, outer_image)?;
+            backend.compress_root_image(profile, outer_image)?;
         let retained = super::state_policy::assemble_portable_hint(
             binding,
             super::CommitmentExecutionMode::Full,

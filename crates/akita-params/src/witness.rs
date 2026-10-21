@@ -523,6 +523,25 @@ impl WitnessLayout {
         }
     }
 
+    /// Append hiding-randomness spans after the tail of a test layout.
+    #[cfg(any(test, feature = "test-support"))]
+    #[must_use]
+    pub fn with_randomness_for_test(
+        mut self,
+        outer: Vec<(usize, Range<usize>)>,
+        opening: Range<usize>,
+    ) -> Self {
+        let end = outer
+            .iter()
+            .map(|(_, range)| range.end)
+            .chain([opening.end, self.tail_range.end])
+            .max()
+            .unwrap_or(self.tail_range.end);
+        self.randomness = WitnessRandomnessLayout { outer, opening };
+        self.tail_range.end = end;
+        self
+    }
+
     pub fn validate_internal_ranges(&self) -> Result<(), AkitaError> {
         let body_end = self
             .compression_alignment_ranges

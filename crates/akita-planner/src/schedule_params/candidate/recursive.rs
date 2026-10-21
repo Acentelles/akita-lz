@@ -503,6 +503,7 @@ impl RecursiveCandidateContext<'_, '_> {
                         let params = attach_recursive_setup_prefix(
                             setup_prefix.as_ref(),
                             policy.claim_ext_degree,
+                            request.hiding,
                             base_candidate.clone(),
                         )?;
                         if params.compression_sources_supported()? {
@@ -716,6 +717,7 @@ fn append_selective_l2_candidates(
             let params = attach_recursive_setup_prefix(
                 setup_prefix.as_ref(),
                 policy.claim_ext_degree,
+                request.hiding,
                 base_candidate.clone(),
             )?;
             if params.compression_sources_supported()? {

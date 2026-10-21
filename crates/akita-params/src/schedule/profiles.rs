@@ -103,7 +103,6 @@ pub struct GroupCommitPhaseParams {
     pub randomness_columns: usize,
 }
 
-#[allow(clippy::trivially_copy_pass_by_ref)]
 pub(crate) fn is_zero_width(value: &usize) -> bool {
     *value == 0
 }

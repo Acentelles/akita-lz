@@ -12,7 +12,7 @@ use jolt_algebra::{Prime128Offset275, Prime128OffsetA7F7, Prime32Offset99, Prime
 use jolt_crypto::lattice::required_randomness_columns;
 
 use crate::sis::SisModulusProfileId;
-use crate::FoldSchedule;
+use crate::{CommittedGroupParams, FoldSchedule, GroupOpenPhaseParams};
 
 /// Slack bits added on top of `2λ` when sizing hiding randomness.
 const HIDING_SLACK_BITS: usize = 8;
@@ -86,16 +86,58 @@ pub fn hiding_randomness_columns(
     Ok(columns)
 }
 
+/// Hiding-randomness columns of every B slice of `group`'s commitment.
+///
+/// The randomness hides one slice image and is drawn from the open alphabet
+/// of the opening that consumes the commitment, the alphabet that level's
+/// range check proves.
+///
+/// # Errors
+///
+/// Returns the sizing errors of [`hiding_randomness_columns`].
+pub fn b_randomness_columns(group: &GroupOpenPhaseParams) -> Result<usize, AkitaError> {
+    let outer = &group.profile.outer.matrix;
+    hiding_randomness_columns(
+        ImageShape {
+            rows: outer.output_rank(),
+            ring_dim: outer.ring_dimension(),
+            modulus: outer.sis_modulus_profile(),
+        },
+        DigitAlphabet {
+            log_basis: group.opening.log_basis_open,
+        },
+    )
+}
+
+/// Hiding-randomness columns of the D image `params`' level makes, drawn from
+/// that level's open alphabet.
+///
+/// # Errors
+///
+/// Returns the sizing errors of [`hiding_randomness_columns`].
+pub fn d_randomness_columns(params: &CommittedGroupParams) -> Result<usize, AkitaError> {
+    let open = params.open();
+    hiding_randomness_columns(
+        ImageShape {
+            rows: open.matrix.output_rank(),
+            ring_dim: open.matrix.ring_dimension(),
+            modulus: open.matrix.sis_modulus_profile(),
+        },
+        DigitAlphabet {
+            log_basis: open.digits.log_basis,
+        },
+    )
+}
+
 /// Recompute every hiding-randomness width of `schedule` and reject any
 /// mismatch, in release builds.
 ///
-/// Each level up to `cut_level` must carry exactly
-/// [`hiding_randomness_columns`] for its own group's B slices, at the outer
-/// digit alphabet, and for its D image, at its open alphabet. The outer
-/// alphabet may not exceed the open one, so the level's range check covers the
-/// randomness. Preceding groups (setup prefixes, committed programs, trusted
-/// advice) and every level after the cut carry none, and a hiding level uses
-/// one witness chunk.
+/// Each level up to `cut_level` must carry exactly [`b_randomness_columns`]
+/// for its own group's B slices and [`d_randomness_columns`] for its D
+/// image. Both are sized at the level's open alphabet, the one its range
+/// check proves. Preceding groups (setup prefixes, committed
+/// programs, trusted advice) and every level after the cut carry none, and a
+/// hiding level uses one witness chunk.
 ///
 /// # Errors
 ///
@@ -110,41 +152,16 @@ pub fn validate_hiding_randomness(
         let invalid = |what: &str| {
             AkitaError::InvalidSetup(format!("level {level} {what} hiding randomness"))
         };
-        let profile = &params.own_group().profile;
-        let outer = &profile.outer;
-        let open = params.open();
+        let own = params.own_group();
         let (expected_b, expected_d) = if level <= cut_level {
-            if outer.digits.log_basis > open.digits.log_basis
-                || params.witness_chunk.num_chunks != 1
-            {
-                return Err(invalid("cannot range-check its"));
+            if params.witness_chunk.num_chunks != 1 {
+                return Err(invalid("splits across witness chunks its"));
             }
-            (
-                hiding_randomness_columns(
-                    ImageShape {
-                        rows: outer.matrix.output_rank(),
-                        ring_dim: outer.matrix.ring_dimension(),
-                        modulus: outer.matrix.sis_modulus_profile(),
-                    },
-                    DigitAlphabet {
-                        log_basis: outer.digits.log_basis,
-                    },
-                )?,
-                hiding_randomness_columns(
-                    ImageShape {
-                        rows: open.matrix.output_rank(),
-                        ring_dim: open.matrix.ring_dimension(),
-                        modulus: open.matrix.sis_modulus_profile(),
-                    },
-                    DigitAlphabet {
-                        log_basis: open.digits.log_basis,
-                    },
-                )?,
-            )
+            (b_randomness_columns(own)?, d_randomness_columns(params)?)
         } else {
             (0, 0)
         };
-        if profile.randomness_columns != expected_b {
+        if own.profile.randomness_columns != expected_b {
             return Err(invalid("has the wrong B"));
         }
         if params.open_randomness_columns != expected_d {

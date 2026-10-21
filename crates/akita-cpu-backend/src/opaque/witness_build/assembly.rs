@@ -99,7 +99,7 @@ where
     }
     crate::arithmetic::requirements::warm_relation_ntt_cache(backend, prepared, level)?;
     let dims = level.role_dims();
-    let d_randomness = crate::hiding::sample_hiding_digits(
+    let d_randomness = backend.hiding_rng.sample(
         level
             .open_randomness_columns
             .checked_mul(dims.d_d())

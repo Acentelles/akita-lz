@@ -168,6 +168,7 @@ where
             route,
             compression: self.compression,
             state_policy: self.state_policy,
+            hiding_rng: None,
         })
     }
 }
