@@ -10,6 +10,14 @@ each payload mode needs. A physical row is one coordinate equation in its
 stated ring. We first compare the two payloads, then derive the compression
 chains that connect them to the semantic commitments.
 
+Compression here concerns public commitment payloads, not the complete
+next-level witness. Smaller payloads require additional private digits to
+prove their compression chains. The complete recursive witness also includes
+response, opening, and inner-commitment digits, plus any quotients required by
+the relation mode. A shorter folded response therefore does not guarantee a
+smaller complete witness; the root may expand it while reducing the relations
+to one recursive witness opening claim.
+
 The output is a set of ring equations. [Checking ring relations over a
 field](./ring-relation-checking.md) explains the next step: use either quotient
 lifting or quotient-free checking to turn those equations into field claims
@@ -149,9 +157,9 @@ finish defining the physical rows for compressed payloads.
 In compressed mode, the prover still computes the same semantic commitments,
 but does not transmit $\mathbf u$ or $\mathbf v_D$. Instead, it decomposes each
 one, recommits the resulting blocks through a two-map chain, and sends one
-fixed 128-byte terminal payload for each chain. In the illustrative q128
+fixed 256-byte terminal payload for each chain. In the illustrative q128
 example developed below, this replaces a 1024-byte semantic outer commitment
-by the 128-byte payload $p_F$. The two commitment relations follow parallel
+by the 256-byte payload $p_F$. The two commitment relations follow parallel
 chains:
 
 $$
@@ -233,7 +241,7 @@ commitment matrix maps a short witness to a semantic commitment consisting of
 a vector of ring elements. The raw realization places that complete
 commitment in the proof. The compressed realization instead recommits it using
 rank-one matrices over progressively smaller rings, producing a commitment
-chain whose terminal payload is exactly 128 bytes.
+chain whose terminal payload is exactly 256 bytes.
 
 ### Why recommit?
 
@@ -398,7 +406,9 @@ Module-SIS security bounds.
 
 The current protocol therefore uses a fixed, profile-specific ladder of
 exactly two certified rank-one maps. The ladder accepts a complete source of
-at most 8 KiB and terminates at exactly 128 bytes.
+at most 8 KiB and terminates at exactly 256 bytes. The terminal is 256 rather
+than 128 bytes because of the 169-bit SIS target: a 128-byte terminal would
+need a rank-one map wider than that target admits at its ring dimension.
 
 For the semantic commitment $\mathbf u\in R_{d_B}^{n_B}$, flatten its
 $n_B$ ring coordinates into $n_Bd_B$ field coefficients. Balanced base-$2$
@@ -466,27 +476,27 @@ The production compression dimensions are fixed by the modulus profile:
 
 | Profile | First ring $d_1$ | First image | Terminal ring $d_2$ | Terminal payload |
 |---|---:|---:|---:|---:|
-| q128 | $16$ | 256 bytes | $8$ | 128 bytes |
-| q64 | $32$ | 256 bytes | $16$ | 128 bytes |
-| q32 | $64$ | 256 bytes | $32$ | 128 bytes |
+| q128 | $32$ | 512 bytes | $16$ | 256 bytes |
+| q64 | $64$ | 512 bytes | $32$ | 256 bytes |
+| q32 | $128$ | 512 bytes | $64$ | 256 bytes |
 
 For the q128 example above, the complete chain is
 
 $$
 \underbrace{u\in R_{64}}_{1024\ \text{bytes}}
 \xrightarrow{\text{}}
-\underbrace{\boldsymbol\xi_{F,1}\in R_{16}^{512}}_{\text{base-2 digit blocks}}
+\underbrace{\boldsymbol\xi_{F,1}\in R_{32}^{256}}_{\text{base-2 digit blocks}}
 \overset{\mathbf F_1}{\longrightarrow}
-\underbrace{u^{(1)}\in R_{16}}_{256\ \text{bytes}}
+\underbrace{u^{(1)}\in R_{32}}_{512\ \text{bytes}}
 \xrightarrow{\text{}}
-\underbrace{\boldsymbol\xi_{F,2}\in R_8^{256}}_{\text{base-2 digit blocks}}
+\underbrace{\boldsymbol\xi_{F,2}\in R_{16}^{256}}_{\text{base-2 digit blocks}}
 \overset{\mathbf F_2}{\longrightarrow}
-\underbrace{p_F\in R_8}_{128\ \text{bytes}}.
+\underbrace{p_F\in R_{16}}_{256\ \text{bytes}}.
 $$
 
 The widths count the small-ring elements needed to hold all balanced base-$2$
-digits: $w_1=64\cdot128/16=512$ and
-$w_2=16\cdot128/8=256$.
+digits: $w_1=64\cdot128/32=256$ and
+$w_2=32\cdot128/16=256$.
 
 The schedule's payload mode determines whether these chains are present at a
 particular recursive level, according to the planner-selected transition
@@ -681,10 +691,11 @@ page.
    the commitment hint. It retains their quotient rows when the consuming
    fold uses quotient lifting.
 2. **Build the fold-side objects.**
-   [`RingRelationProver::new`](https://github.com/LayerZero-Labs/akita/blob/main/crates/akita-prover/src/protocol/ring_relation.rs)
+   [`RingRelationProver::prepare`](https://github.com/LayerZero-Labs/akita/blob/main/crates/akita-prover/src/protocol/ring_relation.rs)
+   coordinates public opening payloads and fold challenges. The CPU backend
    decomposes the position-folded values into $\hat{\mathbf e}$, computes
-   $\mathbf v_D=\mathbf D\hat{\mathbf e}$, samples the fold challenges, and
-   builds $\mathbf z$. In compressed mode,
+   $\mathbf v_D=\mathbf D\hat{\mathbf e}$, and retains the accepted response
+   $\mathbf z$ behind a fold handle. In compressed mode,
    [`materialize_compression_witness`](https://github.com/LayerZero-Labs/akita/blob/main/crates/akita-cpu-backend/src/opaque/witness_build/compression_witness.rs)
    combines the retained $\mathbf F$ material with a newly computed
    $\mathbf H$ chain for $\mathbf v_D$, producing the terminal payload $p_H$
@@ -773,21 +784,21 @@ compressed: assemble_compressed_relation_rhs(p_F, p_H)
 
 [`RingRelationInstance`](https://github.com/LayerZero-Labs/akita/blob/main/crates/akita-types/src/proof/ring_relation.rs)
 is the common relation-statement carrier constructed independently by the
-prover and verifier. Its statement fields are verifier-reconstructible; the
-prover may additionally retain a private intermediate needed while preparing
-its witness:
+prover and verifier. Its public fields are verifier-reconstructible. In
+compressed mode, private commitment intermediates remain inside the CPU backend:
 
 | Field or accessor | Mathematical meaning |
 |---|---|
-| `group_challenges()[0]` | fold challenges $c_b$ |
+| `group_ambient_a_challenges(0)` | fold challenges $c_b$ in the A ring; embedded from the challenge subring for packing |
 | `group_ring_multiplier_point(0)` | ring multipliers used by the physical consistency row |
 | `opening_batch()` | authenticated group and claim geometry |
 | `role_dims()` | native $\mathbf A/\mathbf B/\mathbf D$ ring dimensions |
 | `rhs()` in raw mode | $[0\mid\mathbf 0_A\mid\mathbf u\mid\mathbf v_D]$ in the basic setting |
 | `rhs()` in compressed mode | zero ordinary and first-map targets, followed by terminal $p_F,p_H$ targets |
-| `v()` in raw mode | public $\mathbf v_D=\mathbf D\hat{\mathbf e}$ |
-| `v()` in the compressed prover instance | the privately computed $\mathbf v_D$, retained locally after constructing the $\mathbf H$ chain |
-| `v()` in compressed verifier replay | empty; the verifier uses $p_H$ rather than reconstructing $\mathbf v_D$ |
+
+Raw replay includes the public $\mathbf v_D$ in `rhs()`. Compressed replay
+uses $p_H$ instead; the privately computed $\mathbf v_D$ remains in the CPU
+witness-build state and is not a field of the public relation instance.
 
 Full opening points are not owned by `RingRelationInstance`. They are prepared
 separately by the scheduled opening method. The verifier consumes evaluation
@@ -807,20 +818,22 @@ orchestration cannot inspect or transport it. In the basic setting, its private
 
 | Field | Mathematical meaning |
 |---|---|
-| `z_folded_rings` | folded response $\mathbf z$, before decomposition into $\hat z$ |
-| `e_folded` | recomposed position-folded rings $E_b$ |
+| `fold` | accepted CPU fold handle retaining the centered response coefficients and its challenges |
+| `folded_opening` | method-selected opening state: the $E_b$ rings for evaluation trace, or the packed fold product for coefficient packing |
 | `e_hat` | opening digits $\hat{\mathbf e}$ |
-| `hint` | semantic inner rows, plus retained $\mathbf F$ stages for compressed payloads and quotients when required by the relation mode |
+| `inner_relation` | retained semantic inner rows used to reconstruct $\hat{\mathbf t}$ |
+| `role_dims` | native A, B, and D dimensions for the group |
 
 The
 [`PortableCommitmentHandle`](https://github.com/LayerZero-Labs/akita/blob/main/crates/akita-cpu-backend/src/commitment/portable.rs)
 does not store a materialized $\hat{\mathbf t}$ or a separate copy of
 $\mathbf u$. `cpu_recursive_witness_build` derives $\hat{\mathbf t}$ from its semantic
 inner rows. At the aggregate level, `RingRelationWitness::compression` holds
-the optional materialized $\mathbf F/\mathbf H$ chains used by this fold. The
-quotient output is computed afterward only in quotient-lift mode. Reduced
-evaluation places only the ordinary and optional compression digits according
-to `WitnessLayout`.
+the optional materialized $\mathbf F/\mathbf H$ chains used by this fold.
+`RingRelationWitness::d_quotients` records whether the shared D relation has
+quotient data. Quotient-lift assembly includes ordinary and compression
+quotient digits. Reduced evaluation places only the ordinary and optional
+compression digits. `WitnessLayout` defines their exact ranges.
 
 ### Verifier reconstruction
 

@@ -43,8 +43,8 @@ Check these causes in order:
    layout. A catalog row may need to be generated and shipped.
 
 See [Configuration and planning](../how/configuration.md) for catalog ownership
-and [Precommitting under a recursive
-configuration](./commitment-api.md#precommitting-under-a-recursive-configuration)
+and [Recursive grouped
+openings](./commitment-api.md#recursive-grouped-openings)
 for the grouped setup pattern.
 
 ## Equality table allocation is rejected
@@ -73,9 +73,7 @@ registry. It does not store backend NTT caches.
 Cache entries use versioned filenames, and prefix registry names include a
 digest of the setup requirements: the capacity bound and the sorted setup
 prefix slot ids. Old, truncated, corrupt, or mismatched entries
-are not accepted as current setup. Loading recomputes the cached setup prefix
-commitments against the public matrix and rewrites a registry file whose
-commitments differ. Akita logs the load failure and regenerates
+are not accepted as current setup. Akita logs the load failure and regenerates
 the setup. If saving the replacement fails, Akita logs a warning and continues
 with the in-memory setup.
 

@@ -255,19 +255,10 @@ provenance or move setup work into per-proof verification.
 
 The public-matrix disk cache checks its identity, shape, field encoding, and
 every coefficient against the deterministic stream when it is loaded. The
-prover-side setup-prefix registry cache is recomputed against that matrix when
-it is loaded, and a cache file whose commitments differ is rewritten.
-
-A verifier setup decoded from bytes checks its registry's encoding, identity,
-and geometry only, so its registry is structurally validated, not provenance
-validated. `AkitaVerifierSetup` records this as an in-process, non-serialized
-authentication marker that decoding and `from_parts` leave unset. Verifiers do
-not admit schedule rows that offload setup contributions unless the marker is
-set. The marker is set by recomputation (`akita_setup::authenticate_verifier_setup_prefixes`,
-or derivation from a backend-validated prover setup) or explicitly by a caller
-that authenticated the registry against its own trust root
-(`assume_prefix_registry_authenticated`). The recursion guest uses the explicit
-form, because its setup is public input that the outer verifier must pin.
+setup-prefix registry checks encoding, identity, geometry, and required-slot
+completeness. It does not currently recompute each stored commitment or verify
+a derivation certificate. The current registry is therefore structurally
+validated, not fully provenance validated.
 
 The compact `ValidatedVerifierSetup` boundary and certificate chain are
 explicitly deferred. Until they exist, a deployment that loads a persisted
@@ -751,12 +742,23 @@ commitment that completed before the proof call.
 The cache MUST support covering-prefix lookup: a slot of length `m` covers any
 request `n <= m` with the same keys. Growth SHOULD transform only the missing
 suffix. Replacement by a larger immutable snapshot is acceptable; an existing
-borrower may finish on the older covering snapshot. Concurrent first use or
-growth MUST be single-flight per cache key.
-Failed initialization is not resident cache state. A failed cell MUST be
-removed only when it is still the map entry for that key; callers that waited
-on a failed covering cell retry their own exact request. Thus an oversized or
-otherwise rejected warm cannot poison a later valid smaller prefix.
+borrower may finish on the older covering snapshot.
+
+The map holds only finished values; no caller waits on another caller's
+in-flight build. A build MUST run outside the cache lock, because it may
+re-enter the cache (directly, or through a Rayon task it steals while joining)
+for the same or an overlapping key. Overlapping cold acquisitions of one key
+may therefore build duplicate candidates. Publication happens under the lock
+after a second lookup: the first successful covering value wins, and a caller
+whose candidate lost, or whose smaller build finished after a larger covering
+value was published, returns the published value and drops its own after the
+lock is released. Every candidate is a pure function of the prepared setup and
+the key, so the winner is indistinguishable from the losers.
+
+Failed initialization is not resident cache state. A build that returns an
+error or panics publishes nothing and leaves the key retriable. Thus an
+oversized or otherwise rejected warm cannot poison a later valid smaller
+prefix.
 
 #### Operation clusters
 

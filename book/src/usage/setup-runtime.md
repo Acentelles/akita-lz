@@ -34,7 +34,7 @@ polynomial count across the final and all precommitted groups in one opening
 batch that the host plans to support.
 
 ```rust
-let catalog = TrustedScheduleCatalog::<Config>::from_artifact_bytes(&artifact_bytes)?;
+let catalog = TrustedScheduleCatalog::<Config>::from_artifact_bytes(&artifact_bytes, akita_params::ChunkedWitnessCfg::default_non_chunked())?;
 let scheme = AkitaCommitmentScheme::<Config>::new(catalog);
 let setup = scheme.setup_prover(
     max_num_vars,
@@ -137,13 +137,7 @@ recursive setup proof does not need the same direct prefix in the verifier hot
 path.
 
 The complete setup prefix commitment registry remains part of verifier setup.
-Those commitments authenticate the offloaded public setup contributions, so the
-registry itself must be authentic. A verifier setup derived from a prover setup
-in the same process inherits the backend's recomputation; one decoded from bytes
-does not, and verifiers reject offloading rows until its registry is recomputed
-or authenticated against a trusted digest. With `disk-persistence`, the loader
-recomputes a cached registry against the public matrix and rewrites a cache file
-that disagrees.
+Those commitments authenticate the offloaded public setup contributions.
 
 ## Reuse and release CPU caches
 

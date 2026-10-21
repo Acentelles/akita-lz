@@ -397,12 +397,9 @@ fn verifier_setup_with_alternate_full_prefix(
             .insert(replacement)
             .expect("insert verifier slot");
     }
-    // Authenticated on purpose: the caller checks that the successor opening,
-    // not setup admission, rejects a commitment to a different full prefix.
     Some(
         AkitaVerifierSetup::from_parts(verifier_setup.expanded().clone(), prefix_slots)
-            .expect("alternate verifier setup")
-            .assume_prefix_registry_authenticated(),
+            .expect("alternate verifier setup"),
     )
 }
 

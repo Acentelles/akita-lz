@@ -14,9 +14,6 @@ Akita has three main trust boundaries:
 Validated deserialization is the default for bytes that cross a trust boundary.
 Unchecked deserialization is reserved for internal buffers whose producer and shape have already been validated in the same trust domain.
 
-Validated deserialization of a verifier setup rederives the public matrix from its seed, but it checks the setup-prefix registry only structurally.
-Those prefix commitments are the only link between a setup-offloading schedule row and the public matrix, so verifiers admit such rows only when the registry is authenticated: recomputed from the public stream (`akita_setup::authenticate_verifier_setup_prefixes`, or a verifier setup derived in-process from a backend-validated prover setup), or bound to an external trust root the deployment controls and asserted with `AkitaVerifierSetup::assume_prefix_registry_authenticated`.
-
 ## Verifier No-Panic Boundary
 
 Verifier-facing execution must be panic-free for malformed public inputs.
@@ -44,6 +41,24 @@ Reviewers should treat these changes as security-sensitive:
 Unsafe code is allowed only where it buys concrete performance or layout control that safe Rust cannot express cleanly.
 Every unsafe block should have a local safety argument that names the invariant being relied on.
 Verifier-facing crates should avoid unsafe code unless a spec explicitly justifies it.
+
+### Trusted in-place setup views
+
+A RISC-V guest verifier reads its setup from its own program image. Copying and
+range-checking that matrix would dominate the guest's cost, so three paths view
+trusted, `'static`, little-endian setup bytes in place:
+
+- `AkitaDeserialize::borrow_many_trusted`, and the `borrow_trusted` methods built
+  on it, reinterpret field words as elements. They check length and alignment.
+  They take a `TrustedBytes` token: canonical words are the caller's
+  obligation, and constructing the token is the one `unsafe` step.
+- `view_riscv64_scalar_q128_cache` reinterprets the residue rows of a prepared
+  NTT cache. Residue ranges are a trusted-input assumption stated on
+  `TrustedTerminalCache::View`.
+- The bulk prime-field decoder reads into initialized element storage through
+  one byte view. It then applies the single-element rule to every word.
+
+Proof bytes never reach these paths.
 
 ## Resource Limits
 

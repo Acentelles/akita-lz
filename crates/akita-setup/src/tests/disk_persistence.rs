@@ -163,15 +163,19 @@ fn combined_recursive_prefix_registry_persists_and_serves_each_family() {
             .stack_size(64 * 1024 * 1024)
             .spawn(|| {
                 let onehot = SetupRequirements::from_catalog::<OneHotRec>(
-                    &akita_config::test_support::workspace_schedule_catalog::<OneHotRec>()
-                        .expect("recursive one-hot catalog"),
+                    &akita_config::test_support::workspace_schedule_catalog::<OneHotRec>(
+                        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+                    )
+                    .expect("recursive one-hot catalog"),
                     MAX_VARS,
                     MAX_POLYS,
                 )
                 .expect("recursive one-hot requirements");
                 let multichunk = SetupRequirements::from_catalog::<MultiChunkRec>(
-                    &akita_config::test_support::workspace_schedule_catalog::<MultiChunkRec>()
-                        .expect("recursive multi-chunk catalog"),
+                    &akita_config::test_support::workspace_schedule_catalog::<MultiChunkRec>(
+                        akita_params::MultiChunkProfileId::W8R2.cfg(),
+                    )
+                    .expect("recursive multi-chunk catalog"),
                     MAX_VARS,
                     MAX_POLYS,
                 )
@@ -228,12 +232,13 @@ fn combined_recursive_prefix_registry_persists_and_serves_each_family() {
                 // Load directly: `new_prover_setup` would hide a failed load by
                 // regenerating the same deterministic material.
                 let loaded = load_prover_setup::<TestF>(&combined)
-                    .expect("complete combined cache must load without rewriting");
+                    .expect("complete combined cache must load without regeneration");
                 assert_eq!(loaded.expanded, generated.expanded);
                 assert_eq!(loaded.prefix_slots, generated.prefix_slots);
 
-                // One backend imports each family's own slots from the loaded
-                // registry, which the loader recomputed against the matrix.
+                // One backend imports each family's own slots from the decoded
+                // registry. Decoded artifacts are not backend-validated, so
+                // import recomputes each one and compares it.
                 let backend =
                     akita_cpu_backend::CpuBackend::<TestF, TestF>::new(loaded.expanded.clone())
                         .unwrap();
@@ -279,8 +284,10 @@ fn altered_prefix_registry_cache_is_recomputed_and_rewritten() {
             .stack_size(64 * 1024 * 1024)
             .spawn(|| {
                 let requirements = SetupRequirements::from_catalog::<Recursive>(
-                    &akita_config::test_support::workspace_schedule_catalog::<Recursive>()
-                        .expect("recursive dense catalog"),
+                    &akita_config::test_support::workspace_schedule_catalog::<Recursive>(
+                        akita_params::ChunkedWitnessCfg::default_non_chunked(),
+                    )
+                    .expect("recursive dense catalog"),
                     26,
                     1,
                 )
@@ -339,10 +346,16 @@ fn altered_prefix_registry_cache_is_recomputed_and_rewritten() {
                 let capacity = SetupMatrixCapacity {
                     num_field_elements: loaded.expanded.shared_matrix().num_field_elements(),
                 };
-                assert!(loaded
-                    .to_verifier_setup(capacity)
-                    .expect("verifier setup")
-                    .prefix_registry_authenticated());
+                assert_eq!(
+                    loaded
+                        .to_verifier_setup(capacity)
+                        .expect("verifier setup")
+                        .prefix_slots(),
+                    generated
+                        .to_verifier_setup(capacity)
+                        .expect("verifier setup")
+                        .prefix_slots(),
+                );
 
                 remove_cached();
             })

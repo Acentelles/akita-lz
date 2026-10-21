@@ -6,8 +6,6 @@
 
 mod recursive_prefixes;
 
-pub use recursive_prefixes::authenticate_verifier_setup_prefixes;
-
 use akita_config::SetupRequirements;
 use akita_cpu_backend::AkitaProverSetup;
 #[cfg(feature = "disk-persistence")]
@@ -469,10 +467,8 @@ pub(crate) fn load_prover_setup<
         expanded: Arc::new(expanded),
         prefix_slots,
     };
-    // The cached registry is not trusted: its file can be stale, corrupted, or
-    // edited, and verifier setups derived from it would carry its commitments.
-    // Recompute the required slots from the validated matrix, and rewrite the
-    // cache when it disagrees.
+    // Cached commitments must be derived from the validated matrix before a
+    // verifier setup can inherit them.
     let cached = std::mem::replace(
         &mut setup.prefix_slots,
         SetupPrefixProverRegistry::new(setup.expanded.descriptor().setup_seed.clone()),
