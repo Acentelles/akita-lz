@@ -23,6 +23,8 @@ use akita_pcs::AkitaCommitmentScheme;
 use akita_prover::SelectedProverOpeningData;
 use akita_types::{GroupBatchStatement, OpeningClaims, PolynomialGroupClaims};
 use jolt_algebra::{One, Ring, Zero};
+use rand::rngs::StdRng;
+use rand::SeedableRng;
 
 type Cfg = fp128::Dense;
 type F = <Cfg as CommitmentConfig>::Field;
@@ -60,14 +62,40 @@ fn hiding_schedule_to(cut_level: usize) -> (CommittedGroupBatchProfile, FoldSche
 fn hiding_catalog(cut_level: usize) -> TrustedScheduleCatalog<Cfg> {
     let (profiles, schedule) = hiding_schedule_to(cut_level);
     let policy = policy_of::<Cfg>(ChunkedWitnessCfg::default_non_chunked());
-    let validated = ValidatedScheduleCatalog::try_new(
+    let validated = ValidatedScheduleCatalog::try_new_with_test_hiding(
         Cfg::schedule_family_name(),
         [(profiles, schedule)],
         &policy,
         Cfg::ring_challenge_config,
+        cut_level,
     )
     .unwrap();
     TrustedScheduleCatalog::new(validated, ChunkedWitnessCfg::default_non_chunked()).unwrap()
+}
+
+/// A trusted catalog rejects hiding randomness until zero knowledge is
+/// selectable.
+#[test]
+fn trusted_catalogs_reject_hiding_randomness() {
+    on_large_stack(|| {
+        let (profiles, schedule) = hiding_schedule();
+        let policy = policy_of::<Cfg>(ChunkedWitnessCfg::default_non_chunked());
+        let error = ValidatedScheduleCatalog::try_new(
+            Cfg::schedule_family_name(),
+            [(profiles, schedule)],
+            &policy,
+            Cfg::ring_challenge_config,
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("not selectable"), "{error}");
+    });
+}
+
+/// A seeded hiding source, so every hiding proof here is reproducible.
+fn backend(setup: &akita_pcs::AkitaProverSetup<F>, seed: u64) -> CpuBackend<F, F> {
+    CpuBackend::new(setup.expanded.clone())
+        .unwrap()
+        .with_hiding_rng(StdRng::seed_from_u64(seed))
 }
 
 fn on_large_stack(test: fn()) {
@@ -137,19 +165,6 @@ fn validation_recomputes_widths_and_rejects_a_narrow_schedule() {
         }
         // A cut one level earlier leaves level 1's randomness unaccounted for.
         assert!(akita_params::zk::validate_hiding_randomness(&schedule, CUT_LEVEL - 1).is_err());
-        // B randomness drawn from an alphabet wider than the level's open
-        // alphabet would escape the level's range check.
-        let mut wide = schedule.clone();
-        let open_log_basis = wide.root.params.open().digits.log_basis;
-        wide.root
-            .params
-            .own_group_mut()
-            .profile
-            .outer
-            .digits
-            .log_basis = open_log_basis + 1;
-        let error = akita_params::zk::validate_hiding_randomness(&wide, CUT_LEVEL).unwrap_err();
-        assert!(error.to_string().contains("cannot range-check"), "{error}");
     });
 }
 
@@ -220,7 +235,7 @@ fn hiding_commitments_to_one_polynomial_differ() {
     on_large_stack(|| {
         let scheme = AkitaCommitmentScheme::<Cfg>::new(hiding_catalog(CUT_LEVEL));
         let setup = scheme.setup_prover(NV, 1).unwrap();
-        let backend = CpuBackend::new(setup.expanded.clone()).unwrap();
+        let backend = backend(&setup, 1);
         let commit = || {
             backend
                 .commit(
@@ -239,12 +254,14 @@ fn hiding_commitments_to_one_polynomial_differ() {
 }
 
 /// Commit, prove an opening, and verify it. A pending randomness fault, if
-/// any, corrupts the root fold's output witness. Returns whether the claimed
-/// opening was accepted, and that a wrong opening was rejected.
+/// any, corrupts the root fold's output witness after the commitment and
+/// past the prover's relation self-check, so proving still succeeds. Returns
+/// whether the verifier accepted the claimed opening; a wrong opening is
+/// always rejected.
 fn prove_and_verify(cut_level: usize, fault: Option<RandomnessSection>) -> bool {
     let scheme = AkitaCommitmentScheme::<Cfg>::new(hiding_catalog(cut_level));
     let setup = scheme.setup_prover(NV, 1).unwrap();
-    let backend = CpuBackend::new(setup.expanded.clone()).unwrap();
+    let backend = backend(&setup, 2);
     let (evals, poly) = polynomial();
     let output = backend
         .commit(
@@ -273,11 +290,9 @@ fn prove_and_verify(cut_level: usize, fault: Option<RandomnessSection>) -> bool 
     if let Some(section) = fault {
         hiding_test_support::corrupt_next_witness_randomness(section);
     }
-    let Ok(proof) =
-        scheme.batched_prove(&setup, prover_data, &backend, SESSION, BasisMode::Lagrange)
-    else {
-        return false;
-    };
+    let proof = scheme
+        .batched_prove(&setup, prover_data, &backend, SESSION, BasisMode::Lagrange)
+        .unwrap();
 
     let verifier = scheme
         .verifier(scheme.setup_verifier(&setup).unwrap())

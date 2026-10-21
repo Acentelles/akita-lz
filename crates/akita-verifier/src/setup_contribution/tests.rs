@@ -1224,3 +1224,158 @@ fn single_group_plan_supports_multi_chunk_weights() {
     let got = scan.evaluate_direct::<F>(&setup).unwrap();
     assert_eq!(got, expected);
 }
+
+/// A multi-claim unsliced group with B and D hiding randomness: the Stage-3
+/// setup-index MLE, built from compacted message tensors plus the randomness
+/// tensors, matches the dense setup-index weights.
+#[test]
+fn multi_claim_hiding_randomness_setup_index_mle_matches_dense_weights() {
+    const B_RANDOMNESS: usize = 3;
+    const D_RANDOMNESS: usize = 2;
+    let num_claims = 2;
+    let num_live_blocks = 2;
+    let depth_open = 2;
+    let depth_commit = 2;
+    let depth_fold = 2;
+    let num_positions_per_block = 8;
+    let n_a = 2;
+    let n_b = 2;
+    let n_d = 2;
+    let log_basis = 4;
+    let z_len = num_positions_per_block * depth_commit * depth_fold * TEST_D;
+    let e_len = num_claims * depth_open * num_live_blocks * TEST_D;
+    let t_len = n_a * num_claims * depth_commit * num_live_blocks * TEST_D;
+    let unit = WitnessUnitLayout::new_for_test(
+        0,
+        0,
+        0,
+        num_live_blocks,
+        0..z_len,
+        z_len..z_len + e_len,
+        akita_params::RelationRowGeometry::native(TEST_D).unwrap(),
+        z_len + e_len..z_len + e_len + t_len,
+    );
+    let mut cursor = z_len + e_len + t_len;
+    let r_rows = (0..n_d)
+        .map(|_| {
+            let range = cursor..cursor + depth_fold * TEST_D;
+            cursor = range.end;
+            WitnessQuotientRowLayout::new_for_test(
+                akita_params::RelationRowGeometry::native(TEST_D).unwrap(),
+                range,
+            )
+        })
+        .collect();
+    let outer_span = cursor..cursor + B_RANDOMNESS * TEST_D;
+    let opening_span = outer_span.end..outer_span.end + D_RANDOMNESS * TEST_D;
+    let layout = WitnessLayout::new_for_test(vec![unit], r_rows, depth_fold)
+        .with_randomness_for_test(vec![(0, outer_span)], opening_span);
+
+    let tau1 = (0..4)
+        .map(|idx| test_scalar(31 + idx as u128))
+        .collect::<Vec<_>>();
+    let mut inputs = test_inputs(
+        n_a,
+        n_b,
+        n_d,
+        num_claims,
+        num_live_blocks,
+        num_positions_per_block,
+        depth_open,
+        depth_commit,
+        depth_fold,
+        log_basis,
+        EqPolynomial::evals(&tau1).unwrap(),
+    );
+    let lp = &mut inputs.level_params;
+    let geometry = akita_params::CommitmentSliceGeometry::try_new(
+        akita_params::CommitmentSliceCount::ONE,
+        num_live_blocks,
+        num_claims,
+        n_a,
+        depth_commit,
+        TEST_D,
+        TEST_D,
+    )
+    .unwrap()
+    .with_randomness_columns(B_RANDOMNESS)
+    .unwrap();
+    let outer = lp.outer().matrix;
+    lp.own_group_mut().profile.randomness_columns = B_RANDOMNESS;
+    lp.own_group_mut().profile.outer.matrix = akita_params::OuterCommitMatrixParams::new_unchecked(
+        outer.security_policy(),
+        outer.sis_table_key().table_digest,
+        outer.sis_modulus_profile(),
+        outer.output_rank(),
+        geometry.physical_input_width(),
+        outer.coeff_linf_bound(),
+        TEST_D,
+    );
+    let open = lp.open().matrix;
+    lp.open_randomness_columns = D_RANDOMNESS;
+    lp.open_matrix = akita_params::OpenCommitMatrixParams::new_unchecked(
+        open.security_policy(),
+        open.sis_table_key().table_digest,
+        open.sis_modulus_profile(),
+        open.output_rank(),
+        num_claims * num_live_blocks * depth_open + D_RANDOMNESS,
+        open.coeff_linf_bound(),
+        TEST_D,
+    );
+    let fold_gadget = gadget_row_scalars::<F>(depth_fold, log_basis);
+    let relation_address_geometry = akita_params::RelationAddressGeometry::new(
+        CommitmentRingDims::uniform(TEST_D),
+        TEST_D,
+        layout.live_coeff_len(),
+    )
+    .unwrap();
+    let full_vec_randomness = (0..relation_address_geometry.relation_lane_variable_count())
+        .map(|idx| test_scalar(101 + idx as u128))
+        .collect::<Vec<_>>();
+    let groups = vec![SetupContributionGroupInputs {
+        group_id: 0,
+        num_claims,
+        depth_fold,
+        a_row_start: 1,
+        b_row_start: 1 + n_a,
+    }];
+    let plan = SetupContributionPlan::prepare::<F>(
+        &inputs.level_params,
+        &inputs.opening_batch,
+        1,
+        inputs.eq_tau1.clone(),
+        &layout,
+        &groups,
+        PreparedRelationAddress::new(&full_vec_randomness).unwrap(),
+        Some(&fold_gadget),
+        relation_address_geometry,
+    )
+    .unwrap();
+    let group = &plan.groups()[0];
+    assert_eq!(group.physical_b().randomness_tensors().len(), 1);
+    assert_eq!(
+        group.d_column_len(),
+        group.d_col_range().len() + D_RANDOMNESS
+    );
+
+    let alpha = test_scalar(3);
+    let setup_idx_bits = plan.required().next_power_of_two().trailing_zeros() as usize;
+    let rho_setup_idx = (0..setup_idx_bits)
+        .map(|index| test_scalar(1301 + index as u128))
+        .collect::<Vec<_>>();
+    let dense_mle = plan
+        .materialize_setup_index_weights(alpha)
+        .unwrap()
+        .into_iter()
+        .enumerate()
+        .fold(F::zero(), |acc, (index, weight)| {
+            acc + eq_eval_at_index(&rho_setup_idx, index) * weight
+        });
+    assert_eq!(
+        SetupIndexWeightMle::new(&plan)
+            .unwrap()
+            .evaluate(&rho_setup_idx, alpha)
+            .unwrap(),
+        dense_mle
+    );
+}
