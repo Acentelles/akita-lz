@@ -26,6 +26,8 @@ mod transcript_grinding_plan;
 pub mod transcript_site;
 pub mod wire_limits;
 pub mod witness;
+#[cfg(feature = "zk")]
+pub mod zk;
 pub use commitment_slicing::{CommitmentSliceCount, CommitmentSliceGeometry};
 pub use compression::{
     compression_ring_dimensions, CommitmentPayloadGeometry, CommitmentPayloadMode,
@@ -112,7 +114,8 @@ pub use witness::{
     dyadic_block_ranges, grouped_witness_body_coefficients, ChunkedWitnessCfg,
     CompressionWitnessLayerLayout, CompressionWitnessSpan, MultiChunkProfileId,
     QuotientCoefficientBreakdown, RelationQuotientLayout, RelationQuotientPlan, WitnessChunkShape,
-    WitnessLayout, WitnessQuotientRowLayout, WitnessUnitLayout, MAX_WITNESS_CHUNKS,
+    WitnessLayout, WitnessQuotientRowLayout, WitnessRandomnessLayout, WitnessUnitLayout,
+    MAX_WITNESS_CHUNKS,
 };
 
 #[cfg(any(test, feature = "test-support"))]
