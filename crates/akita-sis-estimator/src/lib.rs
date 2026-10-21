@@ -13,6 +13,8 @@ pub mod cost;
 pub mod error;
 pub mod euclidean;
 pub mod euclidean_width_table;
+#[cfg(feature = "labinius-sis")]
+pub mod labinius_width_table;
 pub mod lattice;
 pub mod math;
 pub mod numeric;

@@ -1,0 +1,45 @@
+[package]
+name = "akita-labinius-verifier"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.95"
+license = "Apache-2.0 OR MIT"
+description = "Opt-in LaBinius root reduction verifier for Akita"
+repository = "https://github.com/LayerZero-Labs/akita"
+readme = "../../README.md"
+
+[dependencies]
+akita-algebra = { version = "0.1.0", path = "../akita-algebra" }
+rayon = { version = "1.10", optional = true }
+akita-error = { version = "0.1.0", path = "../akita-error" }
+jolt-transcript = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false, features = [
+  "transcript-blake2b",
+] }
+jolt-crypto = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false, features = [
+  "lattice",
+] }
+jolt-sumcheck = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false }
+akita-challenges = { version = "0.1.0", path = "../akita-challenges", default-features = false }
+akita-params = { version = "0.1.0", path = "../akita-params", default-features = false }
+akita-types = { version = "0.1.0", path = "../akita-types", default-features = false, optional = true }
+jolt-algebra = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false, features = [
+  "asm",
+  "solinas",
+] }
+
+[features]
+parallel = ["dep:rayon", "akita-algebra/parallel", "jolt-algebra/parallel"]
+labinius = [
+  "akita-algebra/labinius-binary",
+  "akita-algebra/labinius-trinomial",
+  "akita-challenges/labinius-challenges",
+  "akita-params/labinius-sis",
+  "dep:akita-types",
+  "akita-types/labinius-trinomial",
+]
+# Run the tests on Keccak instead of Blake2b; the protocol is generic over
+# the sponge.
+keccak-test-sponge = ["jolt-transcript/transcript-keccak"]
+
+[lints]
+workspace = true

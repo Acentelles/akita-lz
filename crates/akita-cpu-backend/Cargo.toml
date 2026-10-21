@@ -52,6 +52,10 @@ akita-verifier = { version = "0.1.0", path = "../akita-verifier", default-featur
 [features]
 response-model-diagnostics = ["akita-prover/response-model-diagnostics"]
 disk-persistence = []
+labinius-trinomial = [
+  "akita-algebra/labinius-trinomial",
+  "akita-types/labinius-trinomial",
+]
 parallel = [
   "akita-prover/parallel",
   "dep:rayon",
@@ -78,6 +82,11 @@ harness = false
 [[bench]]
 name = "root_kernels"
 harness = false
+
+[[bench]]
+name = "trinomial_relation"
+harness = false
+required-features = ["labinius-trinomial"]
 
 [[bench]]
 name = "quotient_kernels"

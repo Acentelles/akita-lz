@@ -207,7 +207,10 @@ fn family_label(family: AkitaModulusProfileId) -> &'static str {
     match family {
         AkitaModulusProfileId::Q32Offset99 => "q32",
         AkitaModulusProfileId::Q64Offset59 => "q64",
+        #[cfg(feature = "labinius-sis")]
+        AkitaModulusProfileId::Q25Plus14561 => "q25-labinius",
         AkitaModulusProfileId::Q128OffsetA7F7 => "q128",
+        AkitaModulusProfileId::Q128Offset275 => "q128_offset275",
     }
 }
 

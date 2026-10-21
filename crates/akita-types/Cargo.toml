@@ -35,6 +35,7 @@ parallel = [
   "jolt-algebra/parallel",
   "jolt-crypto/parallel",
 ]
+labinius-trinomial = ["akita-algebra/labinius-trinomial"]
 
 [dev-dependencies]
 akita-params = { version = "0.1.0", path = "../akita-params", default-features = false, features = [
@@ -49,6 +50,11 @@ rand = "0.8"
 [[bench]]
 name = "golomb_rice"
 harness = false
+
+[[bench]]
+name = "trinomial_setup"
+harness = false
+required-features = ["labinius-trinomial"]
 
 [lints]
 workspace = true

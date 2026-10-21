@@ -11,6 +11,7 @@ readme = "../../README.md"
 [dependencies]
 akita-error = { version = "0.1.0", path = "../akita-error" }
 akita-algebra = { version = "0.1.0", path = "../akita-algebra" }
+akita-challenges = { version = "0.1.0", path = "../akita-challenges", optional = true }
 jolt-crypto = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false, features = [
   "lattice",
 ] }
@@ -27,6 +28,11 @@ blake2 = "0.11.0"
 sha3 = "0.12.0"
 
 [features]
+labinius-sis = ["dep:akita-challenges", "akita-challenges/labinius-challenges"]
+# Selects the dev protocol: every wire-format change `dev` carries that `main`
+# does not, together. Off by default. Schedules priced for it live in
+# `artifacts/schedules-dev`. See docs/branches.md.
+dev-protocol = []
 test-support = []
 parallel = ["akita-algebra/parallel", "jolt-algebra/parallel"]
 

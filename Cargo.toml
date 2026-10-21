@@ -4,6 +4,7 @@ members = [
   "crates/akita-challenges",
   "crates/akita-config",
   "crates/akita-cpu-backend",
+  "crates/akita-metal",
   "crates/akita-error",
   "crates/akita-pcs",
   "crates/akita-serialization",
@@ -16,6 +17,10 @@ members = [
   "crates/akita-planner",
   "crates/akita-schedules",
   "crates/akita-sis-estimator",
+  "crates/akita-zk-prover",
+  "crates/akita-zk-verifier",
+  "crates/akita-labinius-verifier",
+  "crates/akita-labinius-prover",
 ]
 # `profile/akita-recursion/` is a standalone sub-workspace: it pins its own
 # `rust-toolchain.toml` (channel 1.95 + RISC-V targets) and applies Jolt's
@@ -112,3 +117,4 @@ jolt-poly = { path = "../jolt/.claude/worktrees/whiteout-dev/crates/jolt-poly" }
 jolt-transcript = { path = "../jolt/.claude/worktrees/whiteout-dev/crates/jolt-transcript" }
 jolt-sumcheck = { path = "../jolt/.claude/worktrees/whiteout-dev/crates/jolt-sumcheck" }
 jolt-crypto = { path = "../jolt/.claude/worktrees/whiteout-dev/crates/jolt-crypto" }
+jolt-metal = { path = "../jolt/.claude/worktrees/whiteout-dev/crates/jolt-metal" }

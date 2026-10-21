@@ -2,6 +2,7 @@
 
 mod eor_sites;
 pub mod extension_opening_reduction;
+mod field_digest;
 pub mod field_reduction;
 mod fold_sites;
 pub mod instance_descriptor;
@@ -9,6 +10,8 @@ mod l2_sites;
 pub mod ntt_cache;
 pub mod opening_claims;
 pub mod proof;
+#[cfg(feature = "labinius-trinomial")]
+mod relation_bridge;
 pub mod setup_contribution;
 mod stage1_sites;
 mod stage2_sites;
@@ -22,6 +25,7 @@ pub use extension_opening_reduction::{
     derive_tensor_extension_opening_claim_from_partials, tensor_equality_factor_eval_at_point,
     tensor_opening_split, tensor_reduction_claim_from_rows, tensor_row_partials_from_columns,
 };
+pub use field_digest::{field_digest, receive_field_digest, send_field_digest, FIELD_DIGEST_BYTES};
 pub use field_reduction::{
     check_trace_inner_product, dispatch_trace_inner_product_check, embed_ring_subfield_scalar,
     embed_ring_subfield_vector, embed_subfield, pack_tensor_base_lift_i8_digits, psi_embed,
@@ -88,11 +92,19 @@ pub(crate) use proof::{
     FoldLevelProof, NextWitnessBinding, PhysicalL2NormProof, SetupSumcheckProof,
     TerminalLevelProof,
 };
+#[cfg(feature = "labinius-trinomial")]
+pub use relation_bridge::{RelationCoefficientLayout, RelationCoefficientRole, TrinomialSign};
+#[cfg(feature = "labinius-trinomial")]
+pub use relation_bridge::{RelationPolynomial, RelationPolynomialKind};
 pub use setup_contribution::{
     checked_slice, ensure_setup_envelope, factor_aligned_role_tensors, project_role_tensors,
     role_projection_evaluation, role_tensors_are_aligned, shared_setup_fold_gadget,
     PhysicalBSetupPlan, PhysicalBWeightSegment, PhysicalBWeightTerm, PreparedRelationAddress,
     SetupContributionGroupInputs, SetupContributionGroupPlan, SetupContributionPlan,
+};
+#[cfg(feature = "labinius-trinomial")]
+pub use setup_contribution::{
+    PreparedTrinomialASetupWeights, TrinomialASetupView, TrinomialResponseLayout,
 };
 pub use stage1_sites::{stage1_child_claims, stage1_range_image};
 pub use stage2_sites::stage2_w_eval;

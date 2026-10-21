@@ -1,0 +1,51 @@
+[package]
+name = "akita-metal"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.95"
+license = "Apache-2.0 OR MIT"
+description = "Prover-only Metal kernels for the Akita polynomial commitment scheme"
+repository = "https://github.com/LayerZero-Labs/akita"
+readme = "../../README.md"
+
+# Metal is linked only on macOS, through jolt-metal. On every other target
+# this crate compiles against jolt-metal's uninhabited backend and
+# `AkitaMetal::new` reports `Unavailable`.
+[dependencies]
+# The one-hot kernel takes the CPU backend's one-hot sources directly.
+akita-cpu-backend = { version = "0.1.0", path = "../akita-cpu-backend", default-features = false }
+akita-types = { version = "0.1.0", path = "../akita-types", default-features = false }
+bytemuck = { version = "1.16", features = ["derive"] }
+jolt-algebra = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3", default-features = false, features = [
+  "bytemuck",
+  "solinas",
+] }
+jolt-metal = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "f15e9b17ccb933d3a0ad49be049cca999256e1e3" }
+thiserror = "2.0"
+
+[dev-dependencies]
+# The CPU backend is also the reference every kernel is tested and
+# benchmarked against, with its parallel kernels.
+akita-cpu-backend = { version = "0.1.0", path = "../akita-cpu-backend", default-features = false, features = [
+  "parallel",
+] }
+# `FlatMatrix`, which the kernels' tests and benches build their inputs from.
+akita-params = { version = "0.1.0", path = "../akita-params", default-features = false }
+criterion = { version = "0.8", features = ["html_reports"] }
+rand = "0.8"
+rayon = "1.10"
+
+[[bench]]
+name = "ntt"
+harness = false
+
+[[bench]]
+name = "matvec"
+harness = false
+
+[[bench]]
+name = "onehot"
+harness = false
+
+[lints]
+workspace = true

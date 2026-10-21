@@ -72,6 +72,8 @@ logging = ["jolt-transcript/logging"]
 # Run the transcript-semantics test suites on Keccak instead of `AkitaSponge`.
 keccak-test-sponge = []
 response-model-diagnostics = ["akita-cpu-backend/response-model-diagnostics"]
+# Dev-only terminal wire variant; see `akita-params`.
+dev-protocol = ["akita-params/dev-protocol"]
 [dependencies]
 akita-error = { version = "0.1.0", path = "../akita-error" }
 akita-algebra = { version = "0.1.0", path = "../akita-algebra" }

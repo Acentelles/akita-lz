@@ -11,6 +11,7 @@ readme = "../../README.md"
 
 [features]
 test-support = []
+dev-protocol = ["akita-params/dev-protocol"]
 
 [dependencies]
 akita-error = { version = "0.1.0", path = "../akita-error" }

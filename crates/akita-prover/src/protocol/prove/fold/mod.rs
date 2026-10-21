@@ -546,12 +546,41 @@ where
             crate::backend::NextWitnessBindingMessage::TerminalInnerState(message),
             akita_params::NextWitnessBindingPolicy::TerminalInnerState,
         ) => {
+            let FoldSuccessorParams::Terminal(terminal) = next_params else {
+                return Err(AkitaError::Internal(
+                    "terminal inner state bound for a recursive successor".into(),
+                ));
+            };
+            // Under `dev-protocol` the scheduled prefix stops before
+            // the last block, which travels as a digest. Otherwise the prefix
+            // is the whole state.
+            let (sent, last_block) = message
+                .fields()
+                .split_at_checked(terminal.response_shape.layout.t_field_elems())
+                .ok_or_else(|| {
+                    AkitaError::Internal(
+                        "terminal inner state is shorter than its scheduled prefix".into(),
+                    )
+                })?;
             grinding.state_mut().site(
                 akita_types::FoldSite::NextWitnessInnerState { level }
                     .id()?
                     .into(),
             );
-            grinding.state_mut().send_all(message.fields());
+            grinding.state_mut().send_all(sent);
+            if akita_params::RECOMPUTE_LAST_BLOCK {
+                akita_types::send_field_digest(
+                    grinding.state_mut(),
+                    akita_types::FoldSite::NextWitnessInnerStateDigest { level }
+                        .id()?
+                        .into(),
+                    last_block,
+                );
+            } else if !last_block.is_empty() {
+                return Err(AkitaError::Internal(
+                    "terminal inner state is longer than its scheduled length".into(),
+                ));
+            }
             NextWitnessState::TerminalInnerState(message)
         }
         _ => {

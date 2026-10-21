@@ -17,8 +17,9 @@ orchestration lives in `akita-pcs`.
 | `jolt-algebra` (external) | Shared field traits, prime and extension fields, packed and unreduced kernels, cyclotomic ring, NTT/CRT, smooth FFT, checked integer formulas, parallel helpers |
 | `jolt-crypto` (external, `lattice` feature) | Sparse fold challenges, operator-norm rejection, and public-matrix derivation |
 | `akita-serialization` | Serialization, validation, compression traits |
-| `akita-algebra` | Multilinear, equality, split-equality, and offset-equality polynomial utilities |
+| `akita-algebra` | Multilinear, equality, split-equality, and offset-equality polynomial utilities; LaBinius binary and trinomial arithmetic (opt-in) |
 | `jolt-transcript` (external) | Fiat-Shamir proof channel (NARG prover/verifier transcripts, sponges, grinding) |
+| `akita-challenges` | Compatibility re-export of `jolt-crypto` sparse challenges; LaBinius binary challenge families (opt-in) |
 | `akita-sumcheck` | Sumcheck kernel traits, driver adapters, folding |
 | `akita-params` | Parameter geometry, sizing, SIS tables, schedules, compression plans, witness layout, dispatch, and grinding plans |
 | `akita-types` | Proof, setup, and claim wire values, shared protocol math, and native transcript replay |
@@ -31,6 +32,10 @@ orchestration lives in `akita-pcs`.
 | `akita-prover` | Generic protocol sequencing and opaque backend contracts |
 | `akita-cpu-backend` | Owning CPU sources, commitments, witness arithmetic, and caches |
 | `akita-pcs` | Umbrella orchestration, examples, integration tests |
+| `akita-zk-verifier` (`dev`) | Verifier-side zero-knowledge building blocks (#120); no proof path depends on it |
+| `akita-zk-prover` (`dev`) | Prover-side zero-knowledge building blocks (#120); no proof path depends on it |
+| `akita-labinius-verifier` (`dev`) | Seed-derived admitted root setup, lowered root relation, and verification of the root reduction of a binary or prime evaluation claim to evaluation claims on committed tables; no proof path depends on it |
+| `akita-labinius-prover` (`dev`) | Binary source commitment, lowered root witness, root sumcheck kernels, and the root reduction prover with a transparent test oracle; no proof path depends on it |
 
 ## Dependency Layers
 
@@ -55,6 +60,24 @@ graph TD
   Cpu["akita-cpu-backend"]
   Setup["akita-setup"]
   Pcs["akita-pcs"]
+  LabiniusVerifier["akita-labinius-verifier (dev)"]
+  LabiniusProver["akita-labinius-prover (dev)"]
+
+  LabiniusVerifier --> Algebra
+  LabiniusVerifier --> Error
+  LabiniusVerifier --> Sumcheck
+  LabiniusVerifier --> Challenges
+  LabiniusVerifier --> Params
+  LabiniusVerifier --> Types
+  LabiniusVerifier --> Transcript
+  LabiniusVerifier --> Field
+  LabiniusProver --> LabiniusVerifier
+  LabiniusProver --> Algebra
+  LabiniusProver --> Error
+  LabiniusProver --> Sumcheck
+  LabiniusProver --> Challenges
+  LabiniusProver --> Params
+  LabiniusProver --> Field
 
   Algebra --> Error
   Algebra --> Field
@@ -159,6 +182,10 @@ graph TD
   `jolt_algebra::checked`. The formulas return `Option` and do not choose a
   protocol error variant. Callers map failure at the boundary where its meaning
   is known. Generic checked helpers must not be redefined in downstream crates.
+- `akita-challenges` owns transcript-derived challenge distributions. Its
+  optional `labinius-challenges` profiles use external `num-bigint` for exact
+  combinatorial counts that exceed 256 bits; protocol crates should consume
+  those counts and norm bounds instead of reimplementing the policy.
 - `akita-planner` is the offline schedule search and artifact emission engine.
   Normal planner search is `Cfg`-free and depends on `akita-params`,
   `jolt-crypto`, `akita-error`, and `akita-schedules`. The optional

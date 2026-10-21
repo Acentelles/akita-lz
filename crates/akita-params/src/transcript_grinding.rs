@@ -774,7 +774,7 @@ pub fn ring_switch_alpha_loss_factor(
 
 /// Maximum bytes of one canonical nonce of `nonce_bits` bits: the transcript
 /// encodes nonces as little-endian base-128 groups.
-const fn nonce_max_bytes(nonce_bits: u8) -> usize {
+pub const fn nonce_max_bytes(nonce_bits: u8) -> usize {
     (nonce_bits as usize).div_ceil(7)
 }
 

@@ -43,6 +43,7 @@ parallel = [
   "jolt-algebra/parallel",
   "akita-cpu-backend/parallel",
 ]
+dev-protocol = ["akita-params/dev-protocol"]
 
 [lints.rust]
 missing_docs = "warn"
