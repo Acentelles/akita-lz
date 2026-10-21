@@ -7,10 +7,11 @@ use akita_prover::backend::*;
 use akita_sumcheck::SumcheckKernel;
 use akita_transcript::{new_prover_channel, new_verifier_channel};
 use akita_types::*;
-use jolt_field::{Ext2, ExtField, Field, One, Prime128OffsetA7F7, Ring, Zero};
+use jolt_field::{Ext2, ExtField, Field, One, Prime128Offset275, Ring, Zero};
 use jolt_poly::UnivariatePoly;
 use std::sync::Arc;
-type F = Prime128OffsetA7F7;
+// Jolt's challenge codec has no extension tower over Prime128OffsetA7F7.
+type F = Prime128Offset275;
 type E = Ext2<F>;
 
 type CpuBackend = GenericCpuBackend<F, E>;
@@ -297,7 +298,7 @@ fn recursive_extension_opening_reduction_pads_and_shares_challenges() {
             ring_dimension: 64,
         },
     ];
-    let channel = new_prover_channel(b"test/aggregate-padding", b"test").unwrap();
+    let channel = new_prover_channel(b"test/aggregate-padding", b"test");
     let plan = eor_test_plan(7, true);
     let mut grinding = ProverGrinding::new(channel, &plan);
     let proved = prove_eor(
@@ -445,7 +446,7 @@ fn mixed_setup_prefix_and_suffix_eor_matches_independent_dense_oracle() {
                     ring_dimension: D,
                 },
             ];
-            let channel = new_prover_channel(b"test/mixed-eor-dense-oracle", b"test").unwrap();
+            let channel = new_prover_channel(b"test/mixed-eor-dense-oracle", b"test");
             let plan = eor_test_plan(8, true);
             let mut grinding = ProverGrinding::new(channel, &plan);
             let proved = prove_eor(
@@ -473,8 +474,7 @@ fn mixed_setup_prefix_and_suffix_eor_matches_independent_dense_oracle() {
                 .collect::<Vec<_>>();
             assert_eq!(proved.partials, partials);
             let channel =
-                new_verifier_channel(b"test/mixed-eor-dense-oracle", b"test", &proof_bytes)
-                    .unwrap();
+                new_verifier_channel(b"test/mixed-eor-dense-oracle", b"test", &proof_bytes);
             let mut replay = VerifierGrinding::new(channel, &plan);
             let eor_prefix = eor_prefix::<F, E, _>(
                 &mut replay,
@@ -553,8 +553,7 @@ fn mixed_setup_prefix_and_suffix_eor_matches_independent_dense_oracle() {
                     point: &long_point,
                     ring_dimension: D,
                 }];
-                let channel =
-                    new_prover_channel(b"test/shared-commitment-scopes", b"test").unwrap();
+                let channel = new_prover_channel(b"test/shared-commitment-scopes", b"test");
                 let plan = eor_test_plan(8, false);
                 let mut grinding = ProverGrinding::new(channel, &plan);
                 let proved = prove_eor(

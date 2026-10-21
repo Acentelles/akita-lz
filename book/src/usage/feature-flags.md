@@ -63,6 +63,20 @@ Production builds enable exactly one transcript backend.
 The transcript backend is part of proof compatibility. Prover and verifier
 must use the same backend and protocol revision.
 
+### Prover-side transcript feature
+
+`akita-transcript`, `akita-challenges`, and `akita-types` each have a `prover`
+feature. It enables the proof-of-work nonce search and the fold-response
+preview. Both evaluate candidate nonces on a copy of the sponge state, and
+Spongefish exposes that state only under its `yolocrypto` feature. `akita-prover`
+turns `prover` on; `akita-verifier` leaves it off. The dependency hygiene check
+`scripts/check-crate-deps.sh akita-verifier` fails if the verifier's own
+dependency graph enables `yolocrypto`.
+
+Cargo unifies features within one build. A binary that links the prover
+therefore compiles its verifier with `yolocrypto` as well. The feature changes
+which Spongefish items are visible; it does not change proof bytes.
+
 ## Schedule catalog storage
 
 Tracked development artifacts live under `artifacts/schedules/`. Production
