@@ -9,7 +9,7 @@ use akita_params::SubringCoefficientPackingGeometry;
 
 /// Runtime value carried by one of Akita's two opening methods.
 ///
-/// The schedule chooses an [`OpeningMethod`]; this family preserves that same
+/// The schedule chooses an [`OpeningMethod`](akita_params::OpeningMethod); this family preserves that same
 /// method distinction while each protocol stage supplies its own payloads.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum OpeningFamily<Trace, Packing> {
