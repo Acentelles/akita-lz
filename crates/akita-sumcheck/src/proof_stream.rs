@@ -941,7 +941,7 @@ mod tests {
     #[test]
     fn eq_factored_rejects_empty_equality_point() {
         let mut verifier = TestVerifierChannel {
-            state: new_verifier_channel(b"native-eq-empty", b"fixture", &[]).unwrap(),
+            state: new_verifier_channel(b"native-eq-empty", b"fixture", &[]),
             invocation: 12,
         };
         assert!(matches!(
@@ -1093,8 +1093,7 @@ mod tests {
                 b"native-cutover",
                 b"normalized",
                 prover.state.narg_string(),
-            )
-            .unwrap(),
+            ),
             invocation: 5,
         };
         let replayed = verify_eq_factored_sumcheck::<F, F, _, _>(

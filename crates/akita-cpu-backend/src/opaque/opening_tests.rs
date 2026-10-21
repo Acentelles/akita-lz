@@ -7,11 +7,12 @@ use akita_prover::backend::*;
 use akita_sumcheck::SumcheckKernel;
 use akita_transcript::{new_prover_channel, new_verifier_channel};
 use akita_types::*;
-use jolt_field::{Ext2, ExtField, Field, One, Prime128Offset275, Ring, Zero};
+use jolt_field::{Ext2, ExtField, Field, One, Prime64Offset59, Ring, Zero};
 use jolt_poly::UnivariatePoly;
 use std::sync::Arc;
-// Jolt's challenge codec has no extension tower over Prime128OffsetA7F7.
-type F = Prime128Offset275;
+// The setup-prefix test needs a field with both an SIS modulus profile and
+// Jolt extension challenges. On main only the 64-bit field has both.
+type F = Prime64Offset59;
 type E = Ext2<F>;
 
 type CpuBackend = GenericCpuBackend<F, E>;
@@ -324,7 +325,7 @@ fn mixed_setup_prefix_and_suffix_eor_matches_independent_dense_oracle() {
         .spawn(|| {
             const D: usize = 128;
             let mut params = CommittedGroupParams::params_only(
-                SisModulusProfileId::Q128OffsetA7F7,
+                SisModulusProfileId::Q64Offset59,
                 D,
                 2,
                 1,
