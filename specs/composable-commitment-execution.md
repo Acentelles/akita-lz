@@ -119,11 +119,10 @@ A source can translate itself into one or more Akita-owned representations:
 
 | Semantic type | Representation supplied by the source |
 |---|---|
-| `DenseType` | Canonical field coefficients, or exact-plan balanced digit planes in `[ring][digit][coefficient]` order |
+| `DenseType` | Canonical field coefficients |
 | `ShortNormType` | Packed bounded signed coefficients with exact lengths, bit width, and positive/negative reach |
 | `OneHotType` | Complete hot-position slice, chunk size, and variable count |
 
-Dense predecomposed digits remain distinct from packed short-norm coefficients.
 Packed short-norm representations carry three exact extents: source-live,
 encoded-stored, and commitment-padded. The encoded byte length must be exactly
 the stored extent, unused final-byte bits must be zero, and supplied positive
@@ -368,7 +367,8 @@ be rebuilt later.
 The CPU route must preserve its current optimized behavior:
 
 - dense coefficients are borrowed without another full-polynomial copy;
-- cached digit planes stay cached and plan-key checked;
+- opening digit planes stay cached and keyed by ring dimension, digit count,
+  and basis;
 - one-hot traversal keeps stored index widths and bounded scratch;
 - packed short-norm data remains packed until tile decoding;
 - B slicing uses its reusable slice buffer and batched digit-row path;

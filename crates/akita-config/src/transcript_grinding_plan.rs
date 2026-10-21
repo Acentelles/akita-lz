@@ -42,8 +42,10 @@ mod tests {
 
     #[test]
     fn production_onehot_plan_is_canonical_and_fully_priced() {
-        let catalog = crate::test_support::workspace_schedule_catalog::<fp128::OneHot>()
-            .expect("one-hot schedule catalog");
+        let catalog = crate::test_support::workspace_schedule_catalog::<fp128::OneHot>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        )
+        .expect("one-hot schedule catalog");
         let layout = OpeningClaimsLayout::new(14, 1).expect("opening layout");
         let row = catalog
             .resolve_key(&akita_params::ScheduleLookupKey::single(
@@ -99,8 +101,10 @@ mod tests {
 
     #[test]
     fn stage1_prices_the_full_eq_factored_round_degree() {
-        let catalog = crate::test_support::workspace_schedule_catalog::<fp128::OneHot>()
-            .expect("one-hot schedule catalog");
+        let catalog = crate::test_support::workspace_schedule_catalog::<fp128::OneHot>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+        )
+        .expect("one-hot schedule catalog");
         let layout = OpeningClaimsLayout::new(14, 1).expect("opening layout");
         let row = catalog
             .resolve_key(&akita_params::ScheduleLookupKey::single(
@@ -170,12 +174,14 @@ mod tests {
             STAGE2_SUMCHECK_DEGREE,
         };
 
-        fn audit<Cfg: CommitmentConfig>(seen_wire_degrees: &mut [bool; 3])
-        where
+        fn audit<Cfg: CommitmentConfig>(
+            chunking: akita_params::ChunkedWitnessCfg,
+            seen_wire_degrees: &mut [bool; 3],
+        ) where
             Cfg::Field: CanonicalEncoding,
             Cfg::ExtField: ExtField<Cfg::Field>,
         {
-            let catalog = crate::test_support::workspace_schedule_catalog::<Cfg>()
+            let catalog = crate::test_support::workspace_schedule_catalog::<Cfg>(chunking)
                 .expect("workspace schedule catalog");
             for row in catalog.rows() {
                 let layout = row.profiles().opening_layout().expect("opening layout");
@@ -309,29 +315,92 @@ mod tests {
         }
 
         let mut seen = [false; 3];
-        audit::<fp128::Dense>(&mut seen);
-        audit::<fp128::DenseBounded>(&mut seen);
-        audit::<fp128::DenseMultiChunk>(&mut seen);
-        audit::<fp128::OneHot>(&mut seen);
-        audit::<fp128::OneHotMultiChunk>(&mut seen);
-        audit::<fp128::OneHotMultiChunkW2R2>(&mut seen);
-        audit::<fp128::OneHotMultiChunkW4R2>(&mut seen);
-        audit::<fp128::OneHotMultiChunkW2R3>(&mut seen);
-        audit::<fp128::OneHotMultiChunkW4R3>(&mut seen);
-        audit::<fp128::OneHotMultiChunkW8R3>(&mut seen);
-        audit::<fp128::DenseMultiChunkW8R3>(&mut seen);
-        audit::<crate::RecursiveCommitmentConfig<fp128::OneHotMultiChunkW2R3>>(&mut seen);
-        audit::<crate::RecursiveCommitmentConfig<fp128::OneHotMultiChunkW4R3>>(&mut seen);
-        audit::<crate::RecursiveCommitmentConfig<fp128::OneHotMultiChunkW8R3>>(&mut seen);
-        audit::<fp64::Dense>(&mut seen);
-        audit::<fp64::OneHot>(&mut seen);
-        audit::<fp32::Dense>(&mut seen);
-        audit::<fp32::OneHot>(&mut seen);
-        audit::<crate::RecursiveCommitmentConfig<fp128::OneHot>>(&mut seen);
-        audit::<crate::RecursiveCommitmentConfig<fp128::OneHotMultiChunk>>(&mut seen);
-        audit::<crate::RecursiveCommitmentConfig<fp128::Dense>>(&mut seen);
-        audit::<crate::RecursiveCommitmentConfig<fp64::Dense>>(&mut seen);
-        audit::<crate::RecursiveCommitmentConfig<fp32::Dense>>(&mut seen);
+        audit::<fp128::Dense>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+            &mut seen,
+        );
+        audit::<fp128::DenseBounded>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+            &mut seen,
+        );
+        audit::<fp128::DenseMultiChunk>(akita_params::MultiChunkProfileId::W8R2.cfg(), &mut seen);
+        audit::<fp128::OneHot>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+            &mut seen,
+        );
+        audit::<fp128::OneHotMultiChunk>(akita_params::MultiChunkProfileId::W8R2.cfg(), &mut seen);
+        audit::<fp128::OneHotMultiChunkW2R2>(
+            akita_params::MultiChunkProfileId::W2R2.cfg(),
+            &mut seen,
+        );
+        audit::<fp128::OneHotMultiChunkW4R2>(
+            akita_params::MultiChunkProfileId::W4R2.cfg(),
+            &mut seen,
+        );
+        audit::<fp128::OneHotMultiChunkW2R3>(
+            akita_params::MultiChunkProfileId::W2R3.cfg(),
+            &mut seen,
+        );
+        audit::<fp128::OneHotMultiChunkW4R3>(
+            akita_params::MultiChunkProfileId::W4R3.cfg(),
+            &mut seen,
+        );
+        audit::<fp128::OneHotMultiChunkW8R3>(
+            akita_params::MultiChunkProfileId::W8R3.cfg(),
+            &mut seen,
+        );
+        audit::<fp128::DenseMultiChunkW8R3>(
+            akita_params::MultiChunkProfileId::W8R3.cfg(),
+            &mut seen,
+        );
+        audit::<crate::RecursiveCommitmentConfig<fp128::OneHotMultiChunkW2R3>>(
+            akita_params::MultiChunkProfileId::W2R3.cfg(),
+            &mut seen,
+        );
+        audit::<crate::RecursiveCommitmentConfig<fp128::OneHotMultiChunkW4R3>>(
+            akita_params::MultiChunkProfileId::W4R3.cfg(),
+            &mut seen,
+        );
+        audit::<crate::RecursiveCommitmentConfig<fp128::OneHotMultiChunkW8R3>>(
+            akita_params::MultiChunkProfileId::W8R3.cfg(),
+            &mut seen,
+        );
+        audit::<fp64::Dense>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+            &mut seen,
+        );
+        audit::<fp64::OneHot>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+            &mut seen,
+        );
+        audit::<fp32::Dense>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+            &mut seen,
+        );
+        audit::<fp32::OneHot>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+            &mut seen,
+        );
+        audit::<crate::RecursiveCommitmentConfig<fp128::OneHot>>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+            &mut seen,
+        );
+        audit::<crate::RecursiveCommitmentConfig<fp128::OneHotMultiChunk>>(
+            akita_params::MultiChunkProfileId::W8R2.cfg(),
+            &mut seen,
+        );
+        audit::<crate::RecursiveCommitmentConfig<fp128::Dense>>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+            &mut seen,
+        );
+        audit::<crate::RecursiveCommitmentConfig<fp64::Dense>>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+            &mut seen,
+        );
+        audit::<crate::RecursiveCommitmentConfig<fp32::Dense>>(
+            akita_params::ChunkedWitnessCfg::default_non_chunked(),
+            &mut seen,
+        );
         assert_eq!(
             seen, [true; 3],
             "every priced sumcheck protocol is exercised"
