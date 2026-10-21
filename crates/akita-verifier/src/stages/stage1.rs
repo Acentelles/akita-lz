@@ -186,7 +186,7 @@ impl<E: Field + Ring + AkitaSerialize> Stage1Verifier<E> {
             akita_types::stage1_range_image::<F, E, _>(grinding, level, stage, E::zero())?;
         check_range_leaf(
             &mut ClearDomain,
-            &RangeLeaf::new(&leaf.polynomial_coefficients)?,
+            &RangeLeaf::new(self.plan, &leaf.polynomial_coefficients)?,
             range_image_evaluation,
             replay.output_claim,
         )

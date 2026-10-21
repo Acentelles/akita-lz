@@ -4,22 +4,33 @@
 //! (`specs/whiteout-akita.md` §4.4–4.5).
 
 use akita_error::AkitaError;
+use akita_params::DigitRangePlan;
 use jolt_algebra::Field;
 use jolt_transcript::ClaimDomain;
 
-/// The batched range-leaf polynomial `Σ_{k≤4} c_k·X^k`. Every supported
-/// digit basis has a leaf of degree at most four
-/// ([`akita_params::DigitRangePlan::leaf_degree`]).
-pub struct RangeLeaf<E>([E; 5]);
+/// The batched range-leaf polynomial `Σ_{k≤4} c_k·X^k`, zero-padded to
+/// [`DigitRangePlan::MAX_LEAF_DEGREE`], the largest leaf of any supported basis.
+pub struct RangeLeaf<E>([E; DigitRangePlan::MAX_LEAF_DEGREE + 1]);
 
 impl<E: Field> RangeLeaf<E> {
-    /// The leaf with `coefficients` in ascending degree, zero-padded.
-    pub fn new(coefficients: &[E]) -> Result<Self, AkitaError> {
-        let mut padded = [E::zero(); 5];
+    /// The leaf of `plan` with `coefficients` in ascending degree.
+    ///
+    /// # Errors
+    ///
+    /// [`AkitaError::InvalidSetup`] if `coefficients` exceed the degree of
+    /// `plan`'s leaf ([`DigitRangePlan::leaf_degree`]).
+    pub fn new(plan: DigitRangePlan, coefficients: &[E]) -> Result<Self, AkitaError> {
+        let mut padded = [E::zero(); DigitRangePlan::MAX_LEAF_DEGREE + 1];
         padded
             .get_mut(..coefficients.len())
+            .filter(|_| coefficients.len() <= plan.leaf_degree() + 1)
             .ok_or_else(|| {
-                AkitaError::InvalidSetup("stage-1 range leaf exceeds degree four".into())
+                AkitaError::InvalidSetup(format!(
+                    "stage-1 range leaf has {} coefficients; the basis-{} leaf has degree {}",
+                    coefficients.len(),
+                    plan.basis(),
+                    plan.leaf_degree()
+                ))
             })?
             .copy_from_slice(coefficients);
         Ok(Self(padded))
