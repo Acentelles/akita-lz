@@ -44,7 +44,7 @@ pub struct CompressionRelationWeights<E: Field> {
     events: Vec<CompressionRelationEvent<E>>,
     alpha_powers: Vec<E>,
     coefficient_block_len: usize,
-    physical_field_len: usize,
+    physical_field_len: usize, #[cfg(feature = "l3-compression-weights")] groups: l3::Groups<E>,
 }
 
 /// Checked sparse support for the negative-binary compression digits.
@@ -186,7 +186,7 @@ impl<E: Field> CompressionRelationWeights<E> {
         self.accumulate_dense(&mut weights)?;
         Ok(weights)
     }
-
+    #[cfg(not(feature = "l3-compression-weights"))]
     fn accumulate_dense(&self, weights: &mut [E]) -> Result<(), AkitaError> {
         if weights.len() != self.physical_field_len {
             return Err(AkitaError::InvalidSize {
@@ -219,7 +219,7 @@ impl<E: Field> CompressionRelationWeights<E> {
         }
         Ok(())
     }
-
+    #[cfg(not(feature = "l3-compression-weights"))]
     /// Consume the relation table into sorted nonzero physical entries.
     ///
     /// This is the prover-side representation: compression relations occupy a
@@ -301,7 +301,7 @@ impl<E: Field> CompressionRelationWeights<E> {
             .collect::<Result<Vec<_>, AkitaError>>()?;
         Ok(entries.concat())
     }
-
+    #[cfg(not(feature = "l3-compression-weights"))]
     /// Evaluate the table's multilinear extension at one full witness point.
     #[tracing::instrument(skip_all, name = "compression_relation_mle")]
     pub fn evaluate_at_point(&self, point: &[E]) -> Result<E, AkitaError> {
@@ -419,7 +419,7 @@ impl<E: Field> CompressionRelationWeights<E> {
         Ok(evaluation)
     }
 }
-
+#[cfg(not(feature = "l3-compression-weights"))]
 #[allow(clippy::too_many_arguments)]
 fn push_recomposition<F, E>(
     weights: &mut CompressionRelationWeights<E>,
@@ -683,7 +683,7 @@ where
         events: Vec::new(),
         alpha_powers: scalar_powers(alpha, maximum_dimension),
         coefficient_block_len,
-        physical_field_len,
+        physical_field_len, #[cfg(feature = "l3-compression-weights")] groups: l3::Groups::default(),
     };
     let field_bits = usize::try_from(F::MODULUS_BITS)
         .map_err(|_| AkitaError::InvalidSetup("compression field width overflow".into()))?;
@@ -748,7 +748,7 @@ where
         };
         let evaluated = evaluated_matrices.get(matrix_index).ok_or_else(|| {
             AkitaError::Internal("evaluated compression matrix cache entry is missing".into())
-        })?;
+        })?; #[cfg(not(feature = "l3-compression-weights"))]
         for column in 0..map.input_width() {
             let start = column * map.ring_dimension();
             weights.push(
@@ -762,7 +762,7 @@ where
                         )
                     })?,
             )?;
-        }
+        } #[cfg(feature = "l3-compression-weights")] weights.push_column_group(span.range().start, map.ring_dimension(), map.input_width(), row_weight, matrix_index, &evaluated.columns)?;
         if let Some(successor) = successor_compression_span(witness_layout, group_index, map_index)?
         {
             push_recomposition::<F, E>(
@@ -818,7 +818,7 @@ mod tests {
                 events: Vec::new(),
                 alpha_powers: (1..=16).map(F::from_u64).collect(),
                 coefficient_block_len: 2,
-                physical_field_len: 16,
+                physical_field_len: 16, #[cfg(feature = "l3-compression-weights")] groups: l3::Groups::default(),
             };
             for (start, count, alpha_start, scalar) in
                 [(0, 4, 0, 3), (6, 2, 4, 5), (8, 8, 0, 7), (2, 4, 2, 11)]
@@ -847,7 +847,7 @@ mod tests {
             events: Vec::new(),
             alpha_powers: (1..=4096).map(F::from_u64).collect(),
             coefficient_block_len: 8,
-            physical_field_len,
+            physical_field_len, #[cfg(feature = "l3-compression-weights")] groups: l3::Groups::default(),
         };
         for index in 0..600usize {
             let coefficient_count = 8 << (index % 5);
@@ -922,3 +922,9 @@ mod tests {
         assert_ne!(restricted, factored);
     }
 }
+
+// L3 experiment (default off): grouped compression events, evaluated by factor.
+#[cfg(feature = "l3-compression-weights")]
+mod l3;
+#[cfg(feature = "l3-compression-weights")]
+use l3::push_recomposition;

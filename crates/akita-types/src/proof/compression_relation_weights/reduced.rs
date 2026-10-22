@@ -436,7 +436,7 @@ where
         events: Vec::new(),
         alpha_powers: scalar_powers(alpha, maximum_dimension),
         coefficient_block_len,
-        physical_field_len,
+        physical_field_len, #[cfg(feature = "l3-compression-weights")] groups: super::l3::Groups::default(),
     };
     let field_bits = usize::try_from(F::MODULUS_BITS)
         .map_err(|_| AkitaError::InvalidSetup("compression field width overflow".into()))?;
@@ -696,7 +696,7 @@ mod tests {
                 events: Vec::new(),
                 alpha_powers: Vec::new(),
                 coefficient_block_len: 1,
-                physical_field_len: 2048,
+                physical_field_len: 2048, #[cfg(feature = "l3-compression-weights")] groups: super::l3::Groups::default(),
             },
             maps: vec![ReducedCompressionMapEvent {
                 span: span.clone(),
