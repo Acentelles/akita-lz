@@ -27,6 +27,10 @@ tracing = "0.1"
 
 [features]
 default = ["transcript-blake2b", "l3-compression-weights"]
+# Experimental L2 terminal quotient certificate (recursion lever, default off):
+# the terminal A rows are checked at two points against a sent quotient, under
+# a separate protocol identifier.
+l2-terminal-quotient = ["akita-transcript/l2-terminal-quotient"]
 test-support = ["akita-params/test-support"]
 transcript-blake2b = [
   "akita-challenges/transcript-blake2b",

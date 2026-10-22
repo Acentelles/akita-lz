@@ -14,6 +14,8 @@ mod stage1_sites;
 mod stage2_sites;
 mod stage3_sites;
 mod subring_coefficient_packing;
+#[cfg(feature = "l2-terminal-quotient")]
+mod terminal_quotient;
 pub mod trace_weight;
 mod transcript_grinding;
 pub use eor_sites::{eor_final_claims, eor_prefix, EorPrefix, EOR_SUMCHECK_INVOCATION};
@@ -95,6 +97,8 @@ pub use stage1_sites::{stage1_child_claims, stage1_range_image};
 pub use stage2_sites::stage2_w_eval;
 pub use stage3_sites::{stage3_claim, stage3_prefix_eval, stage3_public_slot};
 pub use subring_coefficient_packing::PreparedSubringCoefficientPackingPoint;
+#[cfg(feature = "l2-terminal-quotient")]
+pub use terminal_quotient::{terminal_a_row_quotients, terminal_quotient_len};
 pub use trace_weight::{
     ensure_trace_stage2_supported, prepare_evaluation_trace_group_parameters,
     EvaluationTraceGroupParameters, EvaluationTraceInputs,

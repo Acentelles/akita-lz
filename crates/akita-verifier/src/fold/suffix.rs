@@ -314,11 +314,27 @@ where
             setup_prefix_opening: output.setup_prefix_opening,
         };
     }
-    verify_terminal_suffix(
-        terminal_ntt,
-        grinding,
-        u32::try_from(schedule.recursive_folds.len() + 1).map_err(|_| AkitaError::InvalidProof)?,
-        &current_state,
-        &schedule.terminal,
-    )
+    let terminal_level =
+        u32::try_from(schedule.recursive_folds.len() + 1).map_err(|_| AkitaError::InvalidProof)?;
+    #[cfg(not(feature = "l2-terminal-quotient"))]
+    {
+        verify_terminal_suffix(
+            terminal_ntt,
+            grinding,
+            terminal_level,
+            &current_state,
+            &schedule.terminal,
+        )
+    }
+    #[cfg(feature = "l2-terminal-quotient")]
+    {
+        verify_terminal_suffix(
+            terminal_ntt,
+            grinding,
+            terminal_level,
+            &current_state,
+            &schedule.terminal,
+            setup.expanded().shared_matrix().as_field_slice(),
+        )
+    }
 }

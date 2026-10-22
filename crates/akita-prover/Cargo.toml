@@ -35,6 +35,13 @@ akita-types = { version = "0.1.0", path = "../akita-types", default-features = f
 
 [features]
 default = ["transcript-blake2b"]
+# Experimental L2 terminal quotient certificate (recursion lever, default off):
+# the terminal A rows are checked at two points against a sent quotient, under
+# a separate protocol identifier.
+l2-terminal-quotient = [
+  "akita-types/l2-terminal-quotient",
+  "akita-transcript/l2-terminal-quotient",
+]
 transcript-blake2b = [
   "akita-challenges/transcript-blake2b",
   "akita-config/transcript-blake2b",

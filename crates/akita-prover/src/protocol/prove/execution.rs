@@ -196,23 +196,41 @@ where
         })?;
         let (witness_handle, commitment_material) =
             resident.into_pair::<B::WitnessHandle, B::CommitmentMaterialHandle>(id)?;
-        suffix::prove_terminal_suffix::<Cfg::Field, Cfg::ExtField, B>(
-            self.backend,
-            grinding,
-            public.level,
-            SuffixProverState {
-                public,
-                witness_handle,
-                commitment_material,
-            },
-            &request.schedule.terminal,
-            session
-                .as_ref()
-                .ok_or_else(|| {
-                    AkitaError::InvalidInput("terminal executor was not admitted".into())
-                })?
-                .session(),
-        )
+        let session = session
+            .as_ref()
+            .ok_or_else(|| AkitaError::InvalidInput("terminal executor was not admitted".into()))?
+            .session();
+        #[cfg(not(feature = "l2-terminal-quotient"))]
+        {
+            suffix::prove_terminal_suffix::<Cfg::Field, Cfg::ExtField, B>(
+                self.backend,
+                grinding,
+                public.level,
+                SuffixProverState {
+                    public,
+                    witness_handle,
+                    commitment_material,
+                },
+                &request.schedule.terminal,
+                session,
+            )
+        }
+        #[cfg(feature = "l2-terminal-quotient")]
+        {
+            suffix::prove_terminal_suffix::<Cfg::Field, Cfg::ExtField, B>(
+                self.backend,
+                grinding,
+                public.level,
+                SuffixProverState {
+                    public,
+                    witness_handle,
+                    commitment_material,
+                },
+                &request.schedule.terminal,
+                session,
+                request.setup,
+            )
+        }
     }
     fn finish(&self) -> Result<(), AkitaError> {
         let mut session = self.session.try_borrow_mut().map_err(|_| {

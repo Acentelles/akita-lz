@@ -127,6 +127,7 @@ pub(super) fn prove_terminal_suffix<F, E, B>(
     current_state: SuffixProverState<F, E, B::CommitmentMaterialHandle, B::WitnessHandle>,
     scheduled: &TerminalFoldParams,
     session: &B::ProofSessionHandle,
+    #[cfg(feature = "l2-terminal-quotient")] setup: &akita_types::AkitaSetupDescriptor,
 ) -> Result<(), AkitaError>
 where
     F: Field + CanonicalEncoding + AkitaSerialize + Ring + Unreduced + PseudoMersenne + 'static,
@@ -360,7 +361,51 @@ where
         akita_types::FoldSite::TerminalZPayload { level: fold_level }.id()?,
         z_payload,
         group.z_payload_bytes,
-    )
+    )?;
+    #[cfg(feature = "l2-terminal-quotient")]
+    send_terminal_quotient::<F>(grinding, fold_level, scheduled, group, z_payload, setup)?;
+    Ok(())
+}
+
+/// L2 terminal quotient certificate: send the high half of every unreduced
+/// terminal A-row product after the `z` payload, then draw the verifier's two
+/// evaluation points so both transcripts stay aligned.
+#[cfg(feature = "l2-terminal-quotient")]
+fn send_terminal_quotient<F>(
+    grinding: &mut akita_types::ProverGrinding<'_>,
+    fold_level: u32,
+    scheduled: &TerminalFoldParams,
+    group: &akita_params::TailSegmentGroupLayout,
+    z_payload: &[u8],
+    setup: &akita_types::AkitaSetupDescriptor,
+) -> Result<(), AkitaError>
+where
+    F: Field + CanonicalEncoding + Ring,
+{
+    let d = scheduled.d_a();
+    let n_a = scheduled.inner.matrix.output_rank();
+    let z = akita_types::decode_terminal_z_golomb_payload(z_payload, group)?;
+    let prefix = z
+        .len()
+        .checked_mul(n_a)
+        .ok_or_else(|| AkitaError::Internal("terminal A prefix overflow".into()))?;
+    let matrix = akita_types::derive_public_matrix_prefix::<F>(prefix, &setup.setup_seed);
+    let quotients = akita_types::terminal_a_row_quotients(matrix.as_field_slice(), &z, d, n_a)?;
+    tracing::info!(
+        "native terminal quotient (L2): field elements {} rows {} ring dimension {} z coords {}",
+        quotients.len(),
+        n_a,
+        d,
+        z.len()
+    );
+    akita_transcript::send_field_group(
+        grinding.state_mut(),
+        akita_types::FoldSite::TerminalQuotient { level: fold_level }.id()?,
+        &quotients,
+    )?;
+    let _first = akita_transcript::prover_field_challenge::<F>(grinding.state_mut())?;
+    let _second = akita_transcript::prover_field_challenge::<F>(grinding.state_mut())?;
+    Ok(())
 }
 #[allow(clippy::too_many_arguments)]
 fn prepare_suffix<F, E, B>(

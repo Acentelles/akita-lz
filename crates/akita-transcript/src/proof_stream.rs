@@ -191,10 +191,17 @@ impl Encoding<[u8]> for FramedBytes<'_> {
 }
 
 fn proof_stream_protocol_id() -> [u8; 64] {
-    #[cfg(feature = "transcript-blake2b")]
+    #[cfg(all(feature = "transcript-blake2b", not(feature = "l2-terminal-quotient")))]
     let name = "akita-pcs/native-proof-stream/v7/blake2b";
-    #[cfg(feature = "transcript-keccak")]
+    #[cfg(all(feature = "transcript-keccak", not(feature = "l2-terminal-quotient")))]
     let name = "akita-pcs/native-proof-stream/v7/keccak";
+    // The terminal quotient certificate changes the terminal grammar, so it
+    // runs under its own protocol identifier: proofs of either version are
+    // rejected by the other.
+    #[cfg(all(feature = "transcript-blake2b", feature = "l2-terminal-quotient"))]
+    let name = "akita-pcs/native-proof-stream/v7-l2tq1/blake2b";
+    #[cfg(all(feature = "transcript-keccak", feature = "l2-terminal-quotient"))]
+    let name = "akita-pcs/native-proof-stream/v7-l2tq1/keccak";
     protocol_id(format_args!("{name}"))
 }
 
