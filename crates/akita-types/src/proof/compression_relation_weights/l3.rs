@@ -325,7 +325,7 @@ impl<E: Field> CompressionRelationWeights<E> {
     }
 
     /// Canonical dense accumulation plus the expanded groups.
-    fn accumulate_dense(&self, weights: &mut [E]) -> Result<(), AkitaError> {
+    pub(super) fn accumulate_dense(&self, weights: &mut [E]) -> Result<(), AkitaError> {
         if weights.len() != self.physical_field_len {
             return Err(AkitaError::InvalidSize {
                 expected: self.physical_field_len,
