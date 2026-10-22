@@ -25,6 +25,10 @@ use super::*;
 #[allow(unused_imports)]
 use jolt_field::solinas::parallel::*;
 
+/// Cached dyadic block extensions keyed by (table, offset, block bits, first
+/// point coordinate).
+type BlockCache<E> = Vec<((usize, usize, usize, usize), E)>;
+
 /// Shared value table of one or more groups.
 #[derive(Clone, Debug)]
 pub(super) struct GroupTable<E: Field> {
@@ -298,7 +302,9 @@ impl<E: Field> CompressionRelationWeights<E> {
     }
 
     /// Canonical events of every group, zero scalars dropped as `push` does.
-    fn expanded_group_events(&self) -> Result<Vec<CompressionRelationEvent<E>>, AkitaError> {
+    pub(super) fn expanded_group_events(
+        &self,
+    ) -> Result<Vec<CompressionRelationEvent<E>>, AkitaError> {
         let mut events = Vec::new();
         for group in &self.groups.groups {
             let table =
@@ -557,7 +563,7 @@ impl<E: Field> CompressionRelationWeights<E> {
     fn evaluate_groups_at_point(&self, point: &[E]) -> Result<E, AkitaError> {
         let mut low_factors = Vec::<((usize, usize), E)>::new();
         let mut windows = Vec::<(usize, OffsetEqWindow<E>)>::new();
-        let mut blocks = Vec::<((usize, usize, usize, usize), E)>::new();
+        let mut blocks = BlockCache::<E>::new();
         let mut evaluation = E::zero();
         for group in &self.groups.groups {
             let count = group.coefficient_count;
@@ -655,7 +661,7 @@ impl<E: Field> CompressionRelationWeights<E> {
         low_bits: usize,
         first_high: usize,
         stride_bits: usize,
-        blocks: &mut Vec<((usize, usize, usize, usize), E)>,
+        blocks: &mut BlockCache<E>,
     ) -> Result<E, AkitaError> {
         let (stride_point, run_point) = if stride_bits <= high_point.len() {
             high_point.split_at(stride_bits)

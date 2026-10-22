@@ -618,7 +618,7 @@ mod tests {
                     field_bits * (span.map().ring_dimension() / successor.map().ring_dimension());
             }
         }
-        assert_eq!(program.linear.events.len(), expected_linear_events);
+        assert_eq!(linear_event_count(&program.linear), expected_linear_events);
         assert!(program
             .linear
             .events
@@ -726,5 +726,14 @@ mod tests {
             .is_err());
         let oversized_point = vec![F::one(); 4_096];
         assert!(program.evaluate_at_point(&setup, &oversized_point).is_err());
+    }
+
+    /// Canonical event count; under the L3 feature, grouped events are expanded.
+    fn linear_event_count(linear: &CompressionRelationWeights<F>) -> usize {
+        #[cfg(feature = "l3-compression-weights")]
+        let grouped = linear.expanded_group_events().unwrap().len();
+        #[cfg(not(feature = "l3-compression-weights"))]
+        let grouped = 0;
+        linear.events.len() + grouped
     }
 }
