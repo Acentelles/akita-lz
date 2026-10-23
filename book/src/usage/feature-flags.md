@@ -65,27 +65,33 @@ must use the same backend and protocol revision.
 
 ## Terminal quotient certificate
 
-`terminal-quotient` is off by default and changes the proof format. With it,
-the prover sends, for each terminal A row, the `D - 1` coefficients of the
-quotient of the unreduced row product by `X^D + 1`, and the verifier checks
-each row at two transcript points instead of computing the exact ring
-product. Proofs use a separate protocol identifier, so a verifier built
-without the feature rejects them and vice versa.
+`terminal-quotient` is off by default. It compiles in an opt-in proof format
+and selects nothing: a caller selects it at runtime by using the config adapter
+`akita_config::TerminalQuotientConfig<Cfg>` in place of `Cfg`. Every other
+configuration keeps the exact protocol, with the same setup, commitment and
+proof bytes and the same transcript, whether or not the feature is enabled.
 
-Select it through `akita-pcs/terminal-quotient`. The identifier lives in
-`akita-transcript`, and every crate that prices, sends or checks the quotient
-(`akita-params`, `akita-types`, `akita-prover`, `akita-verifier`, `akita-pcs`)
-fails to compile when its own feature disagrees with it, so a build cannot
-change the identifier without changing the grammar it names.
-`scripts/check-terminal-quotient-features.sh` checks representative partial
-graphs.
+With the adapter, the prover sends, for each terminal A row, the `D - 1`
+coefficients of the quotient of the unreduced row product by `X^D + 1`, and the
+verifier checks each row at two transcript points instead of computing the
+exact ring product. The selection also chooses the proof-stream identifier
+(`v7-terminal-quotient`), the grinding-plan entry and the proof byte model, so
+a proof from one selection fails under the other. The adapter reuses `Cfg`'s
+schedule family; its rows are not re-planned for the quotient bytes.
 
 The two points are base-field draws. The grinding plan prices them as one
 entry, `GrindingSite::TerminalQuotientPair`, with loss `(2D - 2)^2` over the
 `|F|^2` point pairs, and admits it only when `(2D - 2)^2 2^128 <= |F|^2` holds
 with no grinding. That holds for the 128-bit field and fails for every 32- and
-64-bit field, so with the feature those configurations refuse to prove and to
-verify with `UnsupportedSchedule`.
+64-bit field, so selecting the adapter over those fields refuses to prove and
+to verify with `UnsupportedSchedule`.
+
+Enable the feature through `akita-pcs/terminal-quotient`. Every crate that
+prices, sends or checks the quotient (`akita-params`, `akita-types`,
+`akita-config`, `akita-prover`, `akita-verifier`, `akita-pcs`) fails to compile
+when its own feature disagrees with `akita-transcript`'s.
+`scripts/check-terminal-quotient-features.sh` checks representative partial
+graphs and that no hook overrides the identifier.
 
 ## Schedule catalog storage
 

@@ -502,13 +502,10 @@ fn prover_and_verifier_emit_identical_event_sequences_for_every_catalog_shape() 
         check_catalog::<fp128::OneHotMultiChunk, OneHotSource>(&mut covered);
         check_catalog::<fp128::OneHotMultiChunkW2R2, OneHotSource>(&mut covered);
         check_catalog::<fp128::OneHotMultiChunkW4R2, OneHotSource>(&mut covered);
-        // The terminal quotient certificate admits only the 128-bit field.
-        if !cfg!(feature = "terminal-quotient") {
-            check_catalog::<fp32::Dense, DenseSource>(&mut covered);
-            check_catalog::<fp32::OneHot, OneHotSource>(&mut covered);
-            check_catalog::<fp64::Dense, DenseSource>(&mut covered);
-            check_catalog::<fp64::OneHot, OneHotSource>(&mut covered);
-        }
+        check_catalog::<fp32::Dense, DenseSource>(&mut covered);
+        check_catalog::<fp32::OneHot, OneHotSource>(&mut covered);
+        check_catalog::<fp64::Dense, DenseSource>(&mut covered);
+        check_catalog::<fp64::OneHot, OneHotSource>(&mut covered);
         assert!(!covered.is_empty());
         eprintln!("{} catalog shapes covered", covered.len());
     });

@@ -58,17 +58,25 @@ pub fn transcript_grinding_cost_for_planner_edge(
             })?,
             rounds,
             terminal,
+            // Planning prices the base protocol; a configuration that selects
+            // the terminal quotient certificate reuses its base schedule family.
+            false,
         )?;
     }
     Ok(accumulator.cost())
 }
 
 /// Derive the only accepted grinding plan from field metadata and public protocol shape.
+///
+/// `terminal_quotient` is the configuration's runtime selection of the terminal
+/// quotient certificate; it appends the certificate's point pair after the
+/// terminal fold challenges and admits it only for a large enough base field.
 pub fn derive_transcript_grinding_plan_from_public_shape(
     schedule: &FoldSchedule,
     root_layout: &OpeningClaimsLayout,
     challenge_order: ChallengeFieldOrder,
     claim_extension_degree: usize,
+    terminal_quotient: bool,
 ) -> Result<GrindingPlan, AkitaError> {
     schedule.validate_structure()?;
     schedule.validate_nonterminal_opening_execution(claim_extension_degree)?;
@@ -148,6 +156,7 @@ pub fn derive_transcript_grinding_plan_from_public_shape(
         )?,
         predecessor_rounds,
         &schedule.terminal,
+        terminal_quotient,
     )?;
     GrindingPlan::new(runs, challenge_order)
 }
@@ -308,6 +317,7 @@ fn append_terminal(
     level: u32,
     predecessor_rounds: usize,
     terminal: &crate::TerminalFoldParams,
+    terminal_quotient: bool,
 ) -> Result<(), AkitaError> {
     let layout = OpeningClaimsLayout::new(predecessor_rounds, 1)?;
     if extension_degree > 1 {
@@ -319,12 +329,13 @@ fn append_terminal(
         0,
         usize_to_u64(terminal.blocks.live_blocks, "terminal fold coordinates")?,
     )?)?;
-    #[cfg(feature = "terminal-quotient")]
-    sink.push(GrindingRun::terminal_quotient_pair(
-        level,
-        terminal.d_a(),
-        challenge_order,
-    )?)?;
+    if terminal_quotient {
+        sink.push(GrindingRun::terminal_quotient_pair(
+            level,
+            terminal.d_a(),
+            challenge_order,
+        )?)?;
+    }
     Ok(())
 }
 
@@ -579,12 +590,12 @@ mod tests {
                 terminal_runs.push(run);
                 Ok(())
             },
-            ChallengeFieldOrder::from_field(128, 4, SisModulusProfileId::Q128OffsetA7F7.modulus())
-                .unwrap(),
+            ChallengeFieldOrder::from_full_capacity(128).unwrap(),
             4,
             1,
             rounds,
             &terminal,
+            false,
         )
         .expect("terminal grinding runs");
         assert_eq!(
@@ -954,6 +965,7 @@ mod tests {
                 1,
                 7,
                 &terminal,
+                true,
             )
             .unwrap();
             append_terminal(
@@ -963,6 +975,7 @@ mod tests {
                 1,
                 7,
                 &terminal,
+                true,
             )
             .unwrap();
             let plan = GrindingPlan::new(runs, challenge_order).unwrap();

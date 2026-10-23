@@ -21,8 +21,9 @@
 //! only adequate for a large base field. The pair is the typed grinding-plan
 //! entry `GrindingSite::TerminalQuotientPair`, which the plan admits only when
 //! `(2D - 2)^2 2^128 <= |F|^2` holds without grinding (the 128-bit field; no
-//! 32- or 64-bit field). The points are drawn through that entry, so a build
-//! with the certificate refuses to prove or verify over a smaller field.
+//! 32- or 64-bit field). The points are drawn through that entry, so a
+//! configuration that selects the certificate (`TerminalQuotientConfig`)
+//! refuses to prove or verify over a smaller field.
 
 use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;

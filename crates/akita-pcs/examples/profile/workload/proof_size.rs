@@ -21,11 +21,20 @@ pub(super) fn proof_size_budgets<Cfg: CommitmentConfig>(
             .collect(),
     };
     let policy = akita_config::policy_of::<Cfg>();
-    let planner_estimate =
-        akita_schedules::expanded_schedule_proof_estimate_bytes(&key, schedule, &policy)
-            .expect("expanded schedule estimate");
-    let bound = akita_schedules::expanded_schedule_proof_bound(&key, schedule, &policy)
-        .expect("native proof bound");
+    let planner_estimate = akita_schedules::expanded_schedule_proof_estimate_bytes(
+        &key,
+        schedule,
+        &policy,
+        Cfg::terminal_quotient(),
+    )
+    .expect("expanded schedule estimate");
+    let bound = akita_schedules::expanded_schedule_proof_bound(
+        &key,
+        schedule,
+        &policy,
+        Cfg::terminal_quotient(),
+    )
+    .expect("native proof bound");
     ProofSizeBudgets {
         planner_estimate,
         bound,

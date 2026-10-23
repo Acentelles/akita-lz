@@ -50,7 +50,7 @@ fn public_absorption_never_extends_the_argument_string() {
     assert_eq!(prover.narg_string(), before);
 }
 
-#[cfg(all(feature = "transcript-blake2b", not(feature = "terminal-quotient")))]
+#[cfg(feature = "transcript-blake2b")]
 #[test]
 fn blake2b_transcript_has_a_cross_width_known_answer() {
     let mut prover = new_prover_channel(b"cross-width/session", b"cross-width/instance").unwrap();
@@ -61,6 +61,28 @@ fn blake2b_transcript_has_a_cross_width_known_answer() {
         [
             174, 120, 165, 116, 108, 247, 146, 33, 182, 143, 40, 94, 150, 167, 244, 49, 71, 31, 91,
             26, 214, 49, 240, 75, 87, 142, 44, 99, 169, 37, 81, 104,
+        ]
+    );
+}
+
+/// The same transcript steps under the terminal quotient certificate's
+/// identifier, which a configuration selects at runtime.
+#[cfg(all(feature = "transcript-blake2b", feature = "terminal-quotient"))]
+#[test]
+fn blake2b_terminal_quotient_transcript_has_a_cross_width_known_answer() {
+    let mut prover = new_prover_channel_for(
+        crate::ProofStreamVersion::V7TerminalQuotient,
+        b"cross-width/session",
+        b"cross-width/instance",
+    )
+    .unwrap();
+    prover.public_message(b"public-message");
+    let challenge = prover.verifier_message::<[u8; 32]>();
+    assert_eq!(
+        challenge,
+        [
+            159, 36, 11, 15, 242, 123, 12, 223, 159, 245, 133, 118, 153, 39, 59, 112, 32, 94, 92,
+            17, 240, 95, 32, 71, 241, 199, 90, 168, 172, 27, 226, 125,
         ]
     );
 }

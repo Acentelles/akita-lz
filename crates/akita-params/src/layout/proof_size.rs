@@ -32,12 +32,14 @@ pub fn terminal_quotient_len(ring_dimension: usize) -> Result<usize, AkitaError>
 }
 
 /// Proof bytes of the terminal quotient certificate: `n_a (D - 1)` canonical
-/// field elements, or zero when the `terminal-quotient` feature is off.
+/// field elements when the configuration selects it (`terminal_quotient`),
+/// else zero.
 pub fn terminal_quotient_bytes(
     field_bits: u32,
     terminal: &crate::TerminalFoldParams,
+    terminal_quotient: bool,
 ) -> Result<usize, AkitaError> {
-    if !cfg!(feature = "terminal-quotient") {
+    if !terminal_quotient {
         return Ok(0);
     }
     akita_error::checked::product([

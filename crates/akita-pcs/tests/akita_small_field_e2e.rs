@@ -49,9 +49,6 @@
 //! from the combined registry.
 
 #![allow(missing_docs)]
-// The terminal quotient certificate admits only the 128-bit field; with it,
-// these configurations refuse to prove (see `terminal_quotient.rs`).
-#![cfg(not(feature = "terminal-quotient"))]
 
 mod common;
 #[path = "small_field_drivers/reduced_eor.rs"]

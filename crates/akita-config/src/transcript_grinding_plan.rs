@@ -5,7 +5,9 @@ use akita_error::AkitaError;
 use akita_params::{ChallengeFieldOrder, FoldSchedule, GrindingPlan, OpeningClaimsLayout};
 use jolt_field::{CanonicalEncoding, ExtField};
 
-/// Derive the only accepted grinding plan for one effective schedule and call.
+/// Derive the only accepted grinding plan for one effective schedule and call,
+/// including the terminal quotient certificate's point pair when `Cfg` selects
+/// it ([`CommitmentConfig::terminal_quotient`]).
 pub fn derive_transcript_grinding_plan<Cfg: CommitmentConfig>(
     schedule: &FoldSchedule,
     root_layout: &OpeningClaimsLayout,
@@ -31,6 +33,7 @@ where
         root_layout,
         challenge_order,
         extension_degree,
+        Cfg::terminal_quotient(),
     )
 }
 

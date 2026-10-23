@@ -219,6 +219,7 @@ where
         },
         resolved.schedule(),
         &akita_config::policy_of::<Cfg>(),
+        Cfg::terminal_quotient(),
     )
     .expect("native proof bound");
     assert!(
@@ -332,10 +333,6 @@ fn fp128_stream_rejects_statement_session_and_proof_mutations() {
 }
 
 #[test]
-#[cfg_attr(
-    feature = "terminal-quotient",
-    ignore = "the terminal quotient certificate admits only the 128-bit field"
-)]
 fn fp32_extension_stream_rejects_statement_session_and_proof_mutations() {
     run_on_large_stack(|| {
         assert_soundness_boundaries::<fp32::Field, fp32::Dense>(

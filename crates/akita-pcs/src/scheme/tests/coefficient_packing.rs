@@ -121,10 +121,6 @@ fn packing_setup_prefix_dispatch_rejects_an_unsupported_dimension() {
 }
 
 #[test]
-#[cfg_attr(
-    feature = "terminal-quotient",
-    ignore = "the terminal quotient certificate admits only the 128-bit field"
-)]
 fn fixed_root_packing_round_trips_in_both_bases() {
     std::thread::Builder::new()
         .stack_size(512 * 1024 * 1024)

@@ -212,6 +212,7 @@ where
             &request.schedule.terminal,
             session,
             request.setup,
+            Cfg::terminal_quotient(),
         )
     }
     fn finish(&self) -> Result<(), AkitaError> {
@@ -256,6 +257,7 @@ where
 {
     let (resolved, claims, grinding_plan, descriptor_bytes) =
         root::resolve_root::<Cfg, H>(expanded, schedules, opening, basis)?;
+    let stream_version = akita_transcript::ProofStreamVersion::select(Cfg::terminal_quotient())?;
     if registry.active.replace(true) {
         return Err(AkitaError::InvalidInput(
             "backend registry already has an active proof".into(),
@@ -307,7 +309,11 @@ where
             .ok_or_else(|| AkitaError::Internal("proof schedule has no successor fold".into()))?,
         adopted: None,
     };
-    let channel = akita_transcript::new_prover_channel(transcript_session, &descriptor_bytes)?;
+    let channel = akita_transcript::new_prover_channel_for(
+        stream_version,
+        transcript_session,
+        &descriptor_bytes,
+    )?;
     let mut grinding = ProverGrinding::new(channel, &grinding_plan);
     let (mut public, mut resident) = root_executor.root(
         &mut handoff,

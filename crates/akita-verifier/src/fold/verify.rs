@@ -106,7 +106,14 @@ where
             schedule,
             basis,
         )?;
-        let state = akita_transcript::new_verifier_channel(session, &descriptor_bytes, proof)?;
+        let terminal_quotient = Cfg::terminal_quotient();
+        let stream_version = akita_transcript::ProofStreamVersion::select(terminal_quotient)?;
+        let state = akita_transcript::new_verifier_channel_for(
+            stream_version,
+            session,
+            &descriptor_bytes,
+            proof,
+        )?;
         let mut grinding = akita_types::VerifierGrinding::new(state, &grinding_plan);
         let raw_groups = claims
             .groups()
@@ -143,6 +150,7 @@ where
                 witness_len: schedule.root_fold().output_witness_len,
                 setup_prefix_opening: root.setup_prefix_opening,
             },
+            terminal_quotient,
         )?;
         grinding.finish().map(|_accepted| ())
     }

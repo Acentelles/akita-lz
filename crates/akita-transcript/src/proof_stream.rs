@@ -11,7 +11,7 @@ use spongefish::{
 };
 use std::marker::PhantomData;
 
-use crate::TranscriptSponge;
+use crate::{ProofStreamVersion, TranscriptSponge};
 
 mod nonce;
 pub use nonce::{nonce_encoded_len, nonce_max_bytes, NonceAtom};
@@ -25,8 +25,6 @@ pub use sampling::{
 mod verifier;
 pub use verifier::VerifierChannel;
 mod site;
-#[cfg(all(test, feature = "transcript-blake2b", feature = "terminal-quotient"))]
-mod terminal_quotient_known_answer;
 
 /// Proof channel and proof-stream format version.
 pub const PROTOCOL_VERSION: u32 = 7;
@@ -192,16 +190,17 @@ impl Encoding<[u8]> for FramedBytes<'_> {
     }
 }
 
-fn proof_stream_protocol_id() -> [u8; 64] {
+fn proof_stream_protocol_id(version: ProofStreamVersion) -> [u8; 64] {
     #[cfg(feature = "transcript-blake2b")]
     let name = "blake2b";
     #[cfg(feature = "transcript-keccak")]
     let name = "keccak";
-    let ver = crate::version::channel_version().segment();
+    let ver = version.segment();
     protocol_id(format_args!("akita-pcs/native-proof-stream/{ver}/{name}"))
 }
 
 fn domain<'a>(
+    version: ProofStreamVersion,
     session: &'a [u8],
     instance: &'a [u8],
 ) -> Result<
@@ -212,23 +211,38 @@ fn domain<'a>(
     AkitaError,
 > {
     Ok(
-        DomainSeparator::<WithoutInstance>::new(proof_stream_protocol_id())
+        DomainSeparator::<WithoutInstance>::new(proof_stream_protocol_id(version))
             .session(FramedBytes::new(session)?)
             .instance(FramedBytes::new(instance)?),
     )
 }
 
-/// Construct a bound prover channel.
+/// Construct a bound prover channel under the base proof-stream version.
 ///
 /// # Errors
 ///
 /// Returns [`AkitaError::InvalidInput`] when a framed transcript input length exceeds
 /// `u64`.
 pub fn new_prover_channel(session: &[u8], instance: &[u8]) -> Result<ProverChannel, AkitaError> {
-    Ok(domain(session, instance)?.to_prover(TranscriptSponge::default()))
+    new_prover_channel_for(ProofStreamVersion::V7, session, instance)
 }
 
-/// Construct a bound verifier channel over one proof byte string.
+/// Extension seam: construct a bound prover channel under `version`, which a
+/// configuration selects at runtime (terminal quotient certificate).
+///
+/// # Errors
+///
+/// As [`new_prover_channel`].
+pub fn new_prover_channel_for(
+    version: ProofStreamVersion,
+    session: &[u8],
+    instance: &[u8],
+) -> Result<ProverChannel, AkitaError> {
+    Ok(domain(version, session, instance)?.to_prover(TranscriptSponge::default()))
+}
+
+/// Construct a bound verifier channel over one proof byte string under the
+/// base proof-stream version.
 ///
 /// # Errors
 ///
@@ -239,8 +253,23 @@ pub fn new_verifier_channel<'proof>(
     instance: &[u8],
     proof: &'proof [u8],
 ) -> Result<VerifierChannel<'proof>, AkitaError> {
+    new_verifier_channel_for(ProofStreamVersion::V7, session, instance, proof)
+}
+
+/// Extension seam: construct a bound verifier channel under `version`, which
+/// a configuration selects at runtime (terminal quotient certificate).
+///
+/// # Errors
+///
+/// As [`new_verifier_channel`].
+pub fn new_verifier_channel_for<'proof>(
+    version: ProofStreamVersion,
+    session: &[u8],
+    instance: &[u8],
+    proof: &'proof [u8],
+) -> Result<VerifierChannel<'proof>, AkitaError> {
     Ok(VerifierChannel::new(
-        domain(session, instance)?.to_verifier(TranscriptSponge::default(), proof),
+        domain(version, session, instance)?.to_verifier(TranscriptSponge::default(), proof),
     ))
 }
 

@@ -1,76 +1,85 @@
 //! Proof-stream grammar version named in the protocol identifier.
 
-/// Whether this build proves and verifies the terminal quotient certificate.
+use akita_error::AkitaError;
+
+/// Whether the terminal quotient certificate is compiled into this build.
 ///
-/// Every Akita crate that prices, sends or checks the certificate asserts at
-/// compile time that its own `terminal-quotient` feature agrees with this
-/// value, so a build graph cannot change the identifier without also changing
-/// the producers and consumers of the grammar it names.
+/// Compiling it in does not select it: a configuration selects it at runtime
+/// (`CommitmentConfig::terminal_quotient`). Every Akita crate that prices,
+/// sends or checks the certificate asserts at compile time that its own
+/// `terminal-quotient` feature agrees with this value, so a build cannot carry
+/// the certificate's identifier without its producers and consumers.
 pub const TERMINAL_QUOTIENT: bool = cfg!(feature = "terminal-quotient");
 
 /// Grammar version segment of the proof-stream protocol identifier.
 ///
 /// The terminal quotient certificate changes the terminal grammar, so its
 /// proofs run under a separate identifier (a different initial sponge state).
+/// The prover and verifier choose the version and the grammar from the same
+/// runtime selection.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ProofStreamVersion {
     /// Exact terminal ring relations: `v7`.
     V7,
     /// Terminal quotient certificate: `v7-terminal-quotient`.
+    #[cfg(feature = "terminal-quotient")]
     V7TerminalQuotient,
 }
 
 impl ProofStreamVersion {
-    /// The version this build proves and verifies.
-    pub const ACTIVE: Self = if TERMINAL_QUOTIENT {
-        Self::V7TerminalQuotient
-    } else {
-        Self::V7
-    };
+    /// The version for a configuration's terminal quotient selection.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AkitaError::UnsupportedSchedule`] when the certificate is
+    /// selected but not compiled into this build.
+    pub fn select(terminal_quotient: bool) -> Result<Self, AkitaError> {
+        if !terminal_quotient {
+            return Ok(Self::V7);
+        }
+        #[cfg(feature = "terminal-quotient")]
+        {
+            Ok(Self::V7TerminalQuotient)
+        }
+        #[cfg(not(feature = "terminal-quotient"))]
+        {
+            Err(AkitaError::UnsupportedSchedule(
+                "terminal quotient certificate is not compiled into this build".into(),
+            ))
+        }
+    }
 
     /// Segment written into the protocol identifier.
     #[must_use]
     pub const fn segment(self) -> &'static str {
         match self {
             Self::V7 => "v7",
+            #[cfg(feature = "terminal-quotient")]
             Self::V7TerminalQuotient => "v7-terminal-quotient",
         }
     }
 }
 
-#[cfg(feature = "test-support")]
-thread_local! {
-    static VERSION_OVERRIDE: std::cell::Cell<Option<ProofStreamVersion>> =
-        const { std::cell::Cell::new(None) };
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-/// The version used by channels constructed on this thread.
-#[cfg(not(feature = "test-support"))]
-pub(crate) const fn channel_version() -> ProofStreamVersion {
-    ProofStreamVersion::ACTIVE
-}
-
-/// The version used by channels constructed on this thread.
-#[cfg(feature = "test-support")]
-pub(crate) fn channel_version() -> ProofStreamVersion {
-    VERSION_OVERRIDE
-        .with(std::cell::Cell::get)
-        .unwrap_or(ProofStreamVersion::ACTIVE)
-}
-
-/// Run `body` with every channel constructed on this thread bound to
-/// `version` instead of [`ProofStreamVersion::ACTIVE`] (test support only).
-///
-/// Cross-version tests use it to feed one version's proof to a verifier whose
-/// only difference is the version domain.
-#[cfg(feature = "test-support")]
-pub fn with_proof_stream_version<R>(version: ProofStreamVersion, body: impl FnOnce() -> R) -> R {
-    struct Restore(Option<ProofStreamVersion>);
-    impl Drop for Restore {
-        fn drop(&mut self) {
-            VERSION_OVERRIDE.with(|cell| cell.set(self.0));
-        }
+    #[test]
+    fn selection_names_the_version() {
+        assert_eq!(
+            ProofStreamVersion::select(false).unwrap(),
+            ProofStreamVersion::V7
+        );
+        assert_eq!(ProofStreamVersion::V7.segment(), "v7");
+        #[cfg(feature = "terminal-quotient")]
+        assert_eq!(
+            ProofStreamVersion::select(true).unwrap(),
+            ProofStreamVersion::V7TerminalQuotient
+        );
+        #[cfg(not(feature = "terminal-quotient"))]
+        assert!(matches!(
+            ProofStreamVersion::select(true),
+            Err(AkitaError::UnsupportedSchedule(_))
+        ));
     }
-    let _restore = Restore(VERSION_OVERRIDE.with(|cell| cell.replace(Some(version))));
-    body()
 }

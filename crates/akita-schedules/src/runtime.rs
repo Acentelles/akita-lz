@@ -578,6 +578,7 @@ fn expanded_schedule_proof_components(
     key: &akita_params::ScheduleLookupKey,
     schedule: &FoldSchedule,
     policy: &PlannerPolicy,
+    terminal_quotient: bool,
 ) -> Result<ExpandedScheduleProofComponents, AkitaError> {
     let field_bits = policy.decomposition.field_bits();
     key.validate(field_bits)?;
@@ -642,11 +643,13 @@ fn expanded_schedule_proof_components(
         &key.opening_layout()?,
         policy.transcript_grinding_order()?,
         policy.claim_ext_degree,
+        terminal_quotient,
     )?;
-    let terminal_quotient = akita_params::terminal_quotient_bytes(field_bits, &schedule.terminal)?;
+    let terminal_quotient_bytes =
+        akita_params::terminal_quotient_bytes(field_bits, &schedule.terminal, terminal_quotient)?;
     let fixed_bytes = total
         .checked_add(terminal_eor)
-        .and_then(|value| value.checked_add(terminal_quotient))
+        .and_then(|value| value.checked_add(terminal_quotient_bytes))
         .ok_or_else(|| AkitaError::InvalidSetup("proof payload size overflow".into()))?;
     Ok(ExpandedScheduleProofComponents {
         fixed_bytes,
@@ -660,12 +663,15 @@ fn expanded_schedule_proof_components(
 ///
 /// The objective uses additive per-message canonical nonce maxima and the
 /// planner's terminal-response estimate. It is not a parser bound.
+/// `terminal_quotient` is the configuration's runtime selection of the
+/// terminal quotient certificate (`CommitmentConfig::terminal_quotient`).
 pub fn expanded_schedule_proof_estimate_bytes(
     key: &akita_params::ScheduleLookupKey,
     schedule: &FoldSchedule,
     policy: &PlannerPolicy,
+    terminal_quotient: bool,
 ) -> Result<usize, AkitaError> {
-    let components = expanded_schedule_proof_components(key, schedule, policy)?;
+    let components = expanded_schedule_proof_components(key, schedule, policy, terminal_quotient)?;
     components
         .fixed_bytes
         .checked_add(components.terminal_planner_bytes)
@@ -677,12 +683,15 @@ pub fn expanded_schedule_proof_estimate_bytes(
 ///
 /// Unlike the schedule-selection estimate, this uses every inline nonce's
 /// maximum canonical LEB128 width and the scheduled terminal response cap.
+/// `terminal_quotient` is the configuration's runtime selection of the
+/// terminal quotient certificate (`CommitmentConfig::terminal_quotient`).
 pub fn expanded_schedule_proof_bound(
     key: &akita_params::ScheduleLookupKey,
     schedule: &FoldSchedule,
     policy: &PlannerPolicy,
+    terminal_quotient: bool,
 ) -> Result<usize, AkitaError> {
-    let components = expanded_schedule_proof_components(key, schedule, policy)?;
+    let components = expanded_schedule_proof_components(key, schedule, policy, terminal_quotient)?;
     components
         .fixed_bytes
         .checked_add(components.terminal_max_bytes)
@@ -759,6 +768,8 @@ pub fn materialize_candidate_schedule(
         root_layout,
         policy.transcript_grinding_order()?,
         policy.claim_ext_degree,
+        // Planning materializes the base protocol's schedules.
+        false,
     )?;
     if grinding_plan.total_nonce_bits() != cached_grinding_cost.total_nonce_bits
         || grinding_plan.nonce_max_bytes() != cached_grinding_cost.nonce_max_bytes

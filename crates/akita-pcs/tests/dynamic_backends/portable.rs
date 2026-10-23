@@ -19,10 +19,6 @@ type Cpu = CpuBackend<F, E>;
 const DOMAIN: &[u8] = b"akita/test/portable-extension-import";
 
 #[test]
-#[cfg_attr(
-    feature = "terminal-quotient",
-    ignore = "the terminal quotient certificate admits only the 128-bit field"
-)]
 fn portable_tensor_import_matches_homogeneous_proof() {
     common::init_rayon_pool();
     common::run_on_large_stack(|| {
@@ -37,10 +33,6 @@ fn portable_tensor_import_matches_homogeneous_proof() {
 }
 
 #[test]
-#[cfg_attr(
-    feature = "terminal-quotient",
-    ignore = "the terminal quotient certificate admits only the 128-bit field"
-)]
 fn offloaded_route_uses_only_local_prefix_handles() {
     common::init_rayon_pool();
     common::run_on_large_stack(|| {

@@ -128,6 +128,7 @@ pub(super) fn prove_terminal_suffix<F, E, B>(
     scheduled: &TerminalFoldParams,
     session: &B::ProofSessionHandle,
     setup: &akita_types::AkitaSetupDescriptor,
+    terminal_quotient: bool,
 ) -> Result<(), AkitaError>
 where
     F: Field + CanonicalEncoding + AkitaSerialize + Ring + Unreduced + PseudoMersenne + 'static,
@@ -362,8 +363,14 @@ where
         z_payload,
         group.z_payload_bytes,
     )?;
-    #[cfg(feature = "terminal-quotient")]
-    send_terminal_quotient::<F>(grinding, fold_level, scheduled, group, z_payload, setup)?;
+    if terminal_quotient {
+        #[cfg(feature = "terminal-quotient")]
+        send_terminal_quotient::<F>(grinding, fold_level, scheduled, group, z_payload, setup)?;
+        #[cfg(not(feature = "terminal-quotient"))]
+        return Err(AkitaError::UnsupportedSchedule(
+            "terminal quotient certificate is not compiled into this prover".into(),
+        ));
+    }
     #[cfg(not(feature = "terminal-quotient"))]
     let _ = setup;
     Ok(())

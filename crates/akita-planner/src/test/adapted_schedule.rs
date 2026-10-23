@@ -595,10 +595,11 @@ fn benchmark_adapted_schedule_against_full_plans() {
                     &key,
                     &adapted.schedule,
                     &policy,
+                    false,
                 )
                 .expect("adapted payload bytes");
                 let full_bytes = akita_schedules::expanded_schedule_proof_estimate_bytes(
-                    &key, &reference, &policy,
+                    &key, &reference, &policy, false,
                 )
                 .expect("full-plan payload bytes");
                 let ratio_ppm = adapted_bytes * 1_000_000 / full_bytes;

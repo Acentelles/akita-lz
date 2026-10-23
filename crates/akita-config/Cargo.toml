@@ -26,6 +26,14 @@ transcript-keccak = [
   "akita-params/transcript-keccak",
 ]
 test-support = []
+# Terminal quotient certificate (off by default). Compiles in the
+# `TerminalQuotientConfig` adapter, which selects the certificate at runtime;
+# enabling the feature selects nothing.
+terminal-quotient = [
+  "akita-params/terminal-quotient",
+  "akita-transcript/terminal-quotient",
+  "akita-types/terminal-quotient",
+]
 
 [dependencies]
 akita-error = { version = "0.1.0", path = "../akita-error" }

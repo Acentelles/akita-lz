@@ -38,6 +38,7 @@ default = ["transcript-blake2b"]
 # the verifier checks each row at two random points instead of computing the
 # exact ring product. Proofs use a separate protocol identifier.
 terminal-quotient = [
+  "akita-config/terminal-quotient",
   "akita-types/terminal-quotient",
   "akita-transcript/terminal-quotient",
   "akita-params/terminal-quotient",

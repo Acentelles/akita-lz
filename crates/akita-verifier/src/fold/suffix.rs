@@ -283,6 +283,7 @@ pub(super) fn verify_suffix<F, E>(
     grinding: &mut akita_types::VerifierGrinding<'_, '_>,
     schedule: &FoldSchedule,
     mut current_state: SuffixVerifierState<F, E>,
+    terminal_quotient: bool,
 ) -> Result<(), AkitaError>
 where
     F: Field + CanonicalEncoding + akita_serialization::AkitaSerialize + PseudoMersenne,
@@ -321,5 +322,6 @@ where
         &current_state,
         &schedule.terminal,
         setup.expanded().shared_matrix().as_field_slice(),
+        terminal_quotient,
     )
 }

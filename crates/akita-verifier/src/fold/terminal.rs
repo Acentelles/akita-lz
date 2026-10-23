@@ -19,6 +19,7 @@ pub(super) fn verify_terminal_suffix<F, E>(
     current_state: &SuffixVerifierState<F, E>,
     scheduled: &TerminalFoldParams,
     setup_matrix: &[F],
+    terminal_quotient: bool,
 ) -> Result<(), AkitaError>
 where
     F: Field + CanonicalEncoding + akita_serialization::AkitaSerialize + PseudoMersenne,
@@ -142,17 +143,30 @@ where
         group.z_payload_bytes,
     )?;
     scheduled.validate_terminal_linf_cap(group.z_linf_cap)?;
-    // Terminal quotient certificate: the A-row quotient follows the z payload;
-    // the two evaluation points are drawn after it, bound to the whole
-    // terminal response.
+    // Terminal quotient certificate, when the configuration selects it: the
+    // A-row quotient follows the z payload; the two evaluation points are
+    // drawn after it, bound to the whole terminal response.
     #[cfg(feature = "terminal-quotient")]
-    let quotient = crate::terminal::quotient::receive_terminal_quotient::<F>(
-        grinding,
-        level,
-        scheduled.inner.matrix.output_rank(),
-        scheduled.d_a(),
-        setup_matrix,
-    )?;
+    let quotient = if terminal_quotient {
+        Some(crate::terminal::quotient::receive_terminal_quotient::<F>(
+            grinding,
+            level,
+            scheduled.inner.matrix.output_rank(),
+            scheduled.d_a(),
+            setup_matrix,
+        )?)
+    } else {
+        None
+    };
+    #[cfg(not(feature = "terminal-quotient"))]
+    {
+        let _ = setup_matrix;
+        if terminal_quotient {
+            return Err(AkitaError::UnsupportedSchedule(
+                "terminal quotient certificate is not compiled into this verifier".into(),
+            ));
+        }
+    }
     let terminal_response = akita_types::TerminalResponse {
         layout: scheduled.response_shape.layout.clone(),
         z_payloads: vec![z_payload],
@@ -160,8 +174,6 @@ where
         t_fields: current_state.witness.clone(),
     };
     #[cfg(not(feature = "terminal-quotient"))]
-    let _ = setup_matrix;
-    #[cfg(not(feature = "terminal-quotient"))]
     crate::terminal::direct::verify_terminal_ring_relations(
         terminal_ntt,
         &challenges,
@@ -176,7 +188,7 @@ where
         &prepared_point.ring_multiplier_point,
         scheduled,
         &terminal_response,
-        &quotient,
+        quotient.as_ref(),
     )?;
     let (target, scale) = match final_relation {
         Some((claims, factors)) => (

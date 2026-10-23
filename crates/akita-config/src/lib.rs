@@ -72,6 +72,8 @@ pub mod recursive_commitment;
 mod schedule_artifact_tests;
 mod setup_prefix_slots;
 mod setup_requirements;
+#[cfg(feature = "terminal-quotient")]
+mod terminal_quotient;
 pub use setup_prefix_slots::required_setup_prefix_slot_ids_for_schedule;
 pub use setup_requirements::{validate_setup_capacity_metadata, SetupRequirements};
 #[cfg(any(test, feature = "test-support"))]
@@ -86,8 +88,17 @@ pub use akita_schedules::{
 };
 pub use proof_optimized::{ensure_prover_schedule_fits_setup, verifier_schedule_fits_setup};
 pub use recursive_commitment::RecursiveCommitmentConfig;
+#[cfg(feature = "terminal-quotient")]
+pub use terminal_quotient::TerminalQuotientConfig;
 pub use transcript_binding::transcript_instance_descriptor;
 pub use transcript_grinding_plan::derive_transcript_grinding_plan;
+
+// The proof-stream identifier lives in `akita-transcript`; every crate that
+// prices, sends or checks the terminal quotient certificate must agree with it.
+const _: () = assert!(
+    akita_transcript::TERMINAL_QUOTIENT == cfg!(feature = "terminal-quotient"),
+    "terminal-quotient must be enabled on every Akita crate in the build: select it through akita-pcs/terminal-quotient"
+);
 
 /// Derive the runtime schedule policy from a preset.
 ///
@@ -471,6 +482,18 @@ pub trait CommitmentConfig: Clone + Send + Sync + 'static {
     /// Ordinary configs are direct-only. Config adapters that opt into recursive
     /// setup offloading override this and use a separate external family artifact.
     fn recursive_setup_planning() -> bool {
+        false
+    }
+
+    /// Extension seam: whether this configuration selects the terminal
+    /// quotient certificate (feature `terminal-quotient`).
+    ///
+    /// Ordinary configs use the exact terminal ring relations. The
+    /// `TerminalQuotientConfig` adapter overrides this; the selection then
+    /// drives the proof-stream identifier, the terminal grammar, the grinding
+    /// plan and the proof byte model. Enabling the Cargo feature alone selects
+    /// nothing.
+    fn terminal_quotient() -> bool {
         false
     }
 
