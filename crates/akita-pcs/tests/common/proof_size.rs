@@ -53,6 +53,10 @@ impl<S: Subscriber> Layer<S> for CaptureLayer {
     }
 }
 
+/// Terminal quotient bytes the L2 feature adds to the wire at the e2e geometry.
+#[cfg(feature = "l2-terminal-quotient")]
+const L23_QUOTIENT_BYTES: usize = 3_024;
+
 /// Run `prove`, then check its proof against the byte model of `selection`.
 pub(crate) fn prove_matching_byte_model<Cfg: CommitmentConfig>(
     schedules: &TrustedScheduleCatalog<Cfg>,
@@ -105,6 +109,16 @@ pub(crate) fn prove_matching_byte_model<Cfg: CommitmentConfig>(
         .and_then(|rest| rest.checked_sub(nonce))
         .expect("the proof contains both reported variable sections");
 
+    // L23 disclosed test change (report gate for L2 review caveat C1): the
+    // schedule byte model does not count the terminal quotient, so under the
+    // L2 feature the expected fixed width grows by its 3,024 bytes (3 rows of
+    // D - 1 = 63 canonical 16-byte coefficients at the measured geometry).
+    #[cfg(feature = "l2-terminal-quotient")]
+    let model_fixed = model_fixed + L23_QUOTIENT_BYTES;
+    eprintln!(
+        "L23-E2E byte-model test={} actual_fixed={actual_fixed} model_fixed={model_fixed}",
+        std::thread::current().name().unwrap_or("unnamed"),
+    );
     assert_eq!(
         actual_fixed,
         model_fixed,
