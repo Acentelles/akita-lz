@@ -28,8 +28,9 @@ features = ["parallel", "transcript-blake2b"]
 ignored = ["akita-setup"]
 
 [features]
-default = ["parallel", "transcript-blake2b"]
-# Experimental L2 terminal quotient certificate (recursion lever, default off):
+default = ["parallel", "transcript-blake2b", "l2-terminal-quotient"]
+# L2 terminal quotient certificate (default on; disable with
+# --no-default-features):
 # the terminal A rows are checked at two points against a sent quotient, under
 # a separate protocol identifier.
 l2-terminal-quotient = [
