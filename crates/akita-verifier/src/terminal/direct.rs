@@ -438,15 +438,7 @@ where
     {
         return Err(AkitaError::InvalidProof);
     }
-    let rows = (0..n_a)
-        .map(|row_index| {
-            let rows = t
-                .chunks_exact(n_a)
-                .map(|rows| rows.get(row_index).ok_or(AkitaError::InvalidProof))
-                .collect::<Result<Vec<_>, AkitaError>>()?;
-            sparse_challenge_dot(challenges.as_slice(), rows)
-        })
-        .collect::<Result<Vec<_>, AkitaError>>()?;
+    let rows = super::quotient_rhs::evaluate(t, challenges.as_slice(), n_a, quotient.points)?;
     super::quotient::check_rows::<F, D>(quotient, &rows, z)
 }
 
