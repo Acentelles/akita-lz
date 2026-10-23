@@ -34,15 +34,16 @@ quantum computer could break the assumptions behind them.
 
 The commitment is often the part of the proof system that carries this
 assumption. The surrounding protocol checks polynomial identities using
-algebra and random challenges. Replacing the PCS with a post-quantum PCS can
-therefore protect the complete proof without replacing every other protocol in
-the system.
+algebra and random challenges. A PCS designed for quantum resistance removes
+that particular curve assumption. Security of the complete proof also depends
+on the surrounding protocol, including its transcript challenges.
 
 Hash-based commitments provide one post-quantum path. They are well developed,
 but they tend to produce larger proofs and require more prover memory. Akita
-takes the lattice path. It uses structured lattice problems to obtain
-post-quantum security, compact proofs, and a commitment operation that can
-preserve sparse inputs.
+takes the lattice path. It uses structured lattice problems to target quantum
+resistance while providing compact proofs and a commitment operation that can
+preserve sparse inputs. The [security status](#security-status) states the
+model-specific targets and their limits.
 
 ## What a polynomial commitment proves
 

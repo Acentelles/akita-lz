@@ -117,10 +117,11 @@ PR may retain a head-pinned TSV under `specs/evidence/`, but that snapshot is
 review evidence rather than runtime authority.
 
 The reported value is the minimum scalarized SIS attack cost under the
-policy's ADPS16 quantum/LGSA model. It is not an unqualified concrete-security
-claim: the scalar estimator does not price attacks that exploit ring or module
-structure, CRT splitting, subfield projection, or role-specific matrix
-structure.
+policy's ADPS16 quantum cost model. The coefficient-$L_\infty$ route uses an
+LGSA estimate; the Euclidean route prices the collision's $L_2$ length directly.
+This is not an unqualified concrete-security claim: the scalar estimator does
+not price attacks that exploit ring or module structure, CRT splitting,
+subfield projection, or role-specific matrix structure.
 
 The production lookup is table-only. Verifier-reachable code must reject a
 missing table row or unsupported floor with `AkitaError`; it must not run the
@@ -128,7 +129,7 @@ estimator at verification time.
 
 ### Quantum policy
 
-The production rule is the ADPS16 quantum LGSA model with a 169-bit target. It
+The production rule is the ADPS16 quantum cost model with a 169-bit target. It
 is an attack-cost model, not a physical resource estimate or an unqualified
 post-quantum security proof.
 
@@ -167,10 +168,11 @@ review line. That diagnostic has not been rerun at the 169-bit target. The
 idealized model remains documented sensitivity evidence rather than a
 production constraint.
 
-LGSA is likewise an explicit attacker strategy: rerandomize the q-ary basis so
-BKZ forgets its canonical q-vectors. On representative widened q64 and q128
-rows, LGSA is no more expensive than ordinary GSA and is cheaper than the
-determinant-preserving Chen-Nguyen profile simulations. The optional symmetric
+For the coefficient-$L_\infty$ route, LGSA is an explicit attacker strategy:
+rerandomize the q-ary basis so BKZ forgets its canonical q-vectors. On
+representative widened q64 and q128 rows, LGSA is no more expensive than
+ordinary GSA and is cheaper than the determinant-preserving Chen-Nguyen
+profile simulations. The optional symmetric
 ZGSA compatibility path caps its paired smoothing steps at the smaller of the
 q-vector and identity-vector zones, preserving the lattice determinant even
 when q-vectors are the majority.
