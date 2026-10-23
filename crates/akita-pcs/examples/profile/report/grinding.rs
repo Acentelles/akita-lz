@@ -31,6 +31,7 @@ pub(super) fn emit_grinding_plan_report(label: &str, plan: &GrindingPlan) {
             GrindingQueryKind::ProofOfWork => "proof_of_work",
             GrindingQueryKind::FoldResponse => "fold_response",
             GrindingQueryKind::FoldChallengeGroup => "fold_challenge_group",
+            GrindingQueryKind::TerminalQuotientPair => "terminal_quotient_pair",
         };
         let run_nonce_bits = u64::from(run.nonce_bits()) * run.multiplicity();
         tracing::info!(
@@ -100,6 +101,7 @@ fn site_report(site: GrindingSite) -> SiteReport {
         GrindingSite::L2VirtualBatch { .. } => plain("physical_l2", "virtual_batch"),
         GrindingSite::CompressionBinary { .. } => plain("stage2", "compression_binary"),
         GrindingSite::Stage2Batch { .. } => plain("stage2", "claim_batch"),
+        GrindingSite::TerminalQuotientPair { .. } => plain("terminal", "quotient_pair"),
     }
 }
 

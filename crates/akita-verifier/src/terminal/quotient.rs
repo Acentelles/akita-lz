@@ -14,12 +14,18 @@
 //! `2D - 2` for every sent `Q_i` (division by the monic `X^D + 1` is unique),
 //! and the points are drawn after `z`, `t`, the folding challenges and `Q` are
 //! absorbed. So a false row passes both points with probability at most
-//! `((2D - 2) / p)^2`. The check never divides by `r^D + 1`. All other
-//! terminal checks are unchanged.
+//! `((2D - 2) / p)^2`; one shared pair covers every row. The check never
+//! divides by `r^D + 1`. All other terminal checks are unchanged.
+//!
+//! The points live in the base field `F`, not the extension, so the bound is
+//! only adequate for a large base field. The pair is the typed grinding-plan
+//! entry `GrindingSite::TerminalQuotientPair`, which the plan admits only when
+//! `(2D - 2)^2 2^128 <= |F|^2` holds without grinding (the 128-bit field; no
+//! 32- or 64-bit field). The points are drawn through that entry, so a build
+//! with the certificate refuses to prove or verify over a smaller field.
 
 use akita_algebra::CyclotomicRing;
 use akita_error::AkitaError;
-use akita_params::TerminalFoldParams;
 use akita_types::GrindingReplay;
 use jolt_field::{CanonicalEncoding, Field, Ring};
 
@@ -31,21 +37,21 @@ pub(crate) struct TerminalQuotient<'a, F> {
     pub(crate) points: [F; 2],
 }
 
-/// Receive the quotient (after the `z` payload) and draw the two points.
+/// Receive the quotient of the `rows` terminal A rows of ring dimension
+/// `ring_dimension` (after the `z` payload) and draw the two points through
+/// the grinding plan's quotient-pair entry.
 pub(crate) fn receive_terminal_quotient<'a, F>(
     grinding: &mut akita_types::VerifierGrinding<'_, '_>,
     level: u32,
-    scheduled: &TerminalFoldParams,
+    rows: usize,
+    ring_dimension: usize,
     setup: &'a [F],
 ) -> Result<TerminalQuotient<'a, F>, AkitaError>
 where
     F: Field + CanonicalEncoding,
 {
-    let quotient_len = akita_params::terminal_quotient_len(scheduled.d_a())?;
-    let count = scheduled
-        .inner
-        .matrix
-        .output_rank()
+    let quotient_len = akita_params::terminal_quotient_len(ring_dimension)?;
+    let count = rows
         .checked_mul(quotient_len)
         .ok_or(AkitaError::InvalidProof)?;
     let coefficients = akita_transcript::receive_field_group::<F>(
@@ -53,12 +59,11 @@ where
         akita_types::FoldSite::TerminalQuotient { level }.id()?,
         count,
     )?;
-    let first = akita_transcript::verifier_field_challenge::<F>(grinding.state_mut())?;
-    let second = akita_transcript::verifier_field_challenge::<F>(grinding.state_mut())?;
+    let points = grinding.terminal_quotient_points::<F>(level)?;
     Ok(TerminalQuotient {
         setup,
         coefficients,
-        points: [first, second],
+        points,
     })
 }
 
@@ -146,7 +151,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jolt_field::{One, Prime128OffsetA7F7 as F, Zero};
+    use akita_params::{ChallengeFieldOrder, GrindingPlan, GrindingRun, SisModulusProfileId};
+    use akita_transcript::{
+        new_prover_channel, new_verifier_channel, receive_field_group, send_field_group,
+    };
+    use akita_types::{FoldSite, ProverGrinding, VerifierGrinding};
+    use jolt_field::{CanonicalBytes, One, Prime128OffsetA7F7 as F, Zero};
 
     const D: usize = 64;
     const ROWS: usize = 3;
@@ -293,5 +303,194 @@ mod tests {
             points: [F::zero(), F::one()],
         };
         check_rows(&at_zero, &rows, &z).expect("honest quotient at 0 and 1");
+    }
+
+    // Transcript-level tests: the terminal tail `z`, `Q`, then the two points,
+    // replayed through a real proof channel and the grinding plan's pair entry.
+
+    const LEVEL: u32 = 2;
+    const SESSION: &[u8] = b"terminal-quotient/transcript";
+
+    fn fp128_order() -> ChallengeFieldOrder {
+        ChallengeFieldOrder::from_field(128, 1, SisModulusProfileId::Q128OffsetA7F7.modulus())
+            .unwrap()
+    }
+
+    fn plan() -> GrindingPlan {
+        let order = fp128_order();
+        GrindingPlan::new(
+            vec![GrindingRun::terminal_quotient_pair(LEVEL, D, order).unwrap()],
+            order,
+        )
+        .unwrap()
+    }
+
+    fn z_fields(z: &[[i16; D]]) -> Vec<F> {
+        z.iter()
+            .flatten()
+            .map(|&value| F::from_i64(i64::from(value)))
+            .collect()
+    }
+
+    /// The prover's terminal tail: `z`, then `Q`, then the two points.
+    fn prove_tail(z: &[[i16; D]], quotient: &[F]) -> (Vec<u8>, [F; 2]) {
+        let plan = plan();
+        let mut prover = ProverGrinding::new(new_prover_channel(SESSION, b"tail").unwrap(), &plan);
+        let z_site = FoldSite::TerminalZPayload { level: LEVEL }.id().unwrap();
+        send_field_group(prover.state_mut(), z_site, &z_fields(z)).unwrap();
+        let q_site = FoldSite::TerminalQuotient { level: LEVEL }.id().unwrap();
+        send_field_group(prover.state_mut(), q_site, quotient).unwrap();
+        let points = prover.terminal_quotient_points::<F>(LEVEL).unwrap();
+        (prover.finish().unwrap(), points)
+    }
+
+    /// The verifier's side of the same tail, through end of stream.
+    fn verify_tail<'a>(
+        proof: &[u8],
+        setup: &'a [F],
+    ) -> Result<TerminalQuotient<'a, F>, AkitaError> {
+        let plan = plan();
+        let channel = new_verifier_channel(SESSION, b"tail", proof)?;
+        let mut verifier = VerifierGrinding::new(channel, &plan);
+        let z_site = FoldSite::TerminalZPayload { level: LEVEL }.id()?;
+        receive_field_group::<F>(verifier.state_mut(), z_site, COLS * D)?;
+        let quotient = receive_terminal_quotient::<F>(&mut verifier, LEVEL, ROWS, D, setup)?;
+        verifier.finish()?;
+        Ok(quotient)
+    }
+
+    fn power(base: F, exponent: usize) -> F {
+        (0..exponent).fold(F::one(), |acc, _| acc * base)
+    }
+
+    fn monomial(degree: usize) -> CyclotomicRing<F, D> {
+        CyclotomicRing::from_coefficients(std::array::from_fn(|k| {
+            if k == degree {
+                F::one()
+            } else {
+                F::zero()
+            }
+        }))
+    }
+
+    #[test]
+    fn transcript_points_follow_the_quotient_and_match_the_prover() {
+        let (setup, z) = fixture(21);
+        let rows = reduced_rows(&setup, &z);
+        let (proof, points) = prove_tail(&z, &honest(&setup, &z));
+        assert_eq!(
+            proof.len(),
+            (COLS * D + ROWS * (D - 1)) * <F as CanonicalBytes>::NUM_BYTES
+        );
+        let quotient = verify_tail(&proof, &setup).expect("honest tail");
+        assert_eq!(quotient.points, points);
+        check_rows(&quotient, &rows, &z).expect("honest quotient at the transcript points");
+    }
+
+    #[test]
+    fn noncanonical_quotient_atom_rejects_at_receipt() {
+        let (setup, z) = fixture(22);
+        let (proof, _) = prove_tail(&z, &honest(&setup, &z));
+        let atom_bytes = <F as CanonicalBytes>::NUM_BYTES;
+        let start = (COLS * D + 5) * atom_bytes;
+        let mut noncanonical = proof.clone();
+        noncanonical[start..start + atom_bytes].fill(0xff);
+        assert!(verify_tail(&noncanonical, &setup).is_err());
+        // A canonical change to the same atom parses, then fails the identity.
+        let mut changed = proof;
+        changed[start] ^= 1;
+        let quotient = verify_tail(&changed, &setup).expect("canonical atom parses");
+        assert!(check_rows(&quotient, &reduced_rows(&setup, &z), &z).is_err());
+    }
+
+    #[test]
+    fn modified_response_with_recomputed_quotient_rejects_through_the_transcript() {
+        let (setup, z) = fixture(23);
+        let rows = reduced_rows(&setup, &z);
+        let mut tampered = z.clone();
+        tampered[1][17] = tampered[1][17].wrapping_add(3);
+        let (proof, points) = prove_tail(&tampered, &honest(&setup, &tampered));
+        let quotient = verify_tail(&proof, &setup).expect("well-formed tail");
+        assert_eq!(quotient.points, points);
+        assert!(check_rows(&quotient, &rows, &tampered).is_err());
+    }
+
+    #[test]
+    fn quotient_is_bound_before_both_points() {
+        let (setup, z) = fixture(24);
+        let honest_quotient = honest(&setup, &z);
+        let (_, points) = prove_tail(&z, &honest_quotient);
+
+        // Any change to the quotient moves both points.
+        let mut other = honest_quotient.clone();
+        other[ROWS * (D - 1) - 1] += F::one();
+        let (_, moved) = prove_tail(&z, &other);
+        assert_ne!(moved[0], points[0]);
+        assert_ne!(moved[1], points[1]);
+
+        // A false row, and a quotient fitted to the honest transcript's points:
+        // `Q* = Q + c0 + c1 X` with `Q*(r) = Q(r) - r^40 / (r^D + 1)` at both.
+        let false_row = 1;
+        let mut rows = reduced_rows(&setup, &z);
+        rows[false_row] += monomial(40);
+        let targets = points.map(|r| {
+            let shift = power(r, D) + F::one();
+            F::zero() - power(r, 40) * shift.inverse().expect("r^D + 1 is nonzero")
+        });
+        let slope =
+            (targets[1] - targets[0]) * (points[1] - points[0]).inverse().expect("distinct points");
+        let intercept = targets[0] - slope * points[0];
+        let mut fitted = honest_quotient;
+        fitted[false_row * (D - 1)] += intercept;
+        fitted[false_row * (D - 1) + 1] += slope;
+
+        // Were the quotient chosen after the points, it would pass.
+        let after_points = TerminalQuotient {
+            setup: &setup,
+            coefficients: fitted.clone(),
+            points,
+        };
+        check_rows(&after_points, &rows, &z).expect("a quotient fitted to known points");
+
+        // Sent in its place before the points, it moves them and fails.
+        let (proof, drawn) = prove_tail(&z, &fitted);
+        assert_ne!(drawn, points);
+        let quotient = verify_tail(&proof, &setup).expect("well-formed tail");
+        assert_eq!(quotient.points, drawn);
+        assert!(check_rows(&quotient, &rows, &z).is_err());
+    }
+
+    #[test]
+    fn truncated_or_extended_quotient_tail_rejects() {
+        let (setup, z) = fixture(25);
+        let (proof, _) = prove_tail(&z, &honest(&setup, &z));
+        let atom_bytes = <F as CanonicalBytes>::NUM_BYTES;
+        assert!(verify_tail(&proof[..proof.len() - 1], &setup).is_err());
+        assert!(verify_tail(&proof[..proof.len() - atom_bytes], &setup).is_err());
+        let mut extra_byte = proof.clone();
+        extra_byte.push(0);
+        assert!(verify_tail(&extra_byte, &setup).is_err());
+        let mut extra_atom = proof;
+        extra_atom.resize(extra_atom.len() + atom_bytes, 0);
+        assert!(verify_tail(&extra_atom, &setup).is_err());
+    }
+
+    #[test]
+    fn points_need_the_plan_entry_which_small_fields_do_not_get() {
+        for (profile, bits, extension_degree) in [
+            (SisModulusProfileId::Q32Offset99, 32, 4),
+            (SisModulusProfileId::Q64Offset59, 64, 2),
+        ] {
+            let order =
+                ChallengeFieldOrder::from_field(bits, extension_degree, profile.modulus()).unwrap();
+            assert!(matches!(
+                GrindingRun::terminal_quotient_pair(LEVEL, D, order),
+                Err(AkitaError::UnsupportedSchedule(_))
+            ));
+        }
+        let plan = GrindingPlan::new(Vec::new(), fp128_order()).unwrap();
+        let channel = new_verifier_channel(SESSION, b"tail", &[]).unwrap();
+        let mut verifier = VerifierGrinding::new(channel, &plan);
+        assert!(verifier.terminal_quotient_points::<F>(LEVEL).is_err());
     }
 }

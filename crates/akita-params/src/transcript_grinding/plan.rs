@@ -319,6 +319,12 @@ fn append_terminal(
         0,
         usize_to_u64(terminal.blocks.live_blocks, "terminal fold coordinates")?,
     )?)?;
+    #[cfg(feature = "terminal-quotient")]
+    sink.push(GrindingRun::terminal_quotient_pair(
+        level,
+        terminal.d_a(),
+        challenge_order,
+    )?)?;
     Ok(())
 }
 
@@ -573,7 +579,8 @@ mod tests {
                 terminal_runs.push(run);
                 Ok(())
             },
-            ChallengeFieldOrder::from_full_capacity(128).unwrap(),
+            ChallengeFieldOrder::from_field(128, 4, SisModulusProfileId::Q128OffsetA7F7.modulus())
+                .unwrap(),
             4,
             1,
             rounds,

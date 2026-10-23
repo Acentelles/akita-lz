@@ -98,7 +98,16 @@ impl ChallengeFieldOrder {
         }
     }
 
-    fn satisfies_target(self, loss_factor: u64, grind_bits: u8) -> bool {
+    /// Order of the pair set `F x F` of the base field this order extends,
+    /// or `None` for a full-capacity order that names no base field.
+    pub(super) fn base_field_pair(self) -> Option<Self> {
+        let base_modulus_bits = self
+            .nominal_capacity_bits
+            .checked_div(self.extension_degree)?;
+        Self::from_field(base_modulus_bits, 2, self.field_modulus).ok()
+    }
+
+    pub(super) fn satisfies_target(self, loss_factor: u64, grind_bits: u8) -> bool {
         let target =
             GrindingUint::from_u64_shifted(loss_factor, u32::from(TRANSCRIPT_SECURITY_BITS));
         self.exact_cardinality

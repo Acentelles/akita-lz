@@ -20,6 +20,10 @@ fn dense_fp128_roundtrip() {
 }
 
 #[test]
+#[cfg_attr(
+    feature = "terminal-quotient",
+    ignore = "the terminal quotient certificate admits only the 128-bit field"
+)]
 fn onehot_fp32_roundtrip() {
     std::thread::Builder::new()
         .stack_size(512 * 1024 * 1024)

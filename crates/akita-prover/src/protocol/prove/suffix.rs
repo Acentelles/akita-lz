@@ -405,8 +405,9 @@ where
         akita_types::FoldSite::TerminalQuotient { level: fold_level }.id()?,
         &quotients,
     )?;
-    let _first = akita_transcript::prover_field_challenge::<F>(grinding.state_mut())?;
-    let _second = akita_transcript::prover_field_challenge::<F>(grinding.state_mut())?;
+    // The verifier's two points, drawn through the grinding plan's quotient
+    // pair (admitted only for a large enough base field).
+    let _points = grinding.terminal_quotient_points::<F>(fold_level)?;
     Ok(())
 }
 #[allow(clippy::too_many_arguments)]

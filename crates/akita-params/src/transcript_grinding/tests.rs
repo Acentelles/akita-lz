@@ -274,3 +274,67 @@ fn planner_accumulator_prices_an_oversized_edge_without_plan_validation() {
         }
     );
 }
+
+/// The terminal quotient certificate's point pair: local bound
+/// `-log2(((2D - 2) / p)^2)` for every production base field, admitted exactly
+/// when it meets the 128-bit transcript target without grinding.
+#[test]
+fn terminal_quotient_pair_is_admitted_only_over_the_128_bit_field() {
+    use crate::SisModulusProfileId;
+    let local_bits = |modulus: u128, ring_dimension: usize| {
+        2.0 * ((modulus as f64).log2() - ((2 * ring_dimension - 2) as f64).log2())
+    };
+    for (profile, modulus_bits, extension_degree, admitted, bits_at_64) in [
+        (SisModulusProfileId::Q32Offset99, 32, 4, false, 50.045),
+        (SisModulusProfileId::Q64Offset59, 64, 2, false, 114.045),
+        (SisModulusProfileId::Q128OffsetA7F7, 128, 1, true, 242.045),
+    ] {
+        let modulus = profile.modulus();
+        let order =
+            ChallengeFieldOrder::from_field(modulus_bits, extension_degree, modulus).unwrap();
+        // The pair is drawn from the base field: |F x F| = p^2, whatever the
+        // extension degree of the other challenges.
+        assert_eq!(
+            order.base_field_pair(),
+            Some(ChallengeFieldOrder::from_field(modulus_bits, 2, modulus).unwrap())
+        );
+        assert!((local_bits(modulus, 64) - bits_at_64).abs() < 1e-3);
+        for ring_dimension in [32, 64, 128, 256, 512, 1024] {
+            let loss = terminal_quotient_pair_loss_factor(ring_dimension).unwrap();
+            assert_eq!(loss, ((2 * ring_dimension - 2) as u64).pow(2));
+            assert_eq!(local_bits(modulus, ring_dimension) >= 128.0, admitted);
+            match GrindingRun::terminal_quotient_pair(1, ring_dimension, order) {
+                Ok(run) => {
+                    assert!(admitted, "{profile:?} D={ring_dimension} must be refused");
+                    assert_eq!(run.site(), GrindingSite::TerminalQuotientPair { level: 1 });
+                    assert_eq!(run.kind(), GrindingQueryKind::TerminalQuotientPair);
+                    assert_eq!(run.loss_factor(), loss);
+                    assert_eq!(run.grind_bits(), 0);
+                    assert_eq!(run.nonce_bits(), 0);
+                    assert_eq!(run.multiplicity(), TERMINAL_QUOTIENT_POINTS as u64);
+                    let plan = GrindingPlan::new(vec![run], order).unwrap();
+                    assert_eq!(plan.expanded_query_count(), 2);
+                    assert_eq!(plan.total_nonce_bits(), 0);
+                }
+                Err(error) => {
+                    assert!(!admitted, "{profile:?} D={ring_dimension} must be admitted");
+                    assert!(
+                        matches!(&error, AkitaError::UnsupportedSchedule(message)
+                            if message.starts_with("terminal quotient certificate is not admitted")),
+                        "{error:?}"
+                    );
+                }
+            }
+        }
+    }
+    // A full-capacity order names no base field and is refused.
+    assert!(matches!(
+        GrindingRun::terminal_quotient_pair(
+            1,
+            64,
+            ChallengeFieldOrder::from_full_capacity(256).unwrap()
+        ),
+        Err(AkitaError::UnsupportedSchedule(_))
+    ));
+    assert!(terminal_quotient_pair_loss_factor(1).is_err());
+}

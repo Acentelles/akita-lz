@@ -30,6 +30,9 @@ pub const FOLD_COORDINATE_ORACLE_REVISION: u16 = 1;
 /// `u32::MAX` expanded queries.
 pub const TRANSCRIPT_GRINDING_QUERY_LIMIT: u64 = u32::MAX as u64;
 
+/// Field points drawn by the terminal quotient certificate.
+pub const TERMINAL_QUOTIENT_POINTS: usize = 2;
+
 const GRINDING_PLAN_DOMAIN: &[u8] = b"akita/grinding-plan/v1";
 const GRINDING_POLICY_BYTES: usize = 17;
 
@@ -57,6 +60,9 @@ pub enum GrindingQueryKind {
     FoldResponse,
     /// One sparse fold group root and all independently indexed coordinates.
     FoldChallengeGroup,
+    /// The terminal quotient certificate's two base-field evaluation points,
+    /// priced jointly and admitted only without grinding.
+    TerminalQuotientPair,
 }
 
 /// Sumcheck family used in a fixed-width site payload.
@@ -149,6 +155,9 @@ pub enum GrindingSite {
     Stage2Batch {
         level: u32,
     },
+    TerminalQuotientPair {
+        level: u32,
+    },
 }
 
 impl GrindingSite {
@@ -228,6 +237,10 @@ impl GrindingSite {
                 site.family = 114;
                 site.level = level;
             }
+            Self::TerminalQuotientPair { level } => {
+                site.family = 115;
+                site.level = level;
+            }
         }
         site
     }
@@ -238,6 +251,7 @@ impl GrindingSite {
         match self {
             Self::FoldResponse { .. } => GrindingQueryKind::FoldResponse,
             Self::FoldChallengeGroup { .. } => GrindingQueryKind::FoldChallengeGroup,
+            Self::TerminalQuotientPair { .. } => GrindingQueryKind::TerminalQuotientPair,
             _ => GrindingQueryKind::ProofOfWork,
         }
     }
@@ -260,7 +274,8 @@ impl GrindingSite {
             | Self::L2NormMerge { level }
             | Self::L2VirtualBatch { level }
             | Self::CompressionBinary { level }
-            | Self::Stage2Batch { level } => level,
+            | Self::Stage2Batch { level }
+            | Self::TerminalQuotientPair { level } => level,
         }
     }
 
@@ -283,7 +298,8 @@ impl GrindingSite {
             | Self::L2NormMerge { level }
             | Self::L2VirtualBatch { level }
             | Self::CompressionBinary { level }
-            | Self::Stage2Batch { level } => level == u32::MAX,
+            | Self::Stage2Batch { level }
+            | Self::TerminalQuotientPair { level } => level == u32::MAX,
             Self::FoldChallengeGroup { level, group } => level == u32::MAX || group == u32::MAX,
             Self::Stage1InterstageBatch { level, stage } => level == u32::MAX || stage == u32::MAX,
         };
@@ -365,6 +381,10 @@ impl GrindingSite {
             }
             Self::Stage2Batch { level } => {
                 out.push(14);
+                push_u32(out, level);
+            }
+            Self::TerminalQuotientPair { level } => {
+                out.push(15);
                 push_u32(out, level);
             }
         }
@@ -475,6 +495,37 @@ impl GrindingRun {
         })
     }
 
+    /// Construct the terminal quotient certificate's evaluation-point pair.
+    ///
+    /// The verifier checks every terminal A row at two independent uniform
+    /// base-field points drawn after the quotient. For a false row the residual
+    /// is a nonzero polynomial of degree at most `2D - 2`, so at most
+    /// `(2D - 2)^2` of the `|F|^2` point pairs accept it; one shared pair
+    /// covers every row. The pair is admitted only when that loss meets the
+    /// transcript target without grinding: `(2D - 2)^2 2^128 <= |F|^2`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AkitaError::UnsupportedSchedule`] when the base field is too
+    /// small for this bound (every 32- and 64-bit field), or when
+    /// `challenge_order` names no base field, and [`AkitaError::InvalidSetup`]
+    /// when `ring_dimension < 2`.
+    pub fn terminal_quotient_pair(
+        level: u32,
+        ring_dimension: usize,
+        challenge_order: ChallengeFieldOrder,
+    ) -> Result<Self, AkitaError> {
+        let loss_factor = terminal_quotient_pair_loss_factor(ring_dimension)?;
+        admit_terminal_quotient_pair(loss_factor, challenge_order)?;
+        Ok(Self {
+            site: GrindingSite::TerminalQuotientPair { level },
+            loss_factor,
+            grind_bits: 0,
+            nonce_bits: 0,
+            multiplicity: TERMINAL_QUOTIENT_POINTS as u64,
+        })
+    }
+
     /// Number of independently indexed coordinates in a fold challenge group.
     #[must_use]
     pub const fn fold_coordinate_count(self) -> Option<u64> {
@@ -518,6 +569,11 @@ impl GrindingRun {
                     && self.grind_bits == 0
                     && self.nonce_bits == 0
                     && self.multiplicity > 1 => {}
+            GrindingQueryKind::TerminalQuotientPair
+                if self.loss_factor != 0
+                    && self.grind_bits == 0
+                    && self.nonce_bits == 0
+                    && self.multiplicity == TERMINAL_QUOTIENT_POINTS as u64 => {}
             _ => {
                 return Err(AkitaError::InvalidSetup(
                     "grinding run kind and site do not match".into(),
@@ -591,6 +647,9 @@ impl GrindingPlanAccumulator {
             return Err(AkitaError::InvalidSetup(
                 "proof-of-work run target does not match its loss and challenge order".into(),
             ));
+        }
+        if run.kind() == GrindingQueryKind::TerminalQuotientPair {
+            admit_terminal_quotient_pair(run.loss_factor, self.challenge_order)?;
         }
         let multiplicity = usize::try_from(run.multiplicity).map_err(|_| {
             AkitaError::InvalidSetup("grinding run multiplicity exceeds usize".into())
@@ -767,6 +826,45 @@ pub fn ring_switch_alpha_loss_factor(
     }
     .ok_or_else(|| AkitaError::InvalidSetup("ring-switch alpha degree overflow".into()))?;
     polynomial_identity_loss_factor(degree_bound)
+}
+
+/// Joint loss of the terminal quotient certificate's two evaluation points:
+/// `(2D - 2)^2` bad pairs for a residual of degree at most `2D - 2`.
+pub fn terminal_quotient_pair_loss_factor(ring_dimension: usize) -> Result<u64, AkitaError> {
+    let degree = ring_dimension
+        .checked_mul(2)
+        .and_then(|value| value.checked_sub(2))
+        .filter(|&degree| degree > 0)
+        .ok_or_else(|| {
+            AkitaError::InvalidSetup("terminal quotient needs ring dimension at least 2".into())
+        })?;
+    let degree = u64::try_from(degree)
+        .map_err(|_| AkitaError::InvalidSetup("terminal quotient degree exceeds u64".into()))?;
+    degree
+        .checked_mul(degree)
+        .ok_or_else(|| AkitaError::InvalidSetup("terminal quotient loss overflow".into()))
+}
+
+/// Admit the terminal quotient pair only when `loss 2^128 <= |F|^2` holds
+/// with no grinding, `F` being the base field of `challenge_order`.
+fn admit_terminal_quotient_pair(
+    loss_factor: u64,
+    challenge_order: ChallengeFieldOrder,
+) -> Result<(), AkitaError> {
+    let pair = challenge_order.base_field_pair().ok_or_else(|| {
+        AkitaError::UnsupportedSchedule(
+            "terminal quotient certificate is not admitted: the challenge order names no base field"
+                .into(),
+        )
+    })?;
+    if pair.satisfies_target(loss_factor, 0) {
+        Ok(())
+    } else {
+        Err(AkitaError::UnsupportedSchedule(format!(
+            "terminal quotient certificate is not admitted: its two base-field points need \
+             |F|^2 >= {loss_factor} * 2^{TRANSCRIPT_SECURITY_BITS}, and this field is smaller"
+        )))
+    }
 }
 
 fn push_u32(out: &mut Vec<u8>, value: u32) {

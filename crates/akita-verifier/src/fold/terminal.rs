@@ -149,7 +149,8 @@ where
     let quotient = crate::terminal::quotient::receive_terminal_quotient::<F>(
         grinding,
         level,
-        scheduled,
+        scheduled.inner.matrix.output_rank(),
+        scheduled.d_a(),
         setup_matrix,
     )?;
     let terminal_response = akita_types::TerminalResponse {

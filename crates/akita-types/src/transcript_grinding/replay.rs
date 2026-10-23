@@ -1,14 +1,14 @@
 //! Inline Spongefish nonce replay for transcript grinding.
 
 use akita_error::AkitaError;
-use akita_params::{GrindingPlan, GrindingQueryKind, GrindingSite};
+use akita_params::{GrindingPlan, GrindingQueryKind, GrindingSite, TERMINAL_QUOTIENT_POINTS};
 use akita_sumcheck::{SumcheckProverChannel, SumcheckRole, SumcheckVerifierChannel};
 use akita_transcript::{
     commit_grinding_nonce, ext_challenge, grinding_predicate_accepts, nonce_encoded_len,
-    nonce_max_bytes, prover_context, receive_grinding_nonce, search_grinding_nonce,
-    verifier_context, FoldPreview, NonceAtom, ProofChannel, ProtocolContextRecord,
-    ProtocolMessageKind, ProtocolSiteId, ProverChannel, VerifierChannel, GRINDING_PREDICATE_LEN,
-    SITE_FAMILY_SUMCHECK,
+    nonce_max_bytes, prover_context, prover_field_challenge, receive_grinding_nonce,
+    search_grinding_nonce, verifier_context, verifier_field_challenge, FoldPreview, NonceAtom,
+    ProofChannel, ProtocolContextRecord, ProtocolMessageKind, ProtocolSiteId, ProverChannel,
+    VerifierChannel, GRINDING_PREDICATE_LEN, SITE_FAMILY_SUMCHECK,
 };
 use jolt_field::{CanonicalEncoding, ExtField, Field};
 use std::marker::PhantomData;
@@ -62,7 +62,7 @@ impl<'a> GrindingPlanCursor<'a> {
 
     fn consume_run(&mut self, site: GrindingSite, multiplicity: usize) -> Result<(), AkitaError> {
         let run = self.plan.runs().get(self.run_index).ok_or_else(|| {
-            AkitaError::InvalidInput("fold-challenge replay has no remaining plan run".into())
+            AkitaError::InvalidInput("zero-width challenge replay has no remaining plan run".into())
         })?;
         if self.run_offset != 0
             || run.site() != site
@@ -71,11 +71,11 @@ impl<'a> GrindingPlanCursor<'a> {
             || usize::try_from(run.multiplicity()).ok() != Some(multiplicity)
         {
             return Err(AkitaError::InvalidInput(
-                "fold-challenge replay request differs from the next plan run".into(),
+                "zero-width challenge replay request differs from the next plan run".into(),
             ));
         }
         self.run_index = self.run_index.checked_add(1).ok_or_else(|| {
-            AkitaError::Internal("fold-challenge replay run index overflows usize".into())
+            AkitaError::Internal("zero-width challenge replay run index overflows usize".into())
         })?;
         Ok(())
     }
@@ -440,6 +440,33 @@ impl<'plan> ProverGrinding<'plan> {
         result
     }
 
+    /// Consume the terminal quotient pair's plan entry and draw its two
+    /// base-field evaluation points.
+    ///
+    /// The plan admits the pair only for base fields large enough for the
+    /// transcript target, so a smaller field fails before any point is drawn.
+    pub fn terminal_quotient_points<F: CanonicalEncoding>(
+        &mut self,
+        level: u32,
+    ) -> Result<[F; TERMINAL_QUOTIENT_POINTS], AkitaError> {
+        let result = self.terminal_quotient_points_inner::<F>(level);
+        self.invalid |= result.is_err();
+        result
+    }
+
+    fn terminal_quotient_points_inner<F: CanonicalEncoding>(
+        &mut self,
+        level: u32,
+    ) -> Result<[F; TERMINAL_QUOTIENT_POINTS], AkitaError> {
+        self.cursor.consume_run(
+            GrindingSite::TerminalQuotientPair { level },
+            TERMINAL_QUOTIENT_POINTS,
+        )?;
+        let first = prover_field_challenge::<F>(&mut self.state)?;
+        let second = prover_field_challenge::<F>(&mut self.state)?;
+        Ok([first, second])
+    }
+
     /// Finish plan replay and return the authoritative Spongefish argument.
     pub fn finish(self) -> Result<Vec<u8>, AkitaError> {
         if self.invalid {
@@ -562,6 +589,35 @@ impl<'proof, 'plan> VerifierGrinding<'proof, 'plan> {
             self.poison();
         }
         result
+    }
+
+    /// Consume the terminal quotient pair's plan entry and draw its two
+    /// base-field evaluation points.
+    ///
+    /// The plan admits the pair only for base fields large enough for the
+    /// transcript target, so a smaller field fails before any point is drawn.
+    pub fn terminal_quotient_points<F: CanonicalEncoding>(
+        &mut self,
+        level: u32,
+    ) -> Result<[F; TERMINAL_QUOTIENT_POINTS], AkitaError> {
+        let result = self.terminal_quotient_points_inner::<F>(level);
+        if result.is_err() {
+            self.poison();
+        }
+        result
+    }
+
+    fn terminal_quotient_points_inner<F: CanonicalEncoding>(
+        &mut self,
+        level: u32,
+    ) -> Result<[F; TERMINAL_QUOTIENT_POINTS], AkitaError> {
+        self.cursor.consume_run(
+            GrindingSite::TerminalQuotientPair { level },
+            TERMINAL_QUOTIENT_POINTS,
+        )?;
+        let first = verifier_field_challenge::<F>(&mut self.state)?;
+        let second = verifier_field_challenge::<F>(&mut self.state)?;
+        Ok([first, second])
     }
 
     /// Require grinding-plan completion and consume the verifier for EOF.
