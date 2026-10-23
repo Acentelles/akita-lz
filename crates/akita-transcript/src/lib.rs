@@ -5,6 +5,7 @@ mod grinding;
 mod logging;
 mod proof_stream;
 mod sponge;
+mod version;
 
 #[cfg(not(any(feature = "transcript-blake2b", feature = "transcript-keccak")))]
 compile_error!("enable exactly one transcript backend: transcript-blake2b or transcript-keccak");
@@ -41,13 +42,9 @@ pub use proof_stream::{
 };
 pub use sponge::TranscriptSponge;
 
-/// Version segment of the proof-stream protocol identifier. The terminal
-/// quotient certificate changes the terminal grammar, so its proofs run under
-/// a separate identifier and each version rejects the other's proofs.
-#[cfg(not(feature = "terminal-quotient"))]
-const PROOF_STREAM_VERSION: &str = "v7";
-#[cfg(feature = "terminal-quotient")]
-const PROOF_STREAM_VERSION: &str = "v7-terminal-quotient";
+#[cfg(feature = "test-support")]
+pub use version::with_proof_stream_version;
+pub use version::{ProofStreamVersion, TERMINAL_QUOTIENT};
 
 /// Byte length of every proof channel challenge block.
 pub const TRANSCRIPT_CHALLENGE_BLOCK_LEN: usize = 32;

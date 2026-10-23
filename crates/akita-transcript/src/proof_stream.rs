@@ -197,7 +197,7 @@ fn proof_stream_protocol_id() -> [u8; 64] {
     let name = "blake2b";
     #[cfg(feature = "transcript-keccak")]
     let name = "keccak";
-    let ver = crate::PROOF_STREAM_VERSION;
+    let ver = crate::version::channel_version().segment();
     protocol_id(format_args!("akita-pcs/native-proof-stream/{ver}/{name}"))
 }
 
