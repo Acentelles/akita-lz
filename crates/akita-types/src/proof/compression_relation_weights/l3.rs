@@ -802,14 +802,17 @@ where
     F: Field + CanonicalEncoding,
     E: FpExtEncoding<F> + Ring + ExtField<F>,
 {
+    // A zero source ring dimension records no events, but the canonical loop
+    // still reads every row weight; it runs so a short table fails the same way.
     if digit_ring_dim == 0
+        || source_ring_dim == 0
         || !source_ring_dim.is_multiple_of(digit_ring_dim)
         || source_row_count.checked_mul(source_ring_dim) != Some(source_coefficients)
     {
         return None;
     }
     let mut groups = Vec::new();
-    if field_bits == 0 || source_row_count == 0 || source_ring_dim == 0 {
+    if field_bits == 0 || source_row_count == 0 {
         return Some(groups);
     }
     // The canonical loop computes every start with checked additions after an
@@ -1174,6 +1177,44 @@ mod tests {
         let a = grouped.push_column_group(0, 4, 9, F::one(), 1, &columns[..8]);
         let b = canonical.push_columns_canonical(0, 4, 9, F::one(), &columns[..8]);
         assert_eq!(format!("{a:?}"), format!("{b:?}"));
+    }
+
+    /// A zero source ring dimension records no events on either path, and a
+    /// row range past the row-weight table fails with the canonical error.
+    #[test]
+    fn l3_zero_ring_dimension_errors_are_canonical() {
+        let mut stream = Stream(0x5eed);
+        let row_weights = stream.point(2);
+        for (row_start, row_count, fails) in [(0usize, 3usize, true), (1, 2, true), (0, 2, false)] {
+            let mut grouped = empty(1 << 6, 64, 1, &mut stream);
+            let mut canonical = grouped.clone();
+            let a = push_recomposition::<F, F>(
+                &mut grouped,
+                0,
+                4,
+                0,
+                0,
+                row_start,
+                row_count,
+                8,
+                &row_weights,
+            );
+            let b = push_recomposition_canonical::<F, F>(
+                &mut canonical,
+                0,
+                4,
+                0,
+                0,
+                row_start,
+                row_count,
+                8,
+                &row_weights,
+            );
+            assert_eq!(format!("{a:?}"), format!("{b:?}"));
+            assert_eq!(a.is_err(), fails);
+            assert!(grouped.events.is_empty() && grouped.groups.groups.is_empty());
+            assert!(canonical.events.is_empty());
+        }
     }
 
     /// Direct groups exercise tiers the producers do not reach: stride zero
