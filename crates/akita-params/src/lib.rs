@@ -25,6 +25,13 @@ mod transcript_grinding;
 mod transcript_grinding_plan;
 pub mod wire_limits;
 pub mod witness;
+
+// The proof-stream identifier lives in `akita-transcript`; every crate that
+// prices, sends or checks the terminal quotient certificate must agree with it.
+const _: () = assert!(
+    akita_transcript::TERMINAL_QUOTIENT == cfg!(feature = "terminal-quotient"),
+    "terminal-quotient must be enabled on every Akita crate in the build: select it through akita-pcs/terminal-quotient"
+);
 pub use commitment_slicing::{CommitmentSliceCount, CommitmentSliceGeometry};
 pub use compression::{
     compression_ring_dimensions, CommitmentPayloadGeometry, CommitmentPayloadMode,

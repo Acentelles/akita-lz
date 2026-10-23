@@ -70,8 +70,22 @@ the prover sends, for each terminal A row, the `D - 1` coefficients of the
 quotient of the unreduced row product by `X^D + 1`, and the verifier checks
 each row at two transcript points instead of computing the exact ring
 product. Proofs use a separate protocol identifier, so a verifier built
-without the feature rejects them and vice versa. Enable it on `akita-pcs` (or
-on every Akita crate a build uses) for both prover and verifier.
+without the feature rejects them and vice versa.
+
+Select it through `akita-pcs/terminal-quotient`. The identifier lives in
+`akita-transcript`, and every crate that prices, sends or checks the quotient
+(`akita-params`, `akita-types`, `akita-prover`, `akita-verifier`, `akita-pcs`)
+fails to compile when its own feature disagrees with it, so a build cannot
+change the identifier without changing the grammar it names.
+`scripts/check-terminal-quotient-features.sh` checks representative partial
+graphs.
+
+The two points are base-field draws. The grinding plan prices them as one
+entry, `GrindingSite::TerminalQuotientPair`, with loss `(2D - 2)^2` over the
+`|F|^2` point pairs, and admits it only when `(2D - 2)^2 2^128 <= |F|^2` holds
+with no grinding. That holds for the 128-bit field and fails for every 32- and
+64-bit field, so with the feature those configurations refuse to prove and to
+verify with `UnsupportedSchedule`.
 
 ## Schedule catalog storage
 

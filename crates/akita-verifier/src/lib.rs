@@ -45,3 +45,10 @@ pub use relation::RelationMatrixEvaluator;
 pub use setup_contribution::{DirectScan, PreparedCoefficientFunctional, SetupIndexWeightMle};
 pub use stages::stage1::Stage1Verifier;
 pub use verifier::AkitaVerifier;
+
+// The proof-stream identifier lives in `akita-transcript`; every crate that
+// prices, sends or checks the terminal quotient certificate must agree with it.
+const _: () = assert!(
+    akita_transcript::TERMINAL_QUOTIENT == cfg!(feature = "terminal-quotient"),
+    "terminal-quotient must be enabled on every Akita crate in the build: select it through akita-pcs/terminal-quotient"
+);
