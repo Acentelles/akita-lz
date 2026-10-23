@@ -313,8 +313,8 @@ impl<E: Field> CompressionRelationWeights<E> {
     /// Evaluate the table's multilinear extension at one full witness point.
     ///
     /// Ungrouped events take the per-event path and groups are evaluated by
-    /// factor (see the `factored` module); the sum is the multilinear
-    /// extension of the dense table.
+    /// factor (see the `factored` module); the sum is the dense table's extension.
+    #[cfg(not(feature = "compression-weights-crosscheck"))]
     #[tracing::instrument(skip_all, name = "compression_relation_mle")]
     pub fn evaluate_at_point(&self, point: &[E]) -> Result<E, AkitaError> {
         let events = self.evaluate_events_at_point(point)?;
@@ -804,6 +804,9 @@ where
     }
     Ok(weights)
 }
+
+#[cfg(feature = "compression-weights-crosscheck")]
+pub mod crosscheck;
 
 #[cfg(test)]
 mod tests {

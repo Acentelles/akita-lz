@@ -214,10 +214,8 @@ impl<E: Field> CompressionRelationWeights<E> {
         index
     }
 
-    /// Record the column events of one compression row: element `j` is
-    /// `(span_start + j * ring_dimension, ring_dimension, 0, row_weight *
-    /// columns[j])`. Falls back to the canonical loop when any precondition
-    /// fails.
+    /// Record one compression row's column events (`row_weight * columns[j]` at
+    /// `span_start + j * ring_dimension`) as one group, or by the canonical loop.
     pub(super) fn push_column_group(
         &mut self,
         span_start: usize,
@@ -227,6 +225,8 @@ impl<E: Field> CompressionRelationWeights<E> {
         matrix_index: usize,
         columns: &[E],
     ) -> Result<(), AkitaError> {
+        #[cfg(feature = "compression-weights-crosscheck")]
+        self.crosscheck_columns(span_start, ring_dimension, input_width, row_weight, columns)?;
         let len = columns
             .get(..input_width)
             .and_then(|live| live.iter().rposition(|value| !value.is_zero()))
@@ -516,8 +516,8 @@ impl<E: Field> CompressionRelationWeights<E> {
     }
 }
 
-/// Recomposition events grouped by (source row, coefficient block) over the
-/// gadget bits, or the canonical loop when any group fails a precondition.
+/// Recomposition events grouped over the gadget bits, or the canonical loop on any failure.
+#[cfg(not(feature = "compression-weights-crosscheck"))]
 #[allow(clippy::too_many_arguments)]
 pub(super) fn push_recomposition<F, E>(
     weights: &mut CompressionRelationWeights<E>,
@@ -638,6 +638,356 @@ where
         }
     }
     Some(groups)
+}
+
+/// Recomposition events grouped over the gadget bits, or the canonical loop on
+/// any failure, as without `compression-weights-crosscheck`. Each call also
+/// records its outcome (with the reason for a fallback) and compares the
+/// grouped events with the canonical loop's on the same arguments.
+#[cfg(feature = "compression-weights-crosscheck")]
+#[allow(clippy::too_many_arguments)]
+pub(super) fn push_recomposition<F, E>(
+    weights: &mut CompressionRelationWeights<E>,
+    span_start: usize,
+    digit_ring_dim: usize,
+    source_coefficients: usize,
+    source_ring_dim: usize,
+    source_row_start: usize,
+    source_row_count: usize,
+    field_bits: usize,
+    row_weights: &[E],
+) -> Result<(), AkitaError>
+where
+    F: Field + CanonicalEncoding,
+    E: FpExtEncoding<F> + Ring + ExtField<F>,
+{
+    use super::crosscheck::BuilderOutcome;
+    let planned = plan_recomposition_groups::<F, E>(
+        weights,
+        span_start,
+        digit_ring_dim,
+        source_coefficients,
+        source_ring_dim,
+        source_row_start,
+        source_row_count,
+        field_bits,
+        row_weights,
+    );
+    let (outcome, compared) = match &planned {
+        Some(groups) => {
+            let mut grouped = weights.crosscheck_twin(true);
+            grouped.groups.groups.clone_from(groups);
+            let mut canonical = weights.crosscheck_twin(false);
+            let canonical_ok = push_recomposition_canonical::<F, E>(
+                &mut canonical,
+                span_start,
+                digit_ring_dim,
+                source_coefficients,
+                source_ring_dim,
+                source_row_start,
+                source_row_count,
+                field_bits,
+                row_weights,
+            )
+            .is_ok();
+            (
+                BuilderOutcome::RecompositionGrouped {
+                    groups: groups.len(),
+                },
+                Some(canonical_ok && grouped.crosscheck_same_events(&canonical)),
+            )
+        }
+        None => (
+            BuilderOutcome::RecompositionFallback(recomposition_fallback_reason::<F, E>(
+                weights,
+                span_start,
+                digit_ring_dim,
+                source_coefficients,
+                source_ring_dim,
+                source_row_start,
+                source_row_count,
+                field_bits,
+                row_weights,
+            )),
+            None,
+        ),
+    };
+    super::crosscheck::record_builder(weights.crosscheck_key(), outcome, compared)?;
+    match planned {
+        Some(groups) => {
+            weights.groups.groups.extend(groups);
+            Ok(())
+        }
+        None => push_recomposition_canonical::<F, E>(
+            weights,
+            span_start,
+            digit_ring_dim,
+            source_coefficients,
+            source_ring_dim,
+            source_row_start,
+            source_row_count,
+            field_bits,
+            row_weights,
+        ),
+    }
+}
+
+/// Why `plan_recomposition_groups` declined a call: its preconditions, checked
+/// in its order.
+#[cfg(feature = "compression-weights-crosscheck")]
+#[allow(clippy::too_many_arguments)]
+fn recomposition_fallback_reason<F, E>(
+    weights: &CompressionRelationWeights<E>,
+    span_start: usize,
+    digit_ring_dim: usize,
+    source_coefficients: usize,
+    source_ring_dim: usize,
+    source_row_start: usize,
+    source_row_count: usize,
+    field_bits: usize,
+    row_weights: &[E],
+) -> &'static str
+where
+    F: Field + CanonicalEncoding,
+    E: FpExtEncoding<F> + Ring + ExtField<F>,
+{
+    if digit_ring_dim == 0
+        || source_ring_dim == 0
+        || !source_ring_dim.is_multiple_of(digit_ring_dim)
+        || source_row_count.checked_mul(source_ring_dim) != Some(source_coefficients)
+    {
+        return "recomposition_geometry_malformed";
+    }
+    let largest = field_bits
+        .saturating_sub(1)
+        .checked_mul(source_coefficients)
+        .and_then(|offset| span_start.checked_add(offset))
+        .and_then(|start| {
+            start.checked_add(
+                source_row_count
+                    .saturating_sub(1)
+                    .checked_mul(source_ring_dim)?,
+            )
+        })
+        .and_then(|start| start.checked_add(source_ring_dim - digit_ring_dim));
+    if largest.is_none() {
+        return "recomposition_address_overflow";
+    }
+    if gadget_row_scalars::<F>(field_bits, 1)
+        .into_iter()
+        .any(|power| <E as ExtField<F>>::lift_base(power).is_zero())
+    {
+        return "recomposition_zero_gadget_entry";
+    }
+    for source_row in 0..source_row_count {
+        let Some(row_weight) = source_row_start
+            .checked_add(source_row)
+            .and_then(|index| row_weights.get(index))
+        else {
+            return "recomposition_row_weight_missing";
+        };
+        if row_weight.is_zero() {
+            continue;
+        }
+        for coefficient_start in (0..source_ring_dim).step_by(digit_ring_dim) {
+            let physical_start = source_row
+                .checked_mul(source_ring_dim)
+                .and_then(|offset| span_start.checked_add(offset))
+                .and_then(|start| start.checked_add(coefficient_start));
+            let Some(physical_start) = physical_start else {
+                return "recomposition_address_overflow";
+            };
+            if !weights.admits_progression(
+                physical_start,
+                source_coefficients,
+                field_bits,
+                digit_ring_dim,
+                coefficient_start,
+            ) {
+                return "recomposition_progression_not_admitted";
+            }
+        }
+    }
+    "recomposition_unclassified"
+}
+
+#[cfg(feature = "compression-weights-crosscheck")]
+impl<E: Field> CompressionRelationWeights<E> {
+    /// The same geometry with no events and no groups; `with_tables` keeps the
+    /// group tables and their caches.
+    fn crosscheck_twin(&self, with_tables: bool) -> Self {
+        let groups = if with_tables {
+            Groups {
+                groups: Vec::new(),
+                tables: self.groups.tables.clone(),
+                gadget_tables: self.groups.gadget_tables.clone(),
+                column_tables: self.groups.column_tables.clone(),
+            }
+        } else {
+            Groups::default()
+        };
+        Self {
+            events: Vec::new(),
+            alpha_powers: self.alpha_powers.clone(),
+            coefficient_block_len: self.coefficient_block_len,
+            physical_field_len: self.physical_field_len,
+            groups,
+        }
+    }
+
+    /// Identity of this table while it lives: the address of its alpha power
+    /// table and its domain size. Builder outcomes are attributed by it.
+    pub(super) fn crosscheck_key(&self) -> (usize, usize) {
+        (self.alpha_powers.as_ptr().addr(), self.physical_field_len)
+    }
+
+    /// The same table with every group expanded into its events.
+    pub(super) fn crosscheck_expanded(&self) -> Result<Self, AkitaError> {
+        let mut expanded = self.crosscheck_twin(false);
+        expanded.events.clone_from(&self.events);
+        expanded.events.extend(self.expanded_group_events()?);
+        Ok(expanded)
+    }
+
+    /// Whether two tables hold the same events, groups expanded, compared as
+    /// the nonzero sums of scalars per (start, coefficient count, alpha start).
+    fn crosscheck_same_events(&self, other: &Self) -> bool {
+        match (self.crosscheck_event_sums(), other.crosscheck_event_sums()) {
+            (Ok(mine), Ok(theirs)) => mine == theirs,
+            _ => false,
+        }
+    }
+
+    fn crosscheck_event_sums(&self) -> Result<Vec<((usize, usize, usize), E)>, AkitaError> {
+        let mut events = self
+            .events
+            .iter()
+            .cloned()
+            .chain(self.expanded_group_events()?)
+            .map(|event| {
+                (
+                    (
+                        event.physical_start,
+                        event.coefficient_count,
+                        event.alpha_exponent_start,
+                    ),
+                    event.scalar,
+                )
+            })
+            .collect::<Vec<_>>();
+        events.sort_unstable_by_key(|(key, _)| *key);
+        let mut sums = Vec::<((usize, usize, usize), E)>::with_capacity(events.len());
+        for (key, scalar) in events {
+            if let Some((last, sum)) = sums.last_mut() {
+                if *last == key {
+                    *sum += scalar;
+                    continue;
+                }
+            }
+            sums.push((key, scalar));
+        }
+        sums.retain(|(_, sum)| !sum.is_zero());
+        Ok(sums)
+    }
+
+    /// Groups and events per evaluation tier, selected as
+    /// `evaluate_groups_at_point` and `evaluate_events_at_point` select them.
+    pub(super) fn crosscheck_tiers(&self) -> super::crosscheck::Tiers {
+        let mut tiers = super::crosscheck::Tiers::default();
+        for event in &self.events {
+            if event.physical_start & event.coefficient_count.wrapping_sub(1) == 0 {
+                tiers.ungrouped_aligned += 1;
+            } else {
+                tiers.ungrouped_unaligned += 1;
+            }
+        }
+        for group in &self.groups.groups {
+            let low_bits = group.coefficient_count.trailing_zeros();
+            let high_stride = group.stride.checked_shr(low_bits).unwrap_or(0);
+            let tier = if group.len == 1 || high_stride.is_power_of_two() {
+                let geometric = self
+                    .groups
+                    .tables
+                    .get(group.table)
+                    .is_some_and(|table| table.ratio_squares.is_some());
+                if geometric {
+                    &mut tiers.geometric_dyadic
+                } else {
+                    &mut tiers.cached_dyadic
+                }
+            } else {
+                &mut tiers.window
+            };
+            tier.groups += 1;
+            tier.entries += group.len as u64;
+        }
+        tiers
+    }
+
+    /// Record the outcome of one `push_column_group` call before it runs and,
+    /// unless it falls back, compare the grouped events with the canonical
+    /// loop's on the same arguments.
+    fn crosscheck_columns(
+        &self,
+        span_start: usize,
+        ring_dimension: usize,
+        input_width: usize,
+        row_weight: E,
+        columns: &[E],
+    ) -> Result<(), AkitaError> {
+        use super::crosscheck::{BuilderOutcome, ObserverGuard};
+        let Some(_observing) = ObserverGuard::enter() else {
+            // The grouped twin below re-enters `push_column_group`.
+            return Ok(());
+        };
+        let len = columns
+            .get(..input_width)
+            .and_then(|live| live.iter().rposition(|value| !value.is_zero()))
+            .map_or(0, |last| last + 1);
+        let outcome = if columns.len() < input_width {
+            BuilderOutcome::ColumnFallback("column_table_shorter_than_width")
+        } else if row_weight.is_zero() || len == 0 {
+            BuilderOutcome::ColumnZero
+        } else if self.admits_progression(span_start, ring_dimension, len, ring_dimension, 0) {
+            BuilderOutcome::ColumnGrouped
+        } else {
+            BuilderOutcome::ColumnFallback("column_progression_not_admitted")
+        };
+        let compared = if matches!(outcome, BuilderOutcome::ColumnFallback(_)) {
+            None
+        } else {
+            let mut grouped = self.crosscheck_twin(false);
+            let grouped_ok = grouped
+                .push_column_group(
+                    span_start,
+                    ring_dimension,
+                    input_width,
+                    row_weight,
+                    0,
+                    columns,
+                )
+                .is_ok();
+            let mut canonical = self.crosscheck_twin(false);
+            let canonical_ok = canonical
+                .push_columns_canonical(
+                    span_start,
+                    ring_dimension,
+                    input_width,
+                    row_weight,
+                    columns,
+                )
+                .is_ok();
+            let expected_groups = usize::from(matches!(outcome, BuilderOutcome::ColumnGrouped));
+            Some(
+                grouped_ok
+                    && canonical_ok
+                    && grouped.events.is_empty()
+                    && grouped.groups.groups.len() == expected_groups
+                    && grouped.crosscheck_same_events(&canonical),
+            )
+        };
+        super::crosscheck::record_builder(self.crosscheck_key(), outcome, compared)
+    }
 }
 
 #[cfg(test)]
@@ -994,5 +1344,69 @@ mod tests {
         assert_ne!(product, extension);
         let groups_value = eq_bits(&point[..], 0);
         assert_eq!(groups_value, extension);
+    }
+
+    /// The cross-check rejects an evaluation whose closed form disagrees with
+    /// the group's own events: a table marked geometric whose values are not.
+    #[cfg(feature = "compression-weights-crosscheck")]
+    #[test]
+    fn crosscheck_rejects_a_wrong_closed_form() {
+        let mut stream = Stream(0xc0ff_ee00);
+        let mut weights = empty(1 << 9, 64, 1, &mut stream);
+        let mut table = GroupTable::new(stream.point(16), false);
+        table.ratio_squares = Some((0..5).map(|i| F::from_u64(3 << i)).collect());
+        weights.groups.tables.push(table);
+        weights.groups.groups.push(CompressionEventGroup {
+            physical_start: 0,
+            stride: 4,
+            len: 16,
+            coefficient_count: 4,
+            alpha_exponent_start: 0,
+            scalar: stream.field(),
+            table: 0,
+        });
+        let error = weights.evaluate_at_point(&stream.point(9)).unwrap_err();
+        assert!(format!("{error:?}").contains("compression weights cross-check"));
+    }
+
+    /// The cross-check records the builder outcomes (grouped, fallback with
+    /// its reason) and the evaluation tiers of every group kind.
+    #[cfg(feature = "compression-weights-crosscheck")]
+    #[test]
+    fn crosscheck_records_outcomes_and_tiers() {
+        use crate::proof::compression_relation_weights::crosscheck::{report, CrossCheckReport};
+        let mut stream = Stream(0x5eed_1234);
+        let mut weights = empty(1 << 10, 64, 1, &mut stream);
+        let row_weights = stream.point(3);
+        let before = report();
+        // Geometric dyadic, window (stride 48), and a misaligned fallback.
+        push_recomposition::<F, F>(&mut weights, 0, 4, 16, 16, 0, 1, 8, &row_weights).unwrap();
+        push_recomposition::<F, F>(&mut weights, 256, 4, 48, 16, 0, 3, 5, &row_weights).unwrap();
+        push_recomposition::<F, F>(&mut weights, 514, 4, 16, 16, 0, 1, 8, &row_weights).unwrap();
+        // One grouped compression row (cached dyadic tier).
+        let columns = stream.point(6);
+        weights
+            .push_column_group(640, 4, 6, stream.field(), 0, &columns)
+            .unwrap();
+        weights.evaluate_at_point(&stream.point(10)).unwrap();
+        let after = report();
+        let reason = |report: &CrossCheckReport| {
+            report
+                .builders
+                .fallback_reasons
+                .iter()
+                .find(|(reason, _)| *reason == "recomposition_progression_not_admitted")
+                .map_or(0, |(_, count)| *count)
+        };
+        // Other tests may run concurrently, so every count is a lower bound.
+        assert!(after.evaluations > before.evaluations);
+        assert!(after.builders.recomposition_grouped >= before.builders.recomposition_grouped + 2);
+        assert!(after.builders.column_grouped > before.builders.column_grouped);
+        assert!(after.builders.compared >= before.builders.compared + 3);
+        assert!(reason(&after) > reason(&before));
+        assert!(after.tiers.geometric_dyadic.groups > before.tiers.geometric_dyadic.groups);
+        assert!(after.tiers.window.groups > before.tiers.window.groups);
+        assert!(after.tiers.cached_dyadic.groups > before.tiers.cached_dyadic.groups);
+        assert!(after.tiers.ungrouped_unaligned > before.tiers.ungrouped_unaligned);
     }
 }
