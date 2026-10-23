@@ -811,6 +811,10 @@ where
     "recomposition_unclassified"
 }
 
+/// Nonzero scalar sums keyed by (start, coefficient count, alpha start).
+#[cfg(feature = "compression-weights-crosscheck")]
+type EventSums<E> = Vec<((usize, usize, usize), E)>;
+
 #[cfg(feature = "compression-weights-crosscheck")]
 impl<E: Field> CompressionRelationWeights<E> {
     /// The same geometry with no events and no groups; `with_tables` keeps the
@@ -858,7 +862,7 @@ impl<E: Field> CompressionRelationWeights<E> {
         }
     }
 
-    fn crosscheck_event_sums(&self) -> Result<Vec<((usize, usize, usize), E)>, AkitaError> {
+    fn crosscheck_event_sums(&self) -> Result<EventSums<E>, AkitaError> {
         let mut events = self
             .events
             .iter()
@@ -876,7 +880,7 @@ impl<E: Field> CompressionRelationWeights<E> {
             })
             .collect::<Vec<_>>();
         events.sort_unstable_by_key(|(key, _)| *key);
-        let mut sums = Vec::<((usize, usize, usize), E)>::with_capacity(events.len());
+        let mut sums = EventSums::<E>::with_capacity(events.len());
         for (key, scalar) in events {
             if let Some((last, sum)) = sums.last_mut() {
                 if *last == key {
