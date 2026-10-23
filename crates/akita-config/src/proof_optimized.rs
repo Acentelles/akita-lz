@@ -42,8 +42,8 @@ const fn proof_optimized_inner_basis_range(
 /// Explicit sparse-binary chunk size used by standard one-hot presets.
 ///
 /// This is an offline sizing-policy input, not runtime group geometry. Akita's
-/// built-in external schedule artifacts use K=256; downstream configurations
-/// may generate artifacts from another policy-owned chunk size.
+/// standard external schedule artifacts use K=256; other presets may generate
+/// artifacts from another policy-owned chunk size.
 pub const STANDARD_ONEHOT_CHUNK_SIZE: usize =
     akita_params::sis::DEFAULT_UNIT_ONEHOT_SOURCE_CHUNK_SIZE;
 
@@ -136,18 +136,23 @@ macro_rules! impl_proof_optimized_preset {
             }
         }
     };
+    (@committed_source_class $chunk:literal) => {
+        fn committed_source_class() -> akita_params::sis::CommittedSourceClass {
+            akita_params::sis::CommittedSourceClass::UnitOneHot { source_chunk_size: $chunk }
+        }
+    };
     (@committed_source_class balanced_digits) => {
         fn committed_source_class() -> akita_params::sis::CommittedSourceClass {
             akita_params::sis::CommittedSourceClass::BalancedSignedDigit
         }
     };
-    ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $field_bits:expr, $log_commit_bound:expr, source = $source:ident, schedule_family = $family_name:literal, ring_dimension_schedule = $mode:expr) => {
+    ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $field_bits:expr, $log_commit_bound:expr, source = $source:tt, schedule_family = $family_name:literal, ring_dimension_schedule = $mode:expr) => {
         impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $field_bits, $log_commit_bound, $source, $family_name, ring_dimension_schedule = $mode);
     };
     (@options ring_dimension_schedule = $mode:expr) => {
         impl_proof_optimized_preset!(@ring_dimension_schedule $mode);
     };
-    (@core $cfg:ident, $field:ty, $ext_field:ty, $family:expr, $field_bits:expr, $log_commit_bound:expr, $source:ident, $family_name:literal, $($options:tt)*) => {
+    (@core $cfg:ident, $field:ty, $ext_field:ty, $family:expr, $field_bits:expr, $log_commit_bound:expr, $source:tt, $family_name:literal, $($options:tt)*) => {
         impl $crate::CommitmentConfig for $cfg {
             type Field = $field;
             type ExtField = $ext_field;
