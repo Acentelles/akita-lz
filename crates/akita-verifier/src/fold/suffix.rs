@@ -320,5 +320,6 @@ where
         u32::try_from(schedule.recursive_folds.len() + 1).map_err(|_| AkitaError::InvalidProof)?,
         &current_state,
         &schedule.terminal,
+        setup.expanded().shared_matrix().as_field_slice(),
     )
 }

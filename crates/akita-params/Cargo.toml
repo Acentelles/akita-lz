@@ -29,6 +29,10 @@ default = ["transcript-blake2b"]
 # Descriptor digests over the jolt-inlines Blake2b (guest verifiers).
 blake2-inline = ["dep:jolt-inlines-blake2"]
 test-support = []
+# Count the terminal quotient certificate's `n_a (D - 1)` field elements in the
+# proof byte model (enabled by the `terminal-quotient` feature of the crates
+# that send or check it).
+terminal-quotient = ["akita-transcript/terminal-quotient"]
 transcript-blake2b = [
   "akita-challenges/transcript-blake2b",
   "akita-sumcheck/transcript-blake2b",

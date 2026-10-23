@@ -21,6 +21,11 @@ spongefish = { git = "https://github.com/arkworks-rs/spongefish", rev = "ef97413
 
 [features]
 default = ["transcript-blake2b"]
+# Terminal quotient certificate (off by default; changes the proof format):
+# the prover sends the quotient of every terminal A-row product by X^D + 1 and
+# the verifier checks each row at two random points instead of computing the
+# exact ring product. Proofs use a separate protocol identifier.
+terminal-quotient = []
 # Spongefish's Blake2b sponge over the jolt-inlines hasher (a RISC-V guest
 # verifier); same bytes as the `blake2` crate.
 blake2-inline = ["dep:jolt-inlines-blake2", "jolt-inlines-blake2/digest"]

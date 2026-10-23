@@ -33,6 +33,15 @@ rayon = { version = "1.10", optional = true }
 
 [features]
 default = ["transcript-blake2b"]
+# Terminal quotient certificate (off by default; changes the proof format):
+# the prover sends the quotient of every terminal A-row product by X^D + 1 and
+# the verifier checks each row at two random points instead of computing the
+# exact ring product. Proofs use a separate protocol identifier.
+terminal-quotient = [
+  "akita-types/terminal-quotient",
+  "akita-transcript/terminal-quotient",
+  "akita-params/terminal-quotient",
+]
 transcript-blake2b = [
   "akita-challenges/transcript-blake2b",
   "akita-config/transcript-blake2b",

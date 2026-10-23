@@ -43,6 +43,9 @@ pub enum FoldSite {
     TerminalTFields { level: u32 },
     /// Terminal `z` response payload.
     TerminalZPayload { level: u32 },
+    /// Terminal A-row quotient coefficients (terminal quotient certificate).
+    #[cfg(feature = "terminal-quotient")]
+    TerminalQuotient { level: u32 },
 }
 
 impl FoldSite {
@@ -101,6 +104,8 @@ impl FoldSite {
                 round: 3,
                 ..site(SITE_FAMILY_TERMINAL, level, 0)
             },
+            #[cfg(feature = "terminal-quotient")]
+            Self::TerminalQuotient { level } => site(SITE_FAMILY_TERMINAL, level, 4),
         })
     }
 }

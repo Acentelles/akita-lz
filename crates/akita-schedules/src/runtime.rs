@@ -643,8 +643,10 @@ fn expanded_schedule_proof_components(
         policy.transcript_grinding_order()?,
         policy.claim_ext_degree,
     )?;
+    let terminal_quotient = akita_params::terminal_quotient_bytes(field_bits, &schedule.terminal)?;
     let fixed_bytes = total
         .checked_add(terminal_eor)
+        .and_then(|value| value.checked_add(terminal_quotient))
         .ok_or_else(|| AkitaError::InvalidSetup("proof payload size overflow".into()))?;
     Ok(ExpandedScheduleProofComponents {
         fixed_bytes,

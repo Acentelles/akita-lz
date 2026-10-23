@@ -15,6 +15,39 @@ pub fn field_bytes(field_bits: u32) -> usize {
     (field_bits as usize).div_ceil(8)
 }
 
+/// Quotient coefficients per terminal A row under the terminal quotient
+/// certificate: `D - 1`.
+///
+/// # Errors
+///
+/// Returns [`AkitaError::InvalidSetup`] when `ring_dimension < 2`, where the
+/// quotient would be empty.
+pub fn terminal_quotient_len(ring_dimension: usize) -> Result<usize, AkitaError> {
+    ring_dimension
+        .checked_sub(1)
+        .filter(|&len| len > 0)
+        .ok_or_else(|| {
+            AkitaError::InvalidSetup("terminal quotient needs ring dimension at least 2".into())
+        })
+}
+
+/// Proof bytes of the terminal quotient certificate: `n_a (D - 1)` canonical
+/// field elements, or zero when the `terminal-quotient` feature is off.
+pub fn terminal_quotient_bytes(
+    field_bits: u32,
+    terminal: &crate::TerminalFoldParams,
+) -> Result<usize, AkitaError> {
+    if !cfg!(feature = "terminal-quotient") {
+        return Ok(0);
+    }
+    akita_error::checked::product([
+        terminal.inner.matrix.output_rank(),
+        terminal_quotient_len(terminal.d_a())?,
+        field_bytes(field_bits),
+    ])
+    .ok_or_else(|| AkitaError::InvalidSetup("terminal quotient size overflow".into()))
+}
+
 /// Serialized byte size for a terminal direct witness shape.
 pub fn terminal_response_bytes(field_bits: u32, shape: &TerminalResponseShape) -> usize {
     crate::layout::tail_segments::terminal_response_upper_bound_bytes(

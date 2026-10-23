@@ -18,6 +18,7 @@ pub(super) fn verify_terminal_suffix<F, E>(
     level: u32,
     current_state: &SuffixVerifierState<F, E>,
     scheduled: &TerminalFoldParams,
+    setup_matrix: &[F],
 ) -> Result<(), AkitaError>
 where
     F: Field + CanonicalEncoding + akita_serialization::AkitaSerialize + PseudoMersenne,
@@ -141,18 +142,40 @@ where
         group.z_payload_bytes,
     )?;
     scheduled.validate_terminal_linf_cap(group.z_linf_cap)?;
+    // Terminal quotient certificate: the A-row quotient follows the z payload;
+    // the two evaluation points are drawn after it, bound to the whole
+    // terminal response.
+    #[cfg(feature = "terminal-quotient")]
+    let quotient = crate::terminal::quotient::receive_terminal_quotient::<F>(
+        grinding,
+        level,
+        scheduled,
+        setup_matrix,
+    )?;
     let terminal_response = akita_types::TerminalResponse {
         layout: scheduled.response_shape.layout.clone(),
         z_payloads: vec![z_payload],
         e_fields,
         t_fields: current_state.witness.clone(),
     };
+    #[cfg(not(feature = "terminal-quotient"))]
+    let _ = setup_matrix;
+    #[cfg(not(feature = "terminal-quotient"))]
     crate::terminal::direct::verify_terminal_ring_relations(
         terminal_ntt,
         &challenges,
         &prepared_point.ring_multiplier_point,
         scheduled,
         &terminal_response,
+    )?;
+    #[cfg(feature = "terminal-quotient")]
+    crate::terminal::direct::verify_terminal_ring_relations(
+        terminal_ntt,
+        &challenges,
+        &prepared_point.ring_multiplier_point,
+        scheduled,
+        &terminal_response,
+        &quotient,
     )?;
     let (target, scale) = match final_relation {
         Some((claims, factors)) => (

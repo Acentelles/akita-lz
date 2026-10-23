@@ -63,6 +63,16 @@ Production builds enable exactly one transcript backend.
 The transcript backend is part of proof compatibility. Prover and verifier
 must use the same backend and protocol revision.
 
+## Terminal quotient certificate
+
+`terminal-quotient` is off by default and changes the proof format. With it,
+the prover sends, for each terminal A row, the `D - 1` coefficients of the
+quotient of the unreduced row product by `X^D + 1`, and the verifier checks
+each row at two transcript points instead of computing the exact ring
+product. Proofs use a separate protocol identifier, so a verifier built
+without the feature rejects them and vice versa. Enable it on `akita-pcs` (or
+on every Akita crate a build uses) for both prover and verifier.
+
 ## Schedule catalog storage
 
 Tracked development artifacts live under `artifacts/schedules/`. Production

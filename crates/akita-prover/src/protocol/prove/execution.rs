@@ -196,6 +196,10 @@ where
         })?;
         let (witness_handle, commitment_material) =
             resident.into_pair::<B::WitnessHandle, B::CommitmentMaterialHandle>(id)?;
+        let session = session
+            .as_ref()
+            .ok_or_else(|| AkitaError::InvalidInput("terminal executor was not admitted".into()))?
+            .session();
         suffix::prove_terminal_suffix::<Cfg::Field, Cfg::ExtField, B>(
             self.backend,
             grinding,
@@ -206,12 +210,8 @@ where
                 commitment_material,
             },
             &request.schedule.terminal,
-            session
-                .as_ref()
-                .ok_or_else(|| {
-                    AkitaError::InvalidInput("terminal executor was not admitted".into())
-                })?
-                .session(),
+            session,
+            request.setup,
         )
     }
     fn finish(&self) -> Result<(), AkitaError> {

@@ -47,8 +47,8 @@ pub use params::{
 };
 pub use proof_size::{
     extension_opening_reduction_level_bytes, extension_opening_reduction_proof_bytes, field_bytes,
-    padded_boolean_opening_vars, sumcheck_rounds, terminal_response_bytes,
-    terminal_response_max_bytes, terminal_response_planner_bytes,
+    padded_boolean_opening_vars, sumcheck_rounds, terminal_quotient_bytes, terminal_quotient_len,
+    terminal_response_bytes, terminal_response_max_bytes, terminal_response_planner_bytes,
     try_extension_opening_reduction_level_bytes, EXTENSION_OPENING_REDUCTION_DEGREE,
     SETUP_SUMCHECK_DEGREE,
 };

@@ -41,6 +41,14 @@ pub use proof_stream::{
 };
 pub use sponge::TranscriptSponge;
 
+/// Version segment of the proof-stream protocol identifier. The terminal
+/// quotient certificate changes the terminal grammar, so its proofs run under
+/// a separate identifier and each version rejects the other's proofs.
+#[cfg(not(feature = "terminal-quotient"))]
+const PROOF_STREAM_VERSION: &str = "v7";
+#[cfg(feature = "terminal-quotient")]
+const PROOF_STREAM_VERSION: &str = "v7-terminal-quotient";
+
 /// Byte length of every proof channel challenge block.
 pub const TRANSCRIPT_CHALLENGE_BLOCK_LEN: usize = 32;
 /// Byte length of every fold-challenge seed.

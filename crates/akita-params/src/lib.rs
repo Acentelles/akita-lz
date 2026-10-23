@@ -68,6 +68,7 @@ pub use layout::{
     MIN_A_ROLE_FOLD_CHALLENGE_RING_D, SETUP_PREFIX_CONTENT_TAG, SETUP_SUMCHECK_DEGREE,
     SUPPORTED_CHALLENGE_RING_DIMS, SUPPORTED_COMMITMENT_RING_DIMS,
 };
+pub use layout::{terminal_quotient_bytes, terminal_quotient_len};
 pub use proof_size::{nonterminal_level_layout, NonterminalLevelLayout};
 pub use ring_relation_mode::{RelationCandidateTopology, RingRelationMode, RingRelationPhase};
 pub use schedule::{

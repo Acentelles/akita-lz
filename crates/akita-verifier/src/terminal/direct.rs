@@ -101,6 +101,7 @@ where
 }
 
 #[tracing::instrument(skip_all, name = "terminal_direct_a_rows")]
+#[cfg_attr(feature = "terminal-quotient", allow(dead_code))]
 fn check_a_rows<F, const D: usize>(
     terminal_ntt: &TerminalNttCache,
     t: &[CyclotomicRing<F, D>],
@@ -158,10 +159,14 @@ pub(crate) fn verify_terminal_ring_relations<F>(
     multiplier: &RingMultiplierOpeningPoint<F>,
     params: &TerminalFoldParams,
     terminal_response: &TerminalResponse<F>,
+    #[cfg(feature = "terminal-quotient")] quotient: &super::quotient::TerminalQuotient<'_, F>,
 ) -> Result<(), AkitaError>
 where
     F: Field + CanonicalEncoding + akita_serialization::AkitaSerialize + Ring,
 {
+    // Under the quotient certificate the prepared NTT matrix is not read.
+    #[cfg(feature = "terminal-quotient")]
+    let _ = terminal_ntt;
     let witness = terminal_response;
     if witness.layout.ring_dimension != params.d_a() || witness.layout.groups.len() != 1 {
         return Err(AkitaError::InvalidProof);
@@ -307,7 +312,23 @@ where
                     Ok::<_, AkitaError>((folded, reduced))
                 },
                 || {
-                    check_a_rows::<F, D_A>(terminal_ntt, t, z_centered, challenges, n_a, n_a_cols)
+                    #[cfg(feature = "terminal-quotient")]
+                    {
+                        check_a_rows_quotient::<F, D_A>(
+                            quotient, t, z_centered, challenges, n_a, n_a_cols,
+                        )
+                    }
+                    #[cfg(not(feature = "terminal-quotient"))]
+                    {
+                        check_a_rows::<F, D_A>(
+                            terminal_ntt,
+                            t,
+                            z_centered,
+                            challenges,
+                            n_a,
+                            n_a_cols,
+                        )
+                    }
                 }
             );
             let (folded, reduced) = consistency?;
@@ -389,6 +410,44 @@ where
         return Err(AkitaError::InvalidProof);
     }
     Ok(())
+}
+
+/// The terminal A rows under the terminal quotient certificate: the same shape
+/// checks and right-hand sides as [`check_a_rows`], with the exact matrix
+/// product replaced by the two-point quotient identity.
+#[cfg(feature = "terminal-quotient")]
+#[tracing::instrument(skip_all, name = "terminal_quotient_a_rows")]
+fn check_a_rows_quotient<F, const D: usize>(
+    quotient: &super::quotient::TerminalQuotient<'_, F>,
+    t: &[CyclotomicRing<F, D>],
+    z: &[[i16; D]],
+    challenges: &Challenges,
+    n_a: usize,
+    n_a_cols: usize,
+) -> Result<(), AkitaError>
+where
+    F: Field + Ring,
+{
+    if t.len()
+        != challenges
+            .as_slice()
+            .len()
+            .checked_mul(n_a)
+            .ok_or(AkitaError::InvalidProof)?
+        || z.len() != n_a_cols
+    {
+        return Err(AkitaError::InvalidProof);
+    }
+    let rows = (0..n_a)
+        .map(|row_index| {
+            let rows = t
+                .chunks_exact(n_a)
+                .map(|rows| rows.get(row_index).ok_or(AkitaError::InvalidProof))
+                .collect::<Result<Vec<_>, AkitaError>>()?;
+            sparse_challenge_dot(challenges.as_slice(), rows)
+        })
+        .collect::<Result<Vec<_>, AkitaError>>()?;
+    super::quotient::check_rows::<F, D>(quotient, &rows, z)
 }
 
 #[cfg(test)]

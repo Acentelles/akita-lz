@@ -192,10 +192,11 @@ impl Encoding<[u8]> for FramedBytes<'_> {
 
 fn proof_stream_protocol_id() -> [u8; 64] {
     #[cfg(feature = "transcript-blake2b")]
-    let name = "akita-pcs/native-proof-stream/v7/blake2b";
+    let name = "blake2b";
     #[cfg(feature = "transcript-keccak")]
-    let name = "akita-pcs/native-proof-stream/v7/keccak";
-    protocol_id(format_args!("{name}"))
+    let name = "keccak";
+    let ver = crate::PROOF_STREAM_VERSION;
+    protocol_id(format_args!("akita-pcs/native-proof-stream/{ver}/{name}"))
 }
 
 fn domain<'a>(
