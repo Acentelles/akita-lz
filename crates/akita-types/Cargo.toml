@@ -26,7 +26,7 @@ shake = "0.1.0"
 tracing = "0.1"
 
 [features]
-default = ["transcript-blake2b"]
+default = ["transcript-blake2b", "l3-compression-weights"]
 test-support = ["akita-params/test-support"]
 transcript-blake2b = [
   "akita-challenges/transcript-blake2b",
@@ -49,7 +49,8 @@ logging-transcript = [
   "akita-params/logging-transcript",
   "akita-transcript/logging-transcript",
 ]
-# L3 recursion experiment (default off): recomposition and column events are
+# L3 compression-weight factoring (default on; disable with
+# --no-default-features): recomposition and column events are
 # recorded as groups and their multilinear extension is evaluated by factor.
 # Same field values as the canonical evaluator; see compression_relation_weights/l3.rs.
 l3-compression-weights = []
