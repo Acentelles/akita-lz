@@ -25,6 +25,8 @@ pub use sampling::{
 mod verifier;
 pub use verifier::VerifierChannel;
 mod site;
+#[cfg(all(test, feature = "transcript-blake2b", feature = "terminal-quotient"))]
+mod terminal_quotient_known_answer;
 
 /// Proof channel and proof-stream format version.
 pub const PROTOCOL_VERSION: u32 = 7;
@@ -1092,7 +1094,7 @@ mod tests {
         assert_eq!(prover.narg_string(), before);
     }
 
-    #[cfg(feature = "transcript-blake2b")]
+    #[cfg(all(feature = "transcript-blake2b", not(feature = "terminal-quotient")))]
     #[test]
     fn blake2b_transcript_has_a_cross_width_known_answer() {
         let mut prover =
