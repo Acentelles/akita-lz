@@ -1,5 +1,9 @@
 OPTIMIZED ONE-HOT NTT COMMITMENT EXPERIMENT
 
+HISTORICAL BENCHMARK REVISION
+The performance numbers below were measured before the merge of main e423a390 (2026-10-23). Main changed the SIS security policy and schedule geometry. These timings and historical proof hashes are not measurements of the updated branch. The K=16 schedules are regenerated for the new policy; current validation is recorded separately in main-sync-validation.json. Reproduction compares variants within each fresh run.
+
+
 Workload: nv=38 (2^38), k_chunk=16, recursive mode; root D=512, rank=1, width=65536, 8192 live blocks.
 MacBook M4 Max and Leopard Ryzen 9 9950X. Both release builds use -C target-cpu=native; selected final thread counts are recorded below.
 Same setup, opening point, and independent resident random witness reused for all full-size trials within each host.

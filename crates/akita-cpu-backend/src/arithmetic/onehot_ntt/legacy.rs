@@ -1,10 +1,11 @@
 //! Experimental one-hot A commitment using the existing prepared CRT NTT.
 use super::super::{CpuBackend, CpuPreparedSetup};
-use crate::kernels::linear::mat_vec_mul_ntt_packed_digits_i8;
+use crate::kernels::linear::mat_vec_mul_ntt_digits_i8;
 use crate::opaque::{CommitInnerPlan, OneHotSource};
 use crate::OneHotIndex;
 use akita_error::{checked, AkitaError};
 use akita_types::{NttCacheKey, NttTransformDomain, RingVec};
+use jolt_field::solinas::parallel::*;
 use jolt_field::{CanonicalEncoding, Field};
 
 impl<F: Field + CanonicalEncoding, E> CpuBackend<F, E> {
@@ -46,9 +47,16 @@ impl<F: Field + CanonicalEncoding, E> CpuBackend<F, E> {
                     // Binary coefficients fit [-2, 1]. This selects the LUT and
                     // batched-dot NTT lift without decomposing the witness or
                     // changing the schedule's actual gadget basis.
-                    let rows = mat_vec_mul_ntt_packed_digits_i8::<F, _, D>(
-                        ntt, plan.n_a, width, count, &decode, 2,
-                    )?;
+                    let rows = cfg_into_iter!(0..count)
+                        .map(|block| {
+                            let digits = decode(block)?;
+                            mat_vec_mul_ntt_digits_i8::<F, D>(ntt, plan.n_a, width, &[&digits], 2)?
+                                .pop()
+                                .ok_or_else(|| {
+                                    AkitaError::InvalidInput("missing one-hot NTT block".into())
+                                })
+                        })
+                        .collect::<Result<Vec<_>, _>>()?;
                     crate::typed_inner_rows(rows)
                 })
                 .collect()

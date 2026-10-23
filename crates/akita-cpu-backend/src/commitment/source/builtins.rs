@@ -39,19 +39,7 @@ impl<F: Field> CommitmentSource<F> for crate::DensePoly<F> {
         plan: &CommitInnerPlan,
     ) -> Result<AvailablePolynomialTypes, AkitaError> {
         validate_plan_extents(&<Self as CommitmentSource<F>>::descriptor(self)?, plan)?;
-        let mut available = Vec::with_capacity(2);
-        if self
-            .cached_digit_parts(
-                plan.ring_dimension,
-                plan.num_digits_inner,
-                plan.log_basis_inner,
-            )
-            .is_some()
-        {
-            available.push(PolynomialType::Dense(DenseType::PredecomposedDigits));
-        }
-        available.push(PolynomialType::Dense(DenseType::Coefficients));
-        AvailablePolynomialTypes::new(available)
+        AvailablePolynomialTypes::new(vec![PolynomialType::Dense(DenseType::Coefficients)])
     }
 
     fn represent_as(
@@ -64,29 +52,6 @@ impl<F: Field> CommitmentSource<F> for crate::DensePoly<F> {
             PolynomialType::Dense(DenseType::Coefficients) => Ok(PolynomialRepresentation::Dense(
                 DenseRepresentation::Coefficients(self),
             )),
-            PolynomialType::Dense(DenseType::PredecomposedDigits) => {
-                let bytes = self
-                    .cached_digit_parts(
-                        plan.ring_dimension,
-                        plan.num_digits_inner,
-                        plan.log_basis_inner,
-                    )
-                    .ok_or_else(|| {
-                        AkitaError::InvalidInput(
-                            "selected dense digit cache is no longer available".into(),
-                        )
-                    })?;
-                let logical_len = checked_logical_len(self.descriptor()?.num_vars())?;
-                Ok(PolynomialRepresentation::Dense(
-                    DenseRepresentation::PredecomposedDigits(PredecomposedDigitPlanes {
-                        bytes,
-                        ring_dimension: plan.ring_dimension,
-                        num_digits: plan.num_digits_inner,
-                        log_basis: plan.log_basis_inner,
-                        logical_ring_count: logical_len.div_ceil(plan.ring_dimension),
-                    }),
-                ))
-            }
             _ => Err(AkitaError::InvalidInput(
                 "dense source received an unadvertised representation selection".into(),
             )),

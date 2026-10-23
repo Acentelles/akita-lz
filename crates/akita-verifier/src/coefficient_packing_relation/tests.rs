@@ -7,8 +7,8 @@ use akita_params::{BasisMode, SisModulusProfileId};
 use akita_types::{
     coefficient_packing_fixture, coefficient_packing_multigroup_fixture,
     coefficient_packing_relation_events, prepare_coefficient_packing_batch_semantics,
-    validate_coefficient_packing_batch_groups, CoefficientPackingFixture,
-    CoefficientPackingGroupSemantics, PreparedSubringCoefficientPackingPoint, RelationWeightEvent,
+    CoefficientPackingFixture, CoefficientPackingGroupSemantics,
+    PreparedSubringCoefficientPackingPoint, RelationWeightEvent, SubringCoefficientPackingTables,
 };
 use jolt_field::{
     Ext2, FpExt4, One, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59, Ring, Zero,
@@ -58,22 +58,17 @@ pub(crate) fn materialize_stage2<E: Field>(
     // the checked group metadata.
     let geometry = semantics.geometry();
     let d_d = semantics.d_d();
+    let tables = SubringCoefficientPackingTables::new(semantics.prepared_point().clone()).unwrap();
     let direct_source = semantics
         .basis()
         .iter()
-        .flat_map(|&basis| {
-            semantics
-                .prepared_point()
-                .tail_weights()
-                .iter()
-                .map(move |&tail| basis * tail)
-        })
+        .flat_map(|&basis| tables.tail_weights().iter().map(move |&tail| basis * tail))
         .collect::<Vec<_>>();
     let segments_per_direct_term = geometry.partial_base_field_width() / d_d;
     for (claim, &claim_coefficient) in semantics.group_claim_coefficients().iter().enumerate() {
         for unit in semantics.witness_units() {
             for global_block in unit.global_block_range() {
-                let block_weight = semantics.prepared_point().live_block_weights()[global_block];
+                let block_weight = tables.live_block_weights()[global_block];
                 for (digit, &gadget) in semantics.opening_gadget().iter().enumerate() {
                     let factor =
                         semantics.scalar_claim_weight() * claim_coefficient * block_weight * gadget;
@@ -102,12 +97,7 @@ pub(crate) fn materialize_stage2<E: Field>(
     }
 
     let mut packing_z_source = vec![E::zero(); geometry.a_ring_dimension()];
-    for (low_index, &packing_weight) in semantics
-        .prepared_point()
-        .packing_weights()
-        .iter()
-        .enumerate()
-    {
+    for (low_index, &packing_weight) in tables.packing_weights().iter().enumerate() {
         for (subring_index, &alpha_power) in semantics.alpha_powers().iter().enumerate() {
             let physical = geometry
                 .a_ring_coefficient_index(low_index, subring_index)
@@ -116,12 +106,7 @@ pub(crate) fn materialize_stage2<E: Field>(
         }
     }
     for unit in semantics.witness_units() {
-        for (position, &position_weight) in semantics
-            .prepared_point()
-            .position_weights()
-            .iter()
-            .enumerate()
-        {
+        for (position, &position_weight) in tables.position_weights().iter().enumerate() {
             for (witness_digit, &witness_weight) in semantics.witness_gadget().iter().enumerate() {
                 for (fold_digit, &fold_weight) in semantics.fold_gadget().iter().enumerate() {
                     let physical_start = unit
@@ -212,14 +197,15 @@ where
             .unwrap()
             .groups()[0]
             .clone();
-    let events = validate_coefficient_packing_batch_groups(
-        &batch_inputs(fixture, &points, alpha),
-        |group| coefficient_packing_relation_events(&group),
-    )
-    .unwrap()
-    .concat();
     let expanded =
         prepare_coefficient_packing_batch_semantics(batch_inputs(fixture, &points, alpha)).unwrap();
+    let events = expanded
+        .groups()
+        .iter()
+        .map(coefficient_packing_relation_events::<Base, Extension>)
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap()
+        .concat();
     let semantics = &expanded.groups()[0];
     let padded_len = semantics.physical_field_len().next_power_of_two();
     let point = (0..padded_len.trailing_zeros())
@@ -482,12 +468,14 @@ fn multi_group_compact_factors_follow_relation_group_order() {
         claim_coefficients: &fixture.claim_coefficients,
     };
     let compact_batch = prepare_coefficient_packing_verifier_batch_semantics(inputs()).unwrap();
-    let events = validate_coefficient_packing_batch_groups(&inputs(), |group| {
-        coefficient_packing_relation_events(&group)
-    })
-    .unwrap()
-    .concat();
     let expanded = prepare_coefficient_packing_batch_semantics(inputs()).unwrap();
+    let events = expanded
+        .groups()
+        .iter()
+        .map(coefficient_packing_relation_events::<F, E>)
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap()
+        .concat();
     assert_eq!(
         compact_batch
             .groups()
