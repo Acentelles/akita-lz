@@ -50,7 +50,7 @@ fn differential<const D: usize>() {
     for seed in 0..8 {
         let t: Vec<_> = (0..9)
             .map(|block| {
-                CyclotomicRing::from_coefficients(std::array::from_fn(|j| {
+                CyclotomicRing::<F, D>::from_coefficients(std::array::from_fn(|j| {
                     F::from_i64((j * 11 + block * 17 + seed * 5) as i64 - 101)
                 }))
             })
