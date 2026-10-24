@@ -86,7 +86,13 @@ fn transpose_rejects_malformed_challenges_and_shapes() {
         assert!(evaluate(&t, &[bad], 3, [F::zero(), F::one()]).is_err());
     }
     let good = challenge(vec![0], vec![1]);
-    assert!(evaluate(&t[..2], &[good.clone()], 3, [F::zero(), F::one()]).is_err());
+    assert!(evaluate(
+        &t[..2],
+        std::slice::from_ref(&good),
+        3,
+        [F::zero(), F::one()]
+    )
+    .is_err());
     assert!(evaluate(&t, &[good], usize::MAX, [F::zero(), F::one()]).is_err());
     assert!(evaluate(&t, &[], 0, [F::zero(), F::one()]).is_err());
 }
