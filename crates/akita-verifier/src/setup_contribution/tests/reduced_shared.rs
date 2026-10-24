@@ -1,5 +1,6 @@
 use super::fused_scan::reduced_direct_literal_oracle;
 use super::*;
+use jolt_field::Ring;
 
 fn check_shared_reduced_scan<E>(blocks: usize, scalar: impl Fn(u64) -> E, zero_rows: bool)
 where
