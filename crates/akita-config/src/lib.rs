@@ -486,7 +486,8 @@ pub trait CommitmentConfig: Clone + Send + Sync + 'static {
     }
 
     /// Extension seam: whether this configuration selects the terminal
-    /// quotient certificate (feature `terminal-quotient`).
+    /// quotient certificate (feature `terminal-quotient`). Tracked in
+    /// docs/TRACKING.md entry PRB-R3-F1.
     ///
     /// Ordinary configs use the exact terminal ring relations. The
     /// `TerminalQuotientConfig` adapter overrides this; the selection then

@@ -229,6 +229,7 @@ pub fn new_prover_channel(session: &[u8], instance: &[u8]) -> Result<ProverChann
 
 /// Extension seam: construct a bound prover channel under `version`, which a
 /// configuration selects at runtime (terminal quotient certificate).
+/// Tracked in docs/TRACKING.md entry PRB-R3-F2a.
 ///
 /// # Errors
 ///
@@ -258,6 +259,7 @@ pub fn new_verifier_channel<'proof>(
 
 /// Extension seam: construct a bound verifier channel under `version`, which
 /// a configuration selects at runtime (terminal quotient certificate).
+/// Tracked in docs/TRACKING.md entry PRB-R3-F2b.
 ///
 /// # Errors
 ///
