@@ -117,7 +117,9 @@ fn wrong_setup_view_rejects() {
     let coefficients = honest(&setup, &z);
     let mut other = setup.clone();
     other[3 * D + 5] += F::one();
-    assert!(check_reference_rows(&certificate(&other, coefficients.clone(), 11), &rows, &z).is_err());
+    assert!(
+        check_reference_rows(&certificate(&other, coefficients.clone(), 11), &rows, &z).is_err()
+    );
     assert!(matches!(
         check_reference_rows(
             &certificate(&setup[..setup.len() - 1], coefficients, 11),
@@ -135,7 +137,9 @@ fn wrong_terminal_response_rejects_even_with_its_own_quotient() {
     let mut tampered = z.clone();
     tampered[2][9] = tampered[2][9].wrapping_add(1);
     let coefficients = honest(&setup, &tampered);
-    assert!(check_reference_rows(&certificate(&setup, coefficients, 13), &rows, &tampered).is_err());
+    assert!(
+        check_reference_rows(&certificate(&setup, coefficients, 13), &rows, &tampered).is_err()
+    );
 }
 
 #[test]

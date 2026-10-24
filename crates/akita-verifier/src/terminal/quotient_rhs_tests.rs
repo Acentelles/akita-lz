@@ -125,8 +125,7 @@ fn transpose_feeds_the_existing_quotient_check() {
     let rhs = evaluate(&t, &challenges, 1, quotient.points).unwrap();
     super::super::quotient::check_rows(&quotient, &rhs, &z).unwrap();
     let mut changed = t;
-    changed[0] +=
-        CyclotomicRing::from_coefficients([F::one(), F::zero(), F::zero(), F::zero()]);
+    changed[0] += CyclotomicRing::from_coefficients([F::one(), F::zero(), F::zero(), F::zero()]);
     let rhs = evaluate(&changed, &challenges, 1, quotient.points).unwrap();
     assert!(super::super::quotient::check_rows(&quotient, &rhs, &z).is_err());
 }
