@@ -675,16 +675,22 @@ pub fn expanded_schedule_proof_estimate_bytes(
 ///
 /// Unlike the schedule-selection estimate, this uses every inline nonce's
 /// maximum canonical LEB128 width and the scheduled terminal response cap.
+/// With L2 enabled, it also counts the schedule-sized terminal quotient.
 pub fn expanded_schedule_proof_bound(
     key: &akita_params::ScheduleLookupKey,
     schedule: &FoldSchedule,
     policy: &PlannerPolicy,
 ) -> Result<usize, AkitaError> {
     let components = expanded_schedule_proof_components(key, schedule, policy)?;
+    let quotient_bytes = akita_params::proof_size::terminal_quotient_payload_bytes(
+        policy.decomposition.field_bits(),
+        &schedule.terminal,
+    )?;
     components
         .fixed_bytes
         .checked_add(components.terminal_max_bytes)
         .and_then(|value| value.checked_add(components.nonce_max_bytes))
+        .and_then(|value| value.checked_add(quotient_bytes))
         .ok_or_else(|| AkitaError::InvalidSetup("native proof byte bound overflow".into()))
 }
 

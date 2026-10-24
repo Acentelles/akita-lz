@@ -26,6 +26,8 @@ sha3 = "0.12.0"
 
 [features]
 default = ["transcript-blake2b"]
+# Account for the existing L2 wire payload in the native parser bound only.
+l2-terminal-quotient = []
 # Descriptor digests over the jolt-inlines Blake2b (guest verifiers).
 blake2-inline = ["dep:jolt-inlines-blake2"]
 test-support = []

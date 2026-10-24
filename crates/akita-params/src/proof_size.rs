@@ -12,8 +12,42 @@
 use crate::layout::digit_range::DigitRangeRouteShape;
 use crate::layout::digit_range::PhysicalL2NormProofWireShape;
 use crate::layout::field_bytes;
-use crate::{CommittedGroupParams, DigitRangePlan, RelationAddressGeometry, Stage1StageShape};
+use crate::{
+    CommittedGroupParams, DigitRangePlan, RelationAddressGeometry, Stage1StageShape,
+    TerminalFoldParams,
+};
 use akita_error::AkitaError;
+
+/// Fixed bytes in the L2 terminal quotient, or zero when L2 is disabled.
+///
+/// The prover sends `D - 1` canonical base-field coefficients per terminal A
+/// row, with no length prefix. This accounts for the existing wire payload;
+/// it does not change the catalog's schedule-selection estimate.
+///
+/// # Errors
+///
+/// With L2 enabled, rejects ring dimensions below two and byte-count overflow.
+pub fn terminal_quotient_payload_bytes(
+    field_bits: u32,
+    terminal: &TerminalFoldParams,
+) -> Result<usize, AkitaError> {
+    if !cfg!(feature = "l2-terminal-quotient") {
+        return Ok(0);
+    }
+    let coefficients_per_row = terminal
+        .d_a()
+        .checked_sub(1)
+        .filter(|&len| len > 0)
+        .ok_or_else(|| {
+            AkitaError::InvalidSetup("terminal quotient needs ring dimension at least 2".into())
+        })?;
+    akita_error::checked::product([
+        terminal.inner.matrix.output_rank(),
+        coefficients_per_row,
+        field_bytes(field_bits),
+    ])
+    .ok_or_else(|| AkitaError::InvalidSetup("terminal quotient byte count overflow".into()))
+}
 
 fn compressed_unipoly_bytes(degree: usize, elem_bytes: usize) -> usize {
     degree * elem_bytes

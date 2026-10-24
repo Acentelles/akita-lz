@@ -31,7 +31,10 @@ default = ["transcript-blake2b", "l3-compression-weights", "l2-terminal-quotient
 # --no-default-features):
 # the terminal A rows are checked at two points against a sent quotient, under
 # a separate protocol identifier.
-l2-terminal-quotient = ["akita-transcript/l2-terminal-quotient"]
+l2-terminal-quotient = [
+  "akita-transcript/l2-terminal-quotient",
+  "akita-params/l2-terminal-quotient",
+]
 test-support = ["akita-params/test-support"]
 transcript-blake2b = [
   "akita-challenges/transcript-blake2b",
