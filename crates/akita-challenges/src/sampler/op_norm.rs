@@ -626,7 +626,7 @@ fn arctan_inv(x: i128) -> (i128, i128) {
     (sum - slack, sum + slack)
 }
 
-// ONT-B (recursion experiment, feature `ont-static-base`, default off). The
+// Static operator-norm base tables (feature `ont-static-base`, default off). The
 // base tables are a pure function of `(d, q)`; with the feature, the D64
 // selective-L2 table (`d = 64`, `q = 48`) reads them from generated static
 // data instead of evaluating the interval Taylor series, and every other

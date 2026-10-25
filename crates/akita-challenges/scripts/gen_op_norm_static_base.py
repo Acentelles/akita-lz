@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate src/sampler/op_norm/static_base.rs (ONT-B, feature `ont-static-base`).
+"""Generate src/sampler/op_norm/static_base.rs (feature `ont-static-base`).
 
 Exact-integer transcription of `op_norm.rs` `build_tables` (with `pi_enclosure`,
 `arctan_inv`, `taylor_cos`, `taylor_sin`, `octant_reduce`, `apply_sign`,
