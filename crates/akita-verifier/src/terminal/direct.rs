@@ -441,7 +441,7 @@ where
     let rows = super::quotient_rhs::evaluate(t, challenges.as_slice(), n_a, quotient.points)?;
     super::quotient::check_rows::<F, D>(quotient, &rows, z)
 }
-
+#[cfg(feature = "terminal-contraction")] include!("direct_contraction.rs");
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -652,6 +652,3 @@ mod tests {
         assert!(base_reduced_z(&weights[..positions - 1], &gadget, &z, positions).is_err());
     }
 }
-
-#[cfg(feature = "terminal-contraction")]
-include!("direct_contraction.rs");
