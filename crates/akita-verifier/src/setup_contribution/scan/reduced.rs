@@ -1,6 +1,6 @@
 use super::*;
 use jolt_field::{Unreduced, Zero};
-
+#[cfg(feature = "segment-setup")] mod shared_segment;
 /// One distinct coefficient functional over the shared setup base rings.
 ///
 /// Equal role functionals share a class, so their scalar weights are added
@@ -202,7 +202,7 @@ where
     let shared_functional = match functional_classes {
         [class] if class.ratio == 1 => Some(class.functional),
         _ => None,
-    };
+    }; #[cfg(feature = "segment-setup")] if let Some(functional) = shared_functional { return shared_segment::evaluate::<F, E, A, BASE_D>(setup_flat, required, functional, scan_groups, partitions); }
     cfg_try_fold_reduce!(
         0..num_jobs,
         E::zero,

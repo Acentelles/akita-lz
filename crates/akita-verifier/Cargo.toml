@@ -32,6 +32,8 @@ tracing = "0.1"
 rayon = { version = "1.10", optional = true }
 
 [features]
+terminal-contraction = ["jolt-field/terminal-contraction"]
+segment-setup = []
 default = ["transcript-blake2b", "l2-terminal-quotient"]
 # L2 terminal quotient certificate (default on; disable with
 # --no-default-features):

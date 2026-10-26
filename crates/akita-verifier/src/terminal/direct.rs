@@ -63,7 +63,7 @@ where
         F::from_i64(i64::from(coeffs[index]))
     }))
 }
-
+#[cfg(not(feature = "terminal-contraction"))]
 /// `Σ_{p,d} w_p·g_d·z[p·digits + d]` for base-field position weights `w` and
 /// gadget scalars `g`: the consistency fold of the decoded `z`, computed as
 /// one weight-vector dot product per ring coefficient.
@@ -652,3 +652,6 @@ mod tests {
         assert!(base_reduced_z(&weights[..positions - 1], &gadget, &z, positions).is_err());
     }
 }
+
+#[cfg(feature = "terminal-contraction")]
+include!("direct_contraction.rs");

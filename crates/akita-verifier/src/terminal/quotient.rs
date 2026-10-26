@@ -66,7 +66,7 @@ pub(super) fn power_row<F: Field>(point: F, d: usize) -> Vec<F> {
     }
     powers
 }
-
+#[cfg(not(feature = "terminal-contraction"))]
 /// Check every terminal A row against its quotient at both points.
 ///
 /// `rows` are the two evaluations of each `H_i`, computed from the bound
@@ -141,3 +141,6 @@ where
 #[cfg(test)]
 #[path = "quotient_tests.rs"]
 mod tests;
+
+#[cfg(feature = "terminal-contraction")]
+include!("quotient_contraction.rs");
