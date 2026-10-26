@@ -153,7 +153,12 @@ struct DenseLeftTensorView<'a, F: Field> {
     family: &'a EqPairTensorFamily<F>,
     destination_axis: usize,
     residual: Vec<(usize, F)>,
+    #[cfg(feature = "tensor-no-carry")]
+    separated: Option<separate::SeparatedResidual<F>>,
 }
+
+#[cfg(feature = "tensor-no-carry")]
+mod separate;
 
 impl<F: Field> DenseLeftTensorView<'_, F> {
     fn collect_residual(
@@ -196,6 +201,10 @@ impl<F: Field> DenseLeftTensorView<'_, F> {
         equality: &OffsetEqWindow<F>,
         base: usize,
     ) -> Result<F, AkitaError> {
+        #[cfg(feature = "tensor-no-carry")]
+        if let Some(separated) = &self.separated {
+            return separated.evaluate(equality, base);
+        }
         let mut value = F::zero();
         for &(offset, weight) in &self.residual {
             let index = base.checked_add(offset).ok_or_else(|| {
@@ -267,6 +276,8 @@ fn materialize_dense_left_overlap<F: Field>(
             family,
             destination_axis,
             residual: Vec::new(),
+            #[cfg(feature = "tensor-no-carry")]
+            separated: None,
         });
     }
     let work = first_axis
@@ -300,6 +311,10 @@ fn materialize_dense_left_overlap<F: Field>(
                 AkitaError::InvalidInput("paired tensor residual table allocation failed".into())
             })?;
             view.collect_residual(0, 0, F::one())?;
+            #[cfg(feature = "tensor-no-carry")]
+            {
+                view.separated = separate::SeparatedResidual::prepare(view, equality)?;
+            }
         }
     }
 
