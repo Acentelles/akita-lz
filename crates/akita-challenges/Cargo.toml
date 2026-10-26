@@ -28,6 +28,9 @@ transcript-blake2b = ["akita-transcript/transcript-blake2b"]
 transcript-keccak = ["akita-transcript/transcript-keccak"]
 parallel = ["jolt-field/parallel"]
 logging-transcript = ["akita-transcript/logging-transcript"]
+# Recursion option (default off): the D64 selective-L2 operator-norm
+# table reads its base tables from generated static data (same entries).
+ont-static-base = []
 
 [lints]
 workspace = true
