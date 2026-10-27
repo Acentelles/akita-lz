@@ -489,7 +489,7 @@ impl<'a, F: Field> DenseLeftOverlap<'a, F> {
         let destination = output.get_mut(self.destination.clone()).ok_or_else(|| {
             AkitaError::Internal("validated tensor destination span exceeds the output".into())
         })?;
-        // Tuned with `benches/offset_eq_window.rs::bench_materialize_disjoint_intervals`
+        #[cfg(feature = "tensor-eq-runs")] if runs::try_accumulate(equality, &self.views, #[cfg(feature = "tensor-no-carry")] &separated, destination)? { return Ok(output); }
         // on an Apple M4 Max (16 cores, 64 GiB).
         const PARALLEL_THRESHOLD: usize = 1 << 14;
         if self.work >= PARALLEL_THRESHOLD {
@@ -566,3 +566,6 @@ fn visit_tensor_coordinates<F: Field>(
     }
     Ok(())
 }
+
+#[cfg(feature = "tensor-eq-runs")]
+mod runs;

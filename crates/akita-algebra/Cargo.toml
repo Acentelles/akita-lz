@@ -36,6 +36,6 @@ harness = false
 default = []
 parallel = ["dep:rayon", "jolt-field/parallel"]
 tensor-no-carry = []
-
+tensor-eq-runs = []
 [lints]
 workspace = true
