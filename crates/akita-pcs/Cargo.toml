@@ -53,6 +53,9 @@ transcript-keccak = [
   "akita-params/transcript-keccak",
   "akita-verifier/transcript-keccak",
 ]
+# Optional (default off): sums of products at the structured
+# sites of the verifier's setup scan (same field values).
+setup-sop-structured = ["akita-verifier/setup-sop-structured"]
 parallel = [
   "dep:rayon",
   "akita-algebra/parallel",
