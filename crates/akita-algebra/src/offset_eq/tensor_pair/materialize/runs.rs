@@ -23,21 +23,24 @@ pub(super) fn try_accumulate<F: Field>(
         if view.separated.is_some() {
             return Ok(false);
         }
-        let axis = view.family.axes.get(view.destination_axis).ok_or_else(|| {
-            AkitaError::Internal("tensor run destination axis is absent".into())
-        })?;
+        let axis =
+            view.family.axes.get(view.destination_axis).ok_or_else(|| {
+                AkitaError::Internal("tensor run destination axis is absent".into())
+            })?;
         if !axis.right_stride.is_power_of_two()
             || axis.right_stride > equality.eq_low.len() / 8
             || axis.len != destination.len()
         {
             return Ok(false);
         }
-        let span = axis.right_stride.checked_mul(axis.len - 1).ok_or_else(|| {
-            AkitaError::InvalidInput("tensor run right span overflow".into())
-        })?;
-        let last = view.family.right_offset.checked_add(span).ok_or_else(|| {
-            AkitaError::InvalidInput("tensor run right offset overflow".into())
-        })?;
+        let span = axis
+            .right_stride
+            .checked_mul(axis.len - 1)
+            .ok_or_else(|| AkitaError::InvalidInput("tensor run right span overflow".into()))?;
+        let last =
+            view.family.right_offset.checked_add(span).ok_or_else(|| {
+                AkitaError::InvalidInput("tensor run right offset overflow".into())
+            })?;
         if !view.family.scalar.is_zero() {
             for &(offset, _) in &view.residual {
                 last.checked_add(offset).ok_or_else(|| {
@@ -53,15 +56,20 @@ pub(super) fn try_accumulate<F: Field>(
         let axis = view.family.axes.get(view.destination_axis).ok_or_else(|| {
             AkitaError::Internal("validated tensor run destination axis is absent".into())
         })?;
+        let stride_bits = axis.right_stride.trailing_zeros();
         for &(offset, weight) in &view.residual {
             let coefficient = if view.family.scalar == F::one() {
                 weight
             } else {
                 view.family.scalar * weight
             };
-            let mut index = view.family.right_offset.checked_add(offset).ok_or_else(|| {
-                AkitaError::Internal("validated tensor run offset overflow".into())
-            })?;
+            let mut index = view
+                .family
+                .right_offset
+                .checked_add(offset)
+                .ok_or_else(|| {
+                    AkitaError::Internal("validated tensor run offset overflow".into())
+                })?;
             let mut remaining = &mut destination[..];
             while !remaining.is_empty() {
                 let low = index & equality.low_mask;
@@ -70,7 +78,7 @@ pub(super) fn try_accumulate<F: Field>(
                     // Monotone physical addresses cannot reenter the domain.
                     break;
                 };
-                let available = (equality.low_mask - low) / axis.right_stride + 1;
+                let available = ((equality.low_mask - low) >> stride_bits) + 1;
                 let take = available.min(remaining.len());
                 let (run, tail) = remaining.split_at_mut_checked(take).ok_or_else(|| {
                     AkitaError::Internal("validated tensor run split exceeds output".into())
@@ -84,16 +92,23 @@ pub(super) fn try_accumulate<F: Field>(
                     let low_values = equality.eq_low.get(low..).ok_or_else(|| {
                         AkitaError::Internal("tensor run low index exceeds table".into())
                     })?;
-                    for (value, &low_value) in run.iter_mut().zip(low_values.iter().step_by(axis.right_stride)) {
+                    for (value, &low_value) in run
+                        .iter_mut()
+                        .zip(low_values.iter().step_by(axis.right_stride))
+                    {
                         *value += low_value * scale;
                     }
                 }
                 if tail.is_empty() {
                     break;
                 }
-                index = axis.right_stride.checked_mul(take)
+                index = axis
+                    .right_stride
+                    .checked_mul(take)
                     .and_then(|span| index.checked_add(span))
-                    .ok_or_else(|| AkitaError::Internal("validated tensor run advance overflow".into()))?;
+                    .ok_or_else(|| {
+                        AkitaError::Internal("validated tensor run advance overflow".into())
+                    })?;
                 remaining = tail;
             }
         }
