@@ -494,13 +494,16 @@ where
         }
     }
     // Rows with a zero weight contribute nothing; the rest go
-    // through the shared-powers kernel in one call.
-    let (rows, weights): (Vec<&[F]>, Vec<E>) = setup
-        .iter()
-        .zip(weights)
-        .filter(|(_, weight)| !weight.is_zero())
-        .map(|(ring, weight)| (ring.coefficients().as_slice(), weight))
-        .unzip();
-    let term = E::weighted_dot_base_rows(&rows, &weights, base_pows);
+    // through the shared-powers kernel in one call. A plain push loop (no
+    // iterator adapter chain left to outline).
+    let mut rows: Vec<&[F]> = Vec::with_capacity(setup.len());
+    let mut row_weights: Vec<E> = Vec::with_capacity(setup.len());
+    for (ring, weight) in setup.iter().zip(weights) {
+        if !weight.is_zero() {
+            rows.push(ring.coefficients().as_slice());
+            row_weights.push(weight);
+        }
+    }
+    let term = E::weighted_dot_base_rows(&rows, &row_weights, base_pows);
     Ok(acc + term)
 }
