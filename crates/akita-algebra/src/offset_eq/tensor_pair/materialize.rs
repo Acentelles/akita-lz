@@ -221,7 +221,7 @@ impl<F: Field> DenseLeftTensorView<'_, F> {
     }
 }
 
-fn materialize_dense_left_overlap<F: Field>(
+#[rustfmt::skip] fn materialize_dense_left_overlap<F: Field>(
     equality: &OffsetEqWindow<F>,
     families: &[EqPairTensorFamily<F>],
     output_len: usize,
