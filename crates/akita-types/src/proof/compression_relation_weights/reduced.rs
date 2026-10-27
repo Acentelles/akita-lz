@@ -386,7 +386,7 @@ impl<E: Field> ReducedCompressionRelationWeights<E> {
 /// Build the complete reduced-evaluation F/H relation program.
 #[allow(clippy::too_many_arguments)]
 #[tracing::instrument(skip_all, name = "build_reduced_compression_relation_weights")]
-pub fn build_reduced_compression_relation_weights<F, E>(
+#[rustfmt::skip] pub fn build_reduced_compression_relation_weights<F, E>(
     alpha: E,
     lp: &CommittedGroupParams,
     opening_batch: &akita_params::OpeningClaimsLayout,
@@ -641,7 +641,7 @@ mod tests {
     }
 
     #[test]
-    fn reduced_map_uses_canonical_geometry_at_unaligned_window() {
+    #[rustfmt::skip] fn reduced_map_uses_canonical_geometry_at_unaligned_window() {
         let map =
             CompressionMapPlan::new(akita_params::SisModulusProfileId::Q128OffsetA7F7, 8, 16, 1)
                 .unwrap();

@@ -40,7 +40,7 @@ struct EvaluatedCompressionMatrix<E: Field> {
 
 /// Canonical additive relation table for every F/H compression layer.
 #[derive(Clone, Debug)]
-pub struct CompressionRelationWeights<E: Field> {
+#[rustfmt::skip] pub struct CompressionRelationWeights<E: Field> {
     events: Vec<CompressionRelationEvent<E>>,
     alpha_powers: Vec<E>,
     coefficient_block_len: usize,
@@ -629,7 +629,7 @@ where
 /// Build the one canonical compact F/H relation table.
 #[allow(clippy::too_many_arguments)]
 #[tracing::instrument(skip_all, name = "build_compression_relation_weights")]
-pub fn build_compression_relation_weights<F, E>(
+#[rustfmt::skip] pub fn build_compression_relation_weights<F, E>(
     setup: &AkitaExpandedSetup<F>,
     instance: &RingRelationInstance<F>,
     alpha: E,
@@ -806,7 +806,7 @@ mod tests {
     use jolt_field::{One, Zero};
 
     #[test]
-    fn sparse_evaluator_matches_dense_materialization() {
+    #[rustfmt::skip] fn sparse_evaluator_matches_dense_materialization() {
         let point = [
             F::from_u64(11),
             F::from_u64(13),
@@ -841,7 +841,7 @@ mod tests {
     /// Unsorted, overlapping, cancelling, and task-spanning events give the
     /// nonzero entries of the dense table in index order.
     #[test]
-    fn sparse_entries_match_dense_materialization() {
+    #[rustfmt::skip] fn sparse_entries_match_dense_materialization() {
         let physical_field_len = 1 << 16;
         let mut weights = CompressionRelationWeights {
             events: Vec::new(),
