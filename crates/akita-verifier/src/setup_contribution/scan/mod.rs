@@ -389,11 +389,34 @@ where
     }
     let job_rings = super::segments::SETUP_SCAN_JOB_RINGS;
     let num_jobs = required.div_ceil(job_rings);
-    cfg_try_fold_reduce!(
-        0..num_jobs,
-        E::zero,
-        |acc, job| {
-            evaluate_fused_job::<F, E, BASE_D>(
+    #[cfg(feature = "parallel")]
+    {
+        cfg_try_fold_reduce!(
+            0..num_jobs,
+            E::zero,
+            |acc, job| {
+                evaluate_fused_job::<F, E, BASE_D>(
+                    acc,
+                    job,
+                    job_rings,
+                    required,
+                    setup_flat,
+                    base_pows,
+                    projections,
+                    direct_weights,
+                    partitions,
+                )
+            },
+            |lhs, rhs| Ok(lhs + rhs)
+        )
+    }
+    // Sequential builds (the guest) run the jobs in a plain loop, so no fold
+    // closure exists to be outlined.
+    #[cfg(not(feature = "parallel"))]
+    {
+        let mut acc = E::zero();
+        for job in 0..num_jobs {
+            acc = evaluate_fused_job::<F, E, BASE_D>(
                 acc,
                 job,
                 job_rings,
@@ -403,10 +426,10 @@ where
                 projections,
                 direct_weights,
                 partitions,
-            )
-        },
-        |lhs, rhs| Ok(lhs + rhs)
-    )
+            )?;
+        }
+        Ok(acc)
+    }
 }
 
 // With `terminal-contraction` the setup-scan job body is a named function
