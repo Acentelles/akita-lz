@@ -61,6 +61,9 @@ ntt-inline = ["akita-algebra/ntt-inline"]
 # Keccak-f[1600] for the SHAKE challenge samplers through the jolt-inlines
 # Keccak inline (a RISC-V guest verifier).
 keccak-inline = ["akita-challenges/keccak-inline"]
+# LB2S recursion experiment (default off): sums of products at the structured
+# sites of the verifier's setup scan (same field values).
+setup-sop-structured = ["akita-verifier/setup-sop-structured"]
 parallel = [
   "dep:rayon",
   "akita-algebra/parallel",
