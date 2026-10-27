@@ -278,7 +278,7 @@ where
     Ok(acc)
 }
 
-fn evaluate_groups_fused<F, E, const BASE_D: usize>(
+#[cfg(not(feature = "terminal-contraction"))] fn evaluate_groups_fused<F, E, const BASE_D: usize>(
     plan: &SetupContributionPlan<E>,
     setup_view: &RingMatrixView<'_, F, BASE_D>,
     base_pows: &[E],
@@ -361,4 +361,123 @@ where
         },
         |lhs, rhs| Ok(lhs + rhs)
     )
+}
+
+#[cfg(feature = "terminal-contraction")]
+#[inline(always)]
+fn evaluate_groups_fused<F, E, const BASE_D: usize>(
+    plan: &SetupContributionPlan<E>,
+    setup_view: &RingMatrixView<'_, F, BASE_D>,
+    base_pows: &[E],
+    projections: &[[RoleProjection<E>; 3]],
+    direct_weights: &[DirectScanWeights<E>],
+    partitions: &[GroupScanPartition<E>],
+) -> Result<E, AkitaError>
+where
+    F: Field,
+    E: ExtField<F> + MulBaseUnreduced<F>,
+{
+    let setup_flat = setup_view.as_slice();
+    let required = plan.projection_geometry().required();
+    if plan.d_weights().len() != plan.d_rows()
+        || direct_weights.len() != plan.groups().len()
+        || partitions.len() != plan.groups().len()
+    {
+        return Err(AkitaError::InvalidSetup(
+            "cached setup scan geometry is malformed".into(),
+        ));
+    }
+    let job_rings = super::segments::SETUP_SCAN_JOB_RINGS;
+    let num_jobs = required.div_ceil(job_rings);
+    cfg_try_fold_reduce!(
+        0..num_jobs,
+        E::zero,
+        |acc, job| {
+            evaluate_fused_job::<F, E, BASE_D>(
+                acc,
+                job,
+                job_rings,
+                required,
+                setup_flat,
+                base_pows,
+                projections,
+                direct_weights,
+                partitions,
+            )
+        },
+        |lhs, rhs| Ok(lhs + rhs)
+    )
+}
+
+// With `terminal-contraction` the setup-scan job body is a named function
+// that is always inlined, so the fused group loop stays inside
+// `evaluate_direct_typed` in the guest (the closure only forwards).
+#[cfg(feature = "terminal-contraction")]
+#[inline(always)]
+#[allow(clippy::too_many_arguments)]
+fn evaluate_fused_job<F, E, const BASE_D: usize>(
+    acc: E,
+    job: usize,
+    job_rings: usize,
+    required: usize,
+    setup_flat: &[akita_algebra::CyclotomicRing<F, BASE_D>],
+    base_pows: &[E],
+    projections: &[[RoleProjection<E>; 3]],
+    direct_weights: &[DirectScanWeights<E>],
+    partitions: &[GroupScanPartition<E>],
+) -> Result<E, AkitaError>
+where
+    F: Field,
+    E: ExtField<F> + MulBaseUnreduced<F>,
+{
+    let lo = job.checked_mul(job_rings).ok_or(AkitaError::InvalidProof)?;
+    let hi = lo.saturating_add(job_rings).min(required);
+    let setup = setup_flat.get(lo..hi).ok_or(AkitaError::InvalidProof)?;
+    let mut weights = vec![E::zero(); setup.len()];
+    for ((projection, direct), partition) in projections.iter().zip(direct_weights).zip(partitions)
+    {
+        let (e_eq_slice, t_eq_slice, z_eq_slice) = (&direct.e[..], &direct.t[..], &direct.z[..]);
+        let segments = &partition.segments;
+        let first = segments.partition_point(|segment| segment.hi <= lo);
+        for segment in segments.iter().skip(first) {
+            if segment.lo >= hi {
+                break;
+            }
+            let overlap = segment.lo.max(lo)..segment.hi.min(hi);
+            let weight_start = overlap
+                .start
+                .checked_sub(lo)
+                .ok_or(AkitaError::InvalidProof)?;
+            dispatch_segment_roles!(segment, Ok(()), |HAS_D, HAS_B, HAS_A| {
+                for_each_base_ring_segment_weight_typed::<E, HAS_D, HAS_B, HAS_A>(
+                    overlap,
+                    segment,
+                    e_eq_slice,
+                    t_eq_slice,
+                    z_eq_slice,
+                    &projection[2],
+                    &projection[1],
+                    &projection[0],
+                    |offset, weight| {
+                        let slot = weight_start
+                            .checked_add(offset)
+                            .and_then(|index| weights.get_mut(index))
+                            .ok_or(AkitaError::InvalidProof)?;
+                        *slot += weight;
+                        Ok(())
+                    },
+                )
+            })?;
+        }
+    }
+    // Rows with a zero weight contribute nothing; the rest go
+    // through the shared-powers kernel in one call.
+    let (rows, weights): (Vec<&[F]>, Vec<E>) = setup
+        .iter()
+        .zip(weights)
+        .filter(|(_, weight)| !weight.is_zero())
+        .map(|(ring, weight)| (ring.coefficients().as_slice(), weight))
+        .unzip();
+    let term = E::weighted_dot_base_rows(&rows, &weights, base_pows);
+    Ok(acc + term)
 }
