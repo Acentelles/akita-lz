@@ -985,7 +985,8 @@ impl<Cfg: CommitmentConfig> TrustedScheduleCatalog<Cfg> {
     /// from a prevalidated view of the same bytes. `None` when the config
     /// policy is invalid or the view does not match (see
     /// [`ValidatedScheduleCatalog::from_prevalidated_verifier_view`]); the
-    /// caller then loads `bytes` with [`Self::from_verifier_view`].
+    /// caller then loads `bytes` with [`Self::from_verifier_view`]. Never inlined.
+    #[inline(never)]
     pub fn from_prevalidated_verifier_view(
         bytes: &[u8],
         prevalidated: &akita_schedules::PrevalidatedVerifierView<'_>,

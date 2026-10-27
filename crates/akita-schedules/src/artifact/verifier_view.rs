@@ -296,7 +296,8 @@ impl ValidatedScheduleCatalog {
     /// view names `expected_family_name` and that policy digest, carries
     /// exactly the recorded number of rows, and that every carried row passes
     /// its topology check. It returns `None` on any miss, and the caller then
-    /// loads the bytes with [`Self::from_verifier_view`].
+    /// loads the bytes with [`Self::from_verifier_view`]. Never inlined: one copy serves every caller.
+    #[inline(never)]
     pub fn from_prevalidated_verifier_view(
         bytes: &[u8],
         prevalidated: &PrevalidatedVerifierView<'_>,
