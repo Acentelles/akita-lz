@@ -347,7 +347,7 @@ fn materialize_dense_left_overlap<F: Field>(
         .ok_or_else(|| {
             AkitaError::Internal("validated tensor destination span exceeds the output".into())
         })?;
-    // Tuned with `benches/offset_eq_window.rs::bench_materialize_disjoint_intervals`
+    #[cfg(feature = "tensor-eq-runs")] if runs::try_accumulate(equality, &views, destination)? { return Ok(Some(output)); }
     // on an Apple M4 Max (16 cores, 64 GiB).
     const PARALLEL_THRESHOLD: usize = 1 << 14;
     if work >= PARALLEL_THRESHOLD {
@@ -423,3 +423,6 @@ fn visit_tensor_coordinates<F: Field>(
     }
     Ok(())
 }
+
+#[cfg(feature = "tensor-eq-runs")]
+mod runs;
