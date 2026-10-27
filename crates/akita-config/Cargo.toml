@@ -26,6 +26,7 @@ transcript-keccak = [
   "akita-params/transcript-keccak",
 ]
 test-support = []
+prevalidated-catalog = ["akita-schedules/prevalidated-catalog"]
 
 [dependencies]
 akita-error = { version = "0.1.0", path = "../akita-error" }

@@ -861,6 +861,9 @@ fn validate_schedule_challenge_hooks(
     })
 }
 
+#[cfg(feature = "prevalidated-catalog")]
+pub use verifier_view::{PrevalidatedVerifierRecord, PrevalidatedVerifierView};
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -18,6 +18,9 @@ transcript-keccak = [
   "akita-challenges/transcript-keccak",
   "akita-params/transcript-keccak",
 ]
+# Rebuild a selected-row verifier view from values recorded when it was
+# loaded ahead of time (byte-equal views only). Default off.
+prevalidated-catalog = []
 # Used only through `#[serde(with = "serde_bytes")]`, which machete cannot see.
 [package.metadata.cargo-machete]
 ignored = ["serde_bytes"]
