@@ -120,7 +120,7 @@ pub(super) fn role_projection<E: Field>(
 }
 
 #[inline(always)]
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)] #[cfg(not(feature = "lazy-scan-errors"))]
 pub(super) fn base_ring_segment_inner_sum_typed<
     F,
     E,
@@ -173,7 +173,7 @@ where
 }
 
 #[inline(always)]
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)] #[cfg(not(feature = "lazy-scan-errors"))]
 pub(super) fn for_each_base_ring_segment_weight_typed<
     E,
     const HAS_D: bool,
@@ -240,7 +240,7 @@ where
     }
     Ok(())
 }
-
+#[cfg(not(feature = "lazy-scan-errors"))]
 fn checked_role_eq_slice<E, const ACTIVE: bool>(
     eq: &[E],
     base_start: usize,
@@ -297,7 +297,7 @@ where
     Ok(weight)
 }
 
-#[inline(always)]
+#[inline(always)] #[cfg(not(feature = "lazy-scan-errors"))]
 fn projected_b_role_weight_at<E: Field>(
     base_idx: usize,
     segment: &GroupSetupSegment<E>,
@@ -321,7 +321,7 @@ fn projected_b_role_weight_at<E: Field>(
     Ok(scale.map_or(weight, |scale| weight * scale))
 }
 
-#[inline(always)]
+#[inline(always)] #[cfg(not(feature = "lazy-scan-errors"))]
 fn projected_role_weight_at<E: Field>(
     base_idx: usize,
     start_abs: usize,
@@ -337,7 +337,7 @@ fn projected_role_weight_at<E: Field>(
     Ok(scale.map_or(weight, |scale| weight * scale))
 }
 
-#[inline(always)]
+#[inline(always)] #[cfg(not(feature = "lazy-scan-errors"))]
 fn projected_role_index_and_scale<E: Field>(
     base_idx: usize,
     projection: &RoleProjection<E>,
@@ -389,4 +389,227 @@ where
         acc += row_weight * col_weight * MulBaseUnreduced::dot_base(alpha_pows, coeffs);
     }
     Ok(acc)
+}
+
+// ERR-LAZY (`lazy-scan-errors`, default off): the same kernels with the
+// `InvalidProof` value built only on the failure path. `ok_or` builds the
+// error eagerly and drops it on success, and `AkitaError` has drop glue, so
+// every successful check called the outlined drop. Same results, same checks,
+// same first error.
+#[cfg(feature = "lazy-scan-errors")]
+#[inline(always)]
+#[allow(clippy::too_many_arguments)]
+pub(super) fn base_ring_segment_inner_sum_typed<
+    F,
+    E,
+    const D: usize,
+    const HAS_D: bool,
+    const HAS_B: bool,
+    const HAS_A: bool,
+>(
+    range: std::ops::Range<usize>,
+    setup_flat: &[CyclotomicRing<F, D>],
+    base_pows: &[E],
+    segment: &GroupSetupSegment<E>,
+    e_eq: &[E],
+    t_eq: &[E],
+    z_eq: &[E],
+    d_projection: &RoleProjection<E>,
+    b_projection: &RoleProjection<E>,
+    a_projection: &RoleProjection<E>,
+) -> Result<E, AkitaError>
+where
+    F: Field,
+    E: ExtField<F> + MulBaseUnreduced<F>,
+{
+    let Some(setup) = setup_flat.get(range.clone()) else {
+        return Err(AkitaError::InvalidProof);
+    };
+    let mut rows: Vec<&[F]> = Vec::with_capacity(setup.len());
+    let mut weights: Vec<E> = Vec::with_capacity(setup.len());
+    for_each_base_ring_segment_weight_typed::<E, HAS_D, HAS_B, HAS_A>(
+        range,
+        segment,
+        e_eq,
+        t_eq,
+        z_eq,
+        d_projection,
+        b_projection,
+        a_projection,
+        |offset, weight| {
+            if !weight.is_zero() {
+                let Some(ring) = setup.get(offset) else {
+                    return Err(AkitaError::InvalidProof);
+                };
+                rows.push(ring.coefficients().as_slice());
+                weights.push(weight);
+            }
+            Ok(())
+        },
+    )?;
+    Ok(E::weighted_dot_base_rows(&rows, &weights, base_pows))
+}
+
+#[cfg(feature = "lazy-scan-errors")]
+#[inline(always)]
+#[allow(clippy::too_many_arguments)]
+pub(super) fn for_each_base_ring_segment_weight_typed<
+    E,
+    const HAS_D: bool,
+    const HAS_B: bool,
+    const HAS_A: bool,
+>(
+    range: std::ops::Range<usize>,
+    segment: &GroupSetupSegment<E>,
+    e_eq: &[E],
+    t_eq: &[E],
+    z_eq: &[E],
+    d_projection: &RoleProjection<E>,
+    b_projection: &RoleProjection<E>,
+    a_projection: &RoleProjection<E>,
+    mut visit: impl FnMut(usize, E) -> Result<(), AkitaError>,
+) -> Result<(), AkitaError>
+where
+    E: Field,
+{
+    let Some(len) = range.end.checked_sub(range.start) else {
+        return Err(AkitaError::InvalidProof);
+    };
+    let identity =
+        d_projection.is_identity() && b_projection.is_identity() && a_projection.is_identity();
+    if identity {
+        let d_eq = checked_role_eq_slice::<E, HAS_D>(e_eq, range.start, len, segment.d_start_abs)?;
+        let a_eq = checked_role_eq_slice::<E, HAS_A>(z_eq, range.start, len, segment.a_start_abs)?;
+        let mut d_eq = d_eq.iter();
+        let mut a_eq = a_eq.iter();
+        for offset in 0..len {
+            let mut weight = E::zero();
+            if HAS_D {
+                let Some(d) = d_eq.next() else {
+                    return Err(AkitaError::InvalidProof);
+                };
+                weight += segment.d_weight * *d;
+            }
+            if HAS_B {
+                weight +=
+                    projected_b_role_weight_at(range.start + offset, segment, t_eq, b_projection)?;
+            }
+            if HAS_A {
+                let Some(a) = a_eq.next() else {
+                    return Err(AkitaError::InvalidProof);
+                };
+                weight += segment.a_row_weight * *a;
+            }
+            visit(offset, weight)?;
+        }
+        return Ok(());
+    }
+
+    for offset in 0..len {
+        let Some(base_idx) = range.start.checked_add(offset) else {
+            return Err(AkitaError::InvalidProof);
+        };
+        let weight = base_ring_segment_weight_at::<E, HAS_D, HAS_B, HAS_A>(
+            base_idx,
+            segment,
+            e_eq,
+            t_eq,
+            z_eq,
+            d_projection,
+            b_projection,
+            a_projection,
+        )?;
+        visit(offset, weight)?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "lazy-scan-errors")]
+fn checked_role_eq_slice<E, const ACTIVE: bool>(
+    eq: &[E],
+    base_start: usize,
+    len: usize,
+    role_start: usize,
+) -> Result<&[E], AkitaError> {
+    if !ACTIVE {
+        return Ok(&[]);
+    }
+    let Some(start) = base_start.checked_sub(role_start) else {
+        return Err(AkitaError::InvalidProof);
+    };
+    let Some(end) = start.checked_add(len) else {
+        return Err(AkitaError::InvalidProof);
+    };
+    let Some(slice) = eq.get(start..end) else {
+        return Err(AkitaError::InvalidProof);
+    };
+    Ok(slice)
+}
+
+#[cfg(feature = "lazy-scan-errors")]
+#[inline(always)]
+fn projected_b_role_weight_at<E: Field>(
+    base_idx: usize,
+    segment: &GroupSetupSegment<E>,
+    weights: &[E],
+    projection: &RoleProjection<E>,
+) -> Result<E, AkitaError> {
+    let (role_idx, scale) = projected_role_index_and_scale(base_idx, projection)?;
+    let Some(local) = role_idx.checked_sub(segment.b_start_abs) else {
+        return Err(AkitaError::InvalidProof);
+    };
+    let mut weight = E::zero();
+    for term in segment.b_terms.iter() {
+        let Some(logical) = term
+            .logical_start
+            .checked_add(local)
+            .and_then(|index| weights.get(index))
+            .copied()
+        else {
+            return Err(AkitaError::InvalidProof);
+        };
+        weight += term.row_weight * logical;
+    }
+    Ok(scale.map_or(weight, |scale| weight * scale))
+}
+
+#[cfg(feature = "lazy-scan-errors")]
+#[inline(always)]
+fn projected_role_weight_at<E: Field>(
+    base_idx: usize,
+    start_abs: usize,
+    row_weight: E,
+    eq_slice: &[E],
+    projection: &RoleProjection<E>,
+) -> Result<E, AkitaError> {
+    let (role_idx, scale) = projected_role_index_and_scale(base_idx, projection)?;
+    let Some(eq_idx) = role_idx.checked_sub(start_abs) else {
+        return Err(AkitaError::InvalidProof);
+    };
+    let Some(eq) = eq_slice.get(eq_idx) else {
+        return Err(AkitaError::InvalidProof);
+    };
+    let weight = row_weight * *eq;
+    Ok(scale.map_or(weight, |scale| weight * scale))
+}
+
+#[cfg(feature = "lazy-scan-errors")]
+#[inline(always)]
+fn projected_role_index_and_scale<E: Field>(
+    base_idx: usize,
+    projection: &RoleProjection<E>,
+) -> Result<(usize, Option<E>), AkitaError> {
+    Ok(match projection {
+        RoleProjection::Identity => (base_idx, None),
+        RoleProjection::Projected {
+            scales,
+            shift,
+            mask,
+        } => {
+            let Some(scale) = scales.get(base_idx & mask) else {
+                return Err(AkitaError::InvalidProof);
+            };
+            (base_idx >> shift, Some(*scale))
+        }
+    })
 }

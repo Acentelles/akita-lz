@@ -30,6 +30,7 @@ ignored = ["akita-setup"]
 [features]
 terminal-contraction = ["akita-verifier/terminal-contraction"]
 segment-setup = ["akita-verifier/segment-setup"]
+lazy-scan-errors = ["akita-verifier/lazy-scan-errors"]
 default = ["parallel", "transcript-blake2b", "l2-terminal-quotient"]
 # L2 terminal quotient certificate (default on; disable with
 # --no-default-features):

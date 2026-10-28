@@ -34,6 +34,9 @@ rayon = { version = "1.10", optional = true }
 [features]
 terminal-contraction = ["jolt-field/terminal-contraction"]
 segment-setup = []
+# ERR-LAZY (default off): the setup-scan kernels build `InvalidProof` only on
+# the failure path (same results and checks).
+lazy-scan-errors = []
 default = ["transcript-blake2b", "l2-terminal-quotient"]
 # L2 terminal quotient certificate (default on; disable with
 # --no-default-features):

@@ -435,7 +435,7 @@ where
 // With `terminal-contraction` the setup-scan job body is a named function
 // that is always inlined, so the fused group loop stays inside
 // `evaluate_direct_typed` in the guest (the closure only forwards).
-#[cfg(feature = "terminal-contraction")]
+#[cfg(all(feature = "terminal-contraction", not(feature = "lazy-scan-errors")))]
 #[inline(always)]
 #[allow(clippy::too_many_arguments)]
 fn evaluate_fused_job<F, E, const BASE_D: usize>(
@@ -486,6 +486,87 @@ where
                             .checked_add(offset)
                             .and_then(|index| weights.get_mut(index))
                             .ok_or(AkitaError::InvalidProof)?;
+                        *slot += weight;
+                        Ok(())
+                    },
+                )
+            })?;
+        }
+    }
+    // Rows with a zero weight contribute nothing; the rest go
+    // through the shared-powers kernel in one call. A plain push loop (no
+    // iterator adapter chain left to outline).
+    let mut rows: Vec<&[F]> = Vec::with_capacity(setup.len());
+    let mut row_weights: Vec<E> = Vec::with_capacity(setup.len());
+    for (ring, weight) in setup.iter().zip(weights) {
+        if !weight.is_zero() {
+            rows.push(ring.coefficients().as_slice());
+            row_weights.push(weight);
+        }
+    }
+    let term = E::weighted_dot_base_rows(&rows, &row_weights, base_pows);
+    Ok(acc + term)
+}
+
+// ERR-LAZY (`lazy-scan-errors`, default off): the same job with the
+// `InvalidProof` value built only on the failure path (no eager error value
+// to drop after each successful check). Same results and first error.
+#[cfg(all(feature = "terminal-contraction", feature = "lazy-scan-errors"))]
+#[inline(always)]
+#[allow(clippy::too_many_arguments)]
+fn evaluate_fused_job<F, E, const BASE_D: usize>(
+    acc: E,
+    job: usize,
+    job_rings: usize,
+    required: usize,
+    setup_flat: &[akita_algebra::CyclotomicRing<F, BASE_D>],
+    base_pows: &[E],
+    projections: &[[RoleProjection<E>; 3]],
+    direct_weights: &[DirectScanWeights<E>],
+    partitions: &[GroupScanPartition<E>],
+) -> Result<E, AkitaError>
+where
+    F: Field,
+    E: ExtField<F> + MulBaseUnreduced<F>,
+{
+    let Some(lo) = job.checked_mul(job_rings) else {
+        return Err(AkitaError::InvalidProof);
+    };
+    let hi = lo.saturating_add(job_rings).min(required);
+    let Some(setup) = setup_flat.get(lo..hi) else {
+        return Err(AkitaError::InvalidProof);
+    };
+    let mut weights = vec![E::zero(); setup.len()];
+    for ((projection, direct), partition) in projections.iter().zip(direct_weights).zip(partitions)
+    {
+        let (e_eq_slice, t_eq_slice, z_eq_slice) = (&direct.e[..], &direct.t[..], &direct.z[..]);
+        let segments = &partition.segments;
+        let first = segments.partition_point(|segment| segment.hi <= lo);
+        for segment in segments.iter().skip(first) {
+            if segment.lo >= hi {
+                break;
+            }
+            let overlap = segment.lo.max(lo)..segment.hi.min(hi);
+            let Some(weight_start) = overlap.start.checked_sub(lo) else {
+                return Err(AkitaError::InvalidProof);
+            };
+            dispatch_segment_roles!(segment, Ok(()), |HAS_D, HAS_B, HAS_A| {
+                for_each_base_ring_segment_weight_typed::<E, HAS_D, HAS_B, HAS_A>(
+                    overlap,
+                    segment,
+                    e_eq_slice,
+                    t_eq_slice,
+                    z_eq_slice,
+                    &projection[2],
+                    &projection[1],
+                    &projection[0],
+                    |offset, weight| {
+                        let Some(slot) = weight_start
+                            .checked_add(offset)
+                            .and_then(|index| weights.get_mut(index))
+                        else {
+                            return Err(AkitaError::InvalidProof);
+                        };
                         *slot += weight;
                         Ok(())
                     },
