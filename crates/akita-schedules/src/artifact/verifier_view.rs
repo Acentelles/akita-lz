@@ -297,7 +297,7 @@ impl ValidatedScheduleCatalog {
     /// exactly the recorded number of rows, and that every carried row passes
     /// its topology check. It returns `None` on any miss, and the caller then
     /// loads the bytes with [`Self::from_verifier_view`]. Never inlined: one copy serves every caller.
-    #[inline(never)]
+    #[inline(never)] #[cfg(not(feature = "digest-nozero"))]
     pub fn from_prevalidated_verifier_view(
         bytes: &[u8],
         prevalidated: &PrevalidatedVerifierView<'_>,
@@ -358,6 +358,86 @@ impl ValidatedScheduleCatalog {
         row_digests
             .as_flattened_mut()
             .copy_from_slice(&artifact.row_digests);
+        Some(Self {
+            family_name: artifact.family_name,
+            policy_digest: prevalidated.policy_digest,
+            catalog_digest: prevalidated.catalog_digest,
+            coverage: CatalogCoverage::Selected { row_digests },
+            rows_by_digest: resolved,
+            rows_by_key,
+        })
+    }
+}
+
+// DIGEST-NOZERO (`digest-nozero`, default off): the same rebuild, with the
+// carried row digests copied straight from the view bytes instead of
+// zero-filling the digest vector and then overwriting it. Same digests, same
+// order.
+#[cfg(all(feature = "prevalidated-catalog", feature = "digest-nozero"))]
+impl ValidatedScheduleCatalog {
+    /// Rebuild the catalog that [`Self::from_verifier_view`] returns for
+    /// `bytes` from a [`PrevalidatedVerifierView`] of the same bytes; see the
+    /// default build's documentation of this function. Never inlined.
+    #[inline(never)]
+    pub fn from_prevalidated_verifier_view(
+        bytes: &[u8],
+        prevalidated: &PrevalidatedVerifierView<'_>,
+        expected_family_name: &str,
+        policy: &PlannerPolicy,
+    ) -> Option<Self> {
+        if bytes.len() != prevalidated.view.len()
+            || bytes != prevalidated.view
+            || policy_digest(policy) != prevalidated.policy_digest
+        {
+            return None;
+        }
+        let (artifact, rest): (BinaryVerifierCatalog, &[u8]) =
+            postcard::take_from_bytes(bytes).ok()?;
+        if !rest.is_empty()
+            || artifact.family_name != expected_family_name
+            || artifact.policy_digest != prevalidated.policy_digest
+            || artifact.rows.len() != prevalidated.carried_row_digests.len()
+            || !artifact.row_digests.len().is_multiple_of(32)
+        {
+            return None;
+        }
+        let mut resolved = Vec::with_capacity(artifact.rows.len());
+        for (row, digest) in artifact
+            .rows
+            .into_iter()
+            .zip(prevalidated.carried_row_digests)
+        {
+            let (profiles, schedule) = row.into_profile_and_schedule().ok()?;
+            resolved.push(crate::resolve::ResolvedScheduleRow::from_prevalidated(
+                OpeningScheduleSelection {
+                    row_digest: ScheduleRowDigest::from_bytes(*digest),
+                },
+                profiles,
+                schedule,
+            ));
+        }
+        resolved.sort_by_key(|row| row.selection().row_digest);
+        let mut rows_by_key = resolved
+            .iter()
+            .enumerate()
+            .map(|(index, row)| {
+                (
+                    super::key_for_profiles(row.profiles()).canonical_order_key(),
+                    index,
+                )
+            })
+            .collect::<Vec<_>>();
+        rows_by_key.sort_by(|(left_key, left_index), (right_key, right_index)| {
+            left_key.cmp(right_key).then_with(|| {
+                resolved[*left_index]
+                    .selection()
+                    .row_digest
+                    .cmp(&resolved[*right_index].selection().row_digest)
+            })
+        });
+        // The length is a multiple of 32 (checked above), so the remainder is
+        // empty and the chunks are every digest, in order.
+        let row_digests = artifact.row_digests.as_chunks::<32>().0.to_vec();
         Some(Self {
             family_name: artifact.family_name,
             policy_digest: prevalidated.policy_digest,
