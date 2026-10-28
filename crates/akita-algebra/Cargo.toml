@@ -39,5 +39,9 @@ default = []
 parallel = ["dep:rayon", "jolt-field/parallel"]
 tensor-no-carry = []
 tensor-eq-runs = []
+# FILL-INGRESS screen lever (default off): the bounded equality fill scales each
+# low-table run through `Field::scale_slice_into` (one scale ingress per run on a
+# field-inline guest). Needs a jolt-field with that feature.
+fill-ingress = ["jolt-field/fill-ingress"]
 [lints]
 workspace = true

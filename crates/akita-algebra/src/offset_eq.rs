@@ -1391,7 +1391,7 @@ impl<F: Field> OffsetEqWindow<F> {
         Ok(())
     }
 
-    fn fill_bounded_high_interval(
+    #[cfg(not(feature = "fill-ingress"))] fn fill_bounded_high_interval(
         &self,
         mut start: usize,
         mut output: &mut [F],
@@ -1483,5 +1483,57 @@ mod amortization_tests {
         assert!(OffsetEqWindow::<F>::new_if_amortized(&[], usize::MAX)
             .unwrap()
             .is_none());
+    }
+}
+
+// FILL-INGRESS (`fill-ingress`, default off): the bounded fill with each
+// nontrivial-scale run computed by `Field::scale_slice_into`, which a
+// field-inline guest field serves with one scale ingress per run. The zero and
+// one shortcuts, the checked slices and the first error are unchanged; so are
+// the values.
+#[cfg(feature = "fill-ingress")]
+impl<F: Field> OffsetEqWindow<F> {
+    fn fill_bounded_high_interval(
+        &self,
+        mut start: usize,
+        mut output: &mut [F],
+        eq_high: &[F],
+    ) -> Result<(), AkitaError> {
+        while !output.is_empty() {
+            let low = start & self.low_mask;
+            let available_low = self.eq_low.len().checked_sub(low).ok_or_else(|| {
+                AkitaError::Internal("bounded equality low index exceeds the prepared table".into())
+            })?;
+            let take = available_low.min(output.len());
+            let low_end = low.checked_add(take).ok_or_else(|| {
+                AkitaError::Internal("bounded equality low interval end overflow".into())
+            })?;
+            let low_values = self.eq_low.get(low..low_end).ok_or_else(|| {
+                AkitaError::Internal(
+                    "bounded equality low interval exceeds the prepared table".into(),
+                )
+            })?;
+            let (destination, tail) = output.split_at_mut_checked(take).ok_or_else(|| {
+                AkitaError::Internal("bounded equality destination split exceeds the output".into())
+            })?;
+            let high = start >> self.low_bits;
+            let Some(scale) = eq_high.get(high).copied() else {
+                destination.fill(F::zero());
+                tail.fill(F::zero());
+                return Ok(());
+            };
+            if scale.is_zero() {
+                destination.fill(F::zero());
+            } else if scale == F::one() {
+                destination.copy_from_slice(low_values);
+            } else {
+                F::scale_slice_into(scale, low_values, destination);
+            }
+            start = start
+                .checked_add(take)
+                .ok_or_else(|| AkitaError::InvalidInput("equality interval overflow".into()))?;
+            output = tail;
+        }
+        Ok(())
     }
 }
