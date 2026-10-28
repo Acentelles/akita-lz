@@ -76,8 +76,8 @@ where
 use kernels::evaluate_weighted_setup_row;
 use kernels::{
     base_ring_segment_inner_sum_typed, dispatch_segment_roles,
-    for_each_base_ring_segment_weight_typed, role_projection, GroupSetupSegment, RoleProjection,
-};
+    role_projection, GroupSetupSegment, RoleProjection,
+}; #[cfg(not(feature = "setup-lane-streams"))] use kernels::for_each_base_ring_segment_weight_typed;
 use reduced_role::{
     materialize_reduced_role_tensor_weights, prepare_reduced_role_coefficient_state,
 };
