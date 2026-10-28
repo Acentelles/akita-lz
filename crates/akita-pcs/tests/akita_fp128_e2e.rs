@@ -691,9 +691,18 @@ fn fp128_compression_weights_crosscheck() {
     init_rayon_pool();
     run_on_large_stack(|| {
         let before = report();
-        prove_verify_dense_roundtrip::<fp128::Dense>(&[14, 16], b"crosscheck/fp128_dense");
-        prove_verify_onehot_roundtrip::<fp128::OneHot>(&[12, 15], b"crosscheck/fp128_onehot");
+        prove_verify_dense_roundtrip::<fp128::Dense>(
+            ChunkedWitnessCfg::default_non_chunked(),
+            &[14, 16],
+            b"crosscheck/fp128_dense",
+        );
+        prove_verify_onehot_roundtrip::<fp128::OneHot>(
+            ChunkedWitnessCfg::default_non_chunked(),
+            &[12, 15],
+            b"crosscheck/fp128_onehot",
+        );
         prove_verify_onehot_precommitted_roundtrip::<fp128::OneHot>(
+            ChunkedWitnessCfg::default_non_chunked(),
             &[16],
             b"crosscheck/fp128_onehot_pre",
         );
