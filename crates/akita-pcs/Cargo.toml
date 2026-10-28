@@ -28,6 +28,7 @@ features = ["parallel", "transcript-blake2b"]
 ignored = ["akita-setup"]
 
 [features]
+setup-lane-streams = ["akita-verifier/setup-lane-streams"]
 terminal-contraction = ["akita-verifier/terminal-contraction"]
 segment-setup = ["akita-verifier/segment-setup"]
 lazy-scan-errors = ["akita-verifier/lazy-scan-errors"]

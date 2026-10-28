@@ -1,5 +1,5 @@
 mod group;
-mod reduced;
+mod reduced; #[cfg(feature = "setup-lane-streams")] mod streams;
 
 use super::*;
 use akita_algebra::cfg_try_fold_reduce;
@@ -459,7 +459,7 @@ where
     let mut weights = vec![E::zero(); setup.len()];
     for ((projection, direct), partition) in projections.iter().zip(direct_weights).zip(partitions)
     {
-        let (e_eq_slice, t_eq_slice, z_eq_slice) = (&direct.e[..], &direct.t[..], &direct.z[..]);
+        #[cfg(not(feature = "setup-lane-streams"))] let (e_eq_slice, t_eq_slice, z_eq_slice) = (&direct.e[..], &direct.t[..], &direct.z[..]);
         let segments = &partition.segments;
         let first = segments.partition_point(|segment| segment.hi <= lo);
         for segment in segments.iter().skip(first) {
@@ -471,7 +471,7 @@ where
                 .start
                 .checked_sub(lo)
                 .ok_or(AkitaError::InvalidProof)?;
-            dispatch_segment_roles!(segment, Ok(()), |HAS_D, HAS_B, HAS_A| {
+            #[cfg(feature = "setup-lane-streams")] segment.accumulate_lane_streams(overlap, &mut weights, weight_start, direct, projection)?; #[cfg(not(feature = "setup-lane-streams"))] dispatch_segment_roles!(segment, Ok(()), |HAS_D, HAS_B, HAS_A| {
                 for_each_base_ring_segment_weight_typed::<E, HAS_D, HAS_B, HAS_A>(
                     overlap,
                     segment,
@@ -539,7 +539,7 @@ where
     let mut weights = vec![E::zero(); setup.len()];
     for ((projection, direct), partition) in projections.iter().zip(direct_weights).zip(partitions)
     {
-        let (e_eq_slice, t_eq_slice, z_eq_slice) = (&direct.e[..], &direct.t[..], &direct.z[..]);
+        #[cfg(not(feature = "setup-lane-streams"))] let (e_eq_slice, t_eq_slice, z_eq_slice) = (&direct.e[..], &direct.t[..], &direct.z[..]);
         let segments = &partition.segments;
         let first = segments.partition_point(|segment| segment.hi <= lo);
         for segment in segments.iter().skip(first) {
@@ -550,7 +550,7 @@ where
             let Some(weight_start) = overlap.start.checked_sub(lo) else {
                 return Err(AkitaError::InvalidProof);
             };
-            dispatch_segment_roles!(segment, Ok(()), |HAS_D, HAS_B, HAS_A| {
+            #[cfg(feature = "setup-lane-streams")] segment.accumulate_lane_streams(overlap, &mut weights, weight_start, direct, projection)?; #[cfg(not(feature = "setup-lane-streams"))] dispatch_segment_roles!(segment, Ok(()), |HAS_D, HAS_B, HAS_A| {
                 for_each_base_ring_segment_weight_typed::<E, HAS_D, HAS_B, HAS_A>(
                     overlap,
                     segment,

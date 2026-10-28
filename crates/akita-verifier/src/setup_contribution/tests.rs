@@ -1225,3 +1225,5 @@ fn single_group_plan_supports_multi_chunk_weights() {
     let got = scan.evaluate_direct::<F>(&setup).unwrap();
     assert_eq!(got, expected);
 }
+
+mod lane_streams;
