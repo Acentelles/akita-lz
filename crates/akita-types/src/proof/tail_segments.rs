@@ -9,7 +9,7 @@ use akita_serialization::{
 };
 use jolt_field::{CanonicalEncoding, Field};
 
-use crate::proof::RingVec;
+use crate::proof::RingVec; #[cfg_attr(feature = "golomb-word", allow(unused_imports))]
 use akita_params::golomb_rice::{
     golomb_rice_decode_vec, golomb_rice_max_quotient_for_cap, golomb_rice_zigzag_width,
 };
@@ -188,7 +188,7 @@ fn append_field_coeffs<F: Field + AkitaSerialize, W: Write>(
 pub fn decode_terminal_z_golomb_payload(
     payload: &[u8],
     group: &TailSegmentGroupLayout,
-) -> Result<Vec<i16>, AkitaError> {
+) -> Result<Vec<i16>, AkitaError> { #[cfg(feature = "golomb-word")] use akita_params::golomb_rice::golomb_rice_decode_i16_vec as golomb_rice_decode_vec;
     if payload.len() > group.z_payload_bytes {
         return Err(AkitaError::InvalidProof);
     }

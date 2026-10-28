@@ -62,6 +62,8 @@ logging-transcript = [
 # recorded as groups and their multilinear extension is evaluated by factor.
 # Same field values as the canonical evaluator; see compression_relation_weights/l3.rs.
 l3-compression-weights = []
+# GOLOMB-WORD (default off): terminal z decode through the packed i16 decoder.
+golomb-word = ["akita-params/golomb-word"]
 
 [dev-dependencies]
 akita-params = { version = "0.1.0", path = "../akita-params", default-features = false, features = [

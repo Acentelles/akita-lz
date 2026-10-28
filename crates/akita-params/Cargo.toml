@@ -31,6 +31,9 @@ l2-terminal-quotient = []
 # Descriptor digests over the jolt-inlines Blake2b (guest verifiers).
 blake2-inline = ["dep:jolt-inlines-blake2"]
 test-support = []
+# GOLOMB-WORD (default off): doubleword trailing-ones table and packed
+# doubleword stores in the i16 Golomb-Rice decode (same values and checks).
+golomb-word = []
 transcript-blake2b = [
   "akita-challenges/transcript-blake2b",
   "akita-sumcheck/transcript-blake2b",

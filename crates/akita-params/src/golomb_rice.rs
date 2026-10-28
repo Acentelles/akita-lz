@@ -131,7 +131,7 @@ impl<'a> BitReader<'a> {
 }
 
 /// Trailing one bits of `word`.
-#[inline]
+#[inline] #[cfg(not(feature = "golomb-word"))]
 fn trailing_ones(word: u64) -> u32 {
     #[cfg(any(target_arch = "riscv64", test))]
     {
@@ -428,6 +428,103 @@ pub fn golomb_rice_decode_vec<T>(
         out.push(convert(value)?);
     }
     golomb_rice_consume_canonical_padding(&mut reader)?;
+    Ok(out)
+}
+
+// GOLOMB-WORD (`golomb-word`, default off): the trailing-ones table holds
+// doubleword entries, so each lookup is one doubleword load in the guest
+// instead of a subword load. Same counts.
+/// Trailing one bits of `word`.
+#[cfg(feature = "golomb-word")]
+#[inline]
+fn trailing_ones(word: u64) -> u32 {
+    #[cfg(any(target_arch = "riscv64", test))]
+    {
+        const ONES: [u64; 256] = {
+            let mut table = [0; 256];
+            let mut value = 0;
+            while value < table.len() {
+                table[value] = (value as u8).trailing_ones() as u64;
+                value += 1;
+            }
+            table
+        };
+        let mut ones = 0u64;
+        let mut rest = word;
+        while ones < 64 {
+            let run = ONES[(rest & 0xff) as usize];
+            ones += run;
+            if run < 8 {
+                break;
+            }
+            rest >>= 8;
+        }
+        ones as u32
+    }
+    #[cfg(not(any(target_arch = "riscv64", test)))]
+    word.trailing_ones()
+}
+
+/// [`golomb_rice_decode_vec`] for `i16` outputs (GOLOMB-WORD, `golomb-word`):
+/// the same decode, checks, conversion order and first error, with the
+/// decoded values stored four lanes per aligned doubleword store. Lanes
+/// before the first 8-byte boundary of the buffer and after the last full
+/// doubleword are stored one at a time.
+#[cfg(feature = "golomb-word")]
+pub fn golomb_rice_decode_i16_vec(
+    bytes: &[u8],
+    count: usize,
+    rice_low_bits: u32,
+    zigzag_w: u32,
+    max_quotient: u64,
+    mut convert: impl FnMut(i64) -> Result<i16, AkitaError>,
+) -> Result<Vec<i16>, AkitaError> {
+    const {
+        assert!(
+            cfg!(target_endian = "little"),
+            "packed i16 lanes assume a little-endian target"
+        );
+    }
+    let mut reader = BitReader::new(bytes);
+    let mut out: Vec<i16> = Vec::new();
+    out.try_reserve_exact(count)
+        .map_err(|_| AkitaError::InvalidProof)?;
+    let base = out.as_mut_ptr();
+    let head = base.align_offset(std::mem::align_of::<u64>()).min(count);
+    let mut index = 0;
+    while index < head {
+        let value =
+            golomb_rice_decode_one_from(&mut reader, rice_low_bits, zigzag_w, max_quotient)?;
+        let lane = convert(value)?;
+        // SAFETY: index < count <= capacity.
+        unsafe { base.add(index).write(lane) };
+        index += 1;
+    }
+    while count - index >= 4 {
+        let mut word = 0u64;
+        for shift in [0u32, 16, 32, 48] {
+            let value =
+                golomb_rice_decode_one_from(&mut reader, rice_low_bits, zigzag_w, max_quotient)?;
+            word |= u64::from(convert(value)? as u16) << shift;
+        }
+        // SAFETY: index + 4 <= count <= capacity, and `base + index` is 8-byte
+        // aligned: `base + head` is (align_offset), and index - head is a
+        // multiple of four lanes. On a little-endian target the lane at shift
+        // 16k lands at element index + k.
+        unsafe { base.add(index).cast::<u64>().write(word) };
+        index += 4;
+    }
+    while index < count {
+        let value =
+            golomb_rice_decode_one_from(&mut reader, rice_low_bits, zigzag_w, max_quotient)?;
+        let lane = convert(value)?;
+        // SAFETY: index < count <= capacity.
+        unsafe { base.add(index).write(lane) };
+        index += 1;
+    }
+    golomb_rice_consume_canonical_padding(&mut reader)?;
+    // SAFETY: every element below count was written above.
+    unsafe { out.set_len(count) };
     Ok(out)
 }
 
