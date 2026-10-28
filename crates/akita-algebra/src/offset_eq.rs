@@ -1458,7 +1458,7 @@ pub fn eq_eval_at_index<F: Field>(x_challenges: &[F], index: usize) -> F {
         })
 }
 
-// FILL-INGRESS (`fill-ingress`, default off): the bounded fill with each
+// `fill-ingress` (default off): the bounded fill with each
 // nontrivial-scale run computed by `Field::scale_slice_into`, which a
 // field-inline guest field serves with one scale ingress per run. The zero and
 // one shortcuts, the checked slices and the first error are unchanged; so are

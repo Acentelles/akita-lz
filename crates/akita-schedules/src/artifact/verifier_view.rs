@@ -369,7 +369,7 @@ impl ValidatedScheduleCatalog {
     }
 }
 
-// DIGEST-NOZERO (`digest-nozero`, default off): the same rebuild, with the
+// `digest-nozero` (default off): the same rebuild, with the
 // carried row digests copied straight from the view bytes instead of
 // zero-filling the digest vector and then overwriting it. Same digests, same
 // order.

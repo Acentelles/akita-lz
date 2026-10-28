@@ -508,7 +508,7 @@ where
     Ok(acc + term)
 }
 
-// ERR-LAZY (`lazy-scan-errors`, default off): the same job with the
+// `lazy-scan-errors` (default off): the same job with the
 // `InvalidProof` value built only on the failure path (no eager error value
 // to drop after each successful check). Same results and first error.
 #[cfg(all(feature = "terminal-contraction", feature = "lazy-scan-errors"))]

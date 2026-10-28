@@ -431,7 +431,7 @@ pub fn golomb_rice_decode_vec<T>(
     Ok(out)
 }
 
-// GOLOMB-WORD (`golomb-word`, default off): the trailing-ones table holds
+// `golomb-word` (default off): the trailing-ones table holds
 // doubleword entries, so each lookup is one doubleword load in the guest
 // instead of a subword load. Same counts.
 /// Trailing one bits of `word`.
@@ -465,7 +465,7 @@ fn trailing_ones(word: u64) -> u32 {
     word.trailing_ones()
 }
 
-/// [`golomb_rice_decode_vec`] for `i16` outputs (GOLOMB-WORD, `golomb-word`):
+/// [`golomb_rice_decode_vec`] for `i16` outputs (feature `golomb-word`):
 /// the same decode, checks, conversion order and first error, with the
 /// decoded values stored four lanes per aligned doubleword store. Lanes
 /// before the first 8-byte boundary of the buffer and after the last full

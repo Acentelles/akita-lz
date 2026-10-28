@@ -21,7 +21,7 @@ transcript-keccak = [
 # Rebuild a selected-row verifier view from values recorded when it was
 # loaded ahead of time (byte-equal views only). Default off.
 prevalidated-catalog = []
-# DIGEST-NOZERO (default off): with `prevalidated-catalog`, copy the carried
+# Default off: with `prevalidated-catalog`, copy the carried
 # row digests directly instead of zero-filling first (same digests).
 digest-nozero = []
 # Used only through `#[serde(with = "serde_bytes")]`, which machete cannot see.

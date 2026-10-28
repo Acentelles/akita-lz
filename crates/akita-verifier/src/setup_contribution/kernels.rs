@@ -391,7 +391,7 @@ where
     Ok(acc)
 }
 
-// ERR-LAZY (`lazy-scan-errors`, default off): the same kernels with the
+// `lazy-scan-errors` (default off): the same kernels with the
 // `InvalidProof` value built only on the failure path. `ok_or` builds the
 // error eagerly and drops it on success, and `AkitaError` has drop glue, so
 // every successful check called the outlined drop. Same results, same checks,
