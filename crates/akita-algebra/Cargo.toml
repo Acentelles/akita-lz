@@ -37,6 +37,7 @@ harness = false
 ntt-inline = ["dep:jolt-inlines-ntt"]
 default = []
 parallel = ["dep:rayon", "jolt-field/parallel"]
+carry-graph = []
 tensor-no-carry = []
 tensor-eq-runs = []
 # Default off: the bounded equality fill scales each

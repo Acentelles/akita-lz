@@ -1,4 +1,4 @@
-mod evaluate;
+#[rustfmt::skip] #[cfg_attr(feature = "carry-graph", path = "evaluate_cg.rs")] mod evaluate;
 mod materialize;
 
 pub use evaluate::eval_boolean_pair_tensor_families;
@@ -279,3 +279,6 @@ pub(super) fn charge_work(work: &mut usize, additional: usize) -> Result<(), Aki
     }
     Ok(())
 }
+
+#[cfg(feature = "carry-graph")]
+pub mod carry_graph;
