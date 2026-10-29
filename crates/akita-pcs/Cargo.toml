@@ -29,6 +29,7 @@ ignored = ["akita-setup"]
 
 [features]
 setup-weight-tiles = ["akita-verifier/setup-weight-tiles"]
+challenge-word-decode = ["akita-challenges/challenge-word-decode"]
 signed-byte-sum = ["akita-challenges/signed-byte-sum"]
 mle-leaf-tiles = ["akita-algebra/mle-leaf-tiles"]
 setup-lane-streams = ["akita-verifier/setup-lane-streams"]

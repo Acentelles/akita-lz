@@ -8,8 +8,8 @@
 mod op_norm;
 mod op_norm_accumulate;
 mod position_sample;
-mod signed_sparse;
-mod xof;
+#[cfg_attr(feature = "challenge-word-decode", path = "signed_sparse_word.rs")] mod signed_sparse;
+#[cfg_attr(feature = "challenge-word-decode", path = "xof_word.rs")] mod xof;
 
 pub(crate) use position_sample::MAX_STACK_RING_DIM;
 pub(crate) use signed_sparse::SignedSparseScratch;
