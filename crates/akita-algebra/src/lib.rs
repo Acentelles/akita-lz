@@ -16,7 +16,7 @@ pub mod eq_poly;
 pub mod fft;
 pub mod ntt;
 pub mod offset_eq;
-pub mod poly;
+#[rustfmt::skip] #[cfg_attr(feature = "mle-leaf-tiles", path = "poly_leaf.rs")] pub mod poly;
 pub mod ring;
 pub mod split_eq;
 

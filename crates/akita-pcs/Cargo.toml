@@ -28,6 +28,8 @@ features = ["parallel", "transcript-blake2b"]
 ignored = ["akita-setup"]
 
 [features]
+signed-byte-sum = ["akita-challenges/signed-byte-sum"]
+mle-leaf-tiles = ["akita-algebra/mle-leaf-tiles"]
 setup-lane-streams = ["akita-verifier/setup-lane-streams"]
 terminal-contraction = ["akita-verifier/terminal-contraction"]
 segment-setup = ["akita-verifier/segment-setup"]

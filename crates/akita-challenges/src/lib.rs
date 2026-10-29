@@ -14,7 +14,7 @@
 //! Sampling uses the signed-sparse path in a private `sampler` submodule. The
 //! SHAKE256-backed XOF cursor is crate-internal and not part of the public API.
 
-mod challenge;
+#[rustfmt::skip] #[cfg_attr(feature = "signed-byte-sum", path = "challenge_signed_bytes.rs")] mod challenge;
 mod challenges;
 mod config;
 mod fold_draw;

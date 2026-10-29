@@ -24,6 +24,7 @@ smallvec = { version = "1.15.2", features = ["const_generics"] }
 shake = "0.1.0"
 
 [features]
+signed-byte-sum = ["jolt-field/signed-byte-sum"]
 default = ["transcript-blake2b"]
 transcript-blake2b = ["akita-transcript/transcript-blake2b"]
 transcript-keccak = ["akita-transcript/transcript-keccak"]
