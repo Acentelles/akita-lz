@@ -1,5 +1,5 @@
-mod group;
-mod reduced; #[cfg(feature = "setup-lane-streams")] mod streams;
+#[cfg_attr(feature = "setup-weight-tiles", path = "group_tiles.rs")] mod group;
+mod reduced; #[cfg(feature = "setup-lane-streams")] #[cfg_attr(feature = "setup-weight-tiles", path = "streams_tiles.rs")] mod streams;
 
 use super::*;
 use akita_algebra::cfg_try_fold_reduce;

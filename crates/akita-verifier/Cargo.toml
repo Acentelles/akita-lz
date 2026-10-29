@@ -32,6 +32,7 @@ tracing = "0.1"
 rayon = { version = "1.10", optional = true }
 
 [features]
+setup-weight-tiles = ["setup-lane-streams", "jolt-field/setup-weight-tiles"]
 setup-lane-streams = ["terminal-contraction"]
 terminal-contraction = ["jolt-field/terminal-contraction"]
 segment-setup = []
