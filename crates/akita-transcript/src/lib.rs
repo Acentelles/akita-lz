@@ -50,7 +50,7 @@ pub type TranscriptSponge = jolt_transcript::Blake2b512;
 
 /// Sponge backend selected by the active transcript feature.
 #[cfg(feature = "transcript-keccak")]
-pub type TranscriptSponge = spongefish::instantiations::Keccak;
+pub type TranscriptSponge = jolt_transcript::Keccak;
 
 /// Prover end of the proof channel. The prover's private coins come from
 /// SHAKE128.
