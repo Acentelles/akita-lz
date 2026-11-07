@@ -39,3 +39,8 @@ pub mod planner_support {
         MAX_RECURSION_DEPTH,
     };
 }
+
+#[cfg(feature = "prevalidated-catalog")]
+pub use artifact::{
+    embedded_prevalidated_verifier_view, PrevalidatedVerifierRecord, PrevalidatedVerifierView,
+};

@@ -28,6 +28,8 @@ features = ["parallel", "transcript-keccak"]
 ignored = ["akita-setup"]
 
 [features]
+prevalidated-catalog = ["akita-config/prevalidated-catalog"]
+digest-nozero = ["prevalidated-catalog", "akita-config/digest-nozero"]
 default = ["parallel", "transcript-keccak"]
 transcript-blake2b = [
   "akita-challenges/transcript-blake2b",
