@@ -28,6 +28,7 @@ features = ["parallel", "transcript-keccak"]
 ignored = ["akita-setup"]
 
 [features]
+carry-graph = ["akita-algebra/carry-graph"]
 prevalidated-catalog = ["akita-config/prevalidated-catalog"]
 digest-nozero = ["prevalidated-catalog", "akita-config/digest-nozero"]
 default = ["parallel", "transcript-keccak"]
