@@ -1,4 +1,4 @@
-#[cfg(all(feature = "carry-graph", not(target_arch = "riscv64")))]
+#[cfg(not(target_arch = "riscv64"))]
 fn main() {
     let exponent: u32 = std::env::args()
         .nth(1)
@@ -10,5 +10,5 @@ fn main() {
     print!("{source}");
 }
 
-#[cfg(any(not(feature = "carry-graph"), target_arch = "riscv64"))]
+#[cfg(target_arch = "riscv64")]
 fn main() {}

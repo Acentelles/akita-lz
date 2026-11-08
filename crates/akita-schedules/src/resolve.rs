@@ -209,7 +209,6 @@ pub(crate) fn validate_canonical_transition_lengths(
     Ok(())
 }
 
-#[cfg(feature = "prevalidated-catalog")]
 impl ResolvedScheduleRow {
     /// A row whose audit and digest were established when its verifier view
     /// was prevalidated (see `ValidatedScheduleCatalog::from_prevalidated_verifier_view`).

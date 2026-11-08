@@ -991,5 +991,4 @@ mod independent_commitment_tests {
     }
 }
 
-#[cfg(feature = "prevalidated-catalog")]
 mod prevalidated;

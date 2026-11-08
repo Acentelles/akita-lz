@@ -9,9 +9,7 @@
 //! gets the same identity as the full catalog; Akita itself binds only the
 //! selected row.
 
-#[cfg(feature = "prevalidated-catalog")]
 mod prevalidated;
-#[cfg(feature = "prevalidated-catalog")]
 pub use prevalidated::{
     embedded_prevalidated_verifier_view, PrevalidatedVerifierRecord, PrevalidatedVerifierView,
 };

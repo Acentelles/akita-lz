@@ -18,7 +18,6 @@ pub fn embedded_prevalidated_verifier_view() -> Option<&'static PrevalidatedVeri
 /// This is trusted verifier configuration: [`ValidatedScheduleCatalog::from_prevalidated_verifier_view`]
 /// uses it only for bytes equal to `view`, and the bytes keep the provenance
 /// their caller gives them.
-#[cfg(feature = "prevalidated-catalog")]
 #[derive(Clone, Copy, Debug)]
 pub struct PrevalidatedVerifierView<'a> {
     /// The exact view bytes that were validated.
@@ -32,7 +31,6 @@ pub struct PrevalidatedVerifierView<'a> {
 }
 
 /// What [`ValidatedScheduleCatalog::prevalidate_verifier_view`] records.
-#[cfg(feature = "prevalidated-catalog")]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrevalidatedVerifierRecord {
     view: Vec<u8>,
@@ -44,7 +42,6 @@ pub struct PrevalidatedVerifierRecord {
     carried_row_digests: Vec<[u8; 32]>,
 }
 
-#[cfg(feature = "prevalidated-catalog")]
 impl ValidatedScheduleCatalog {
     /// Load `bytes` through [`Self::from_verifier_view`] and record the values
     /// it derived. The record is accepted only if
@@ -170,15 +167,6 @@ impl ValidatedScheduleCatalog {
                     .cmp(&resolved[*right_index].selection().row_digest)
             })
         });
-        #[cfg(not(feature = "digest-nozero"))]
-        let row_digests = {
-            let mut digests = vec![[0u8; 32]; artifact.row_digests.len() / 32];
-            digests
-                .as_flattened_mut()
-                .copy_from_slice(&artifact.row_digests);
-            digests
-        };
-        #[cfg(feature = "digest-nozero")]
         let row_digests = artifact.row_digests.as_chunks::<32>().0.to_vec();
         Some(Self {
             policy: *policy,

@@ -154,7 +154,6 @@ fn verifier_catalog_view_carries_several_rows_once() {
     view.resolve_selection(second).unwrap();
 }
 
-#[cfg(feature = "prevalidated-catalog")]
 #[test]
 fn prevalidated_view_matches_audited_view_and_rejects_changed_bytes() {
     let chunking = akita_params::ChunkedWitnessCfg::default_non_chunked();

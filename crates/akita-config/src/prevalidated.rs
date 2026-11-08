@@ -1,6 +1,5 @@
 use super::*;
 
-#[cfg(feature = "prevalidated-catalog")]
 impl<Cfg: CommitmentConfig> TrustedScheduleCatalog<Cfg> {
     /// Load a selected-row verifier view as [`Self::from_verifier_view`] does
     /// and record what loading derived, for

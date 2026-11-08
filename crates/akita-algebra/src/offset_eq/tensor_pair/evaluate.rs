@@ -332,7 +332,6 @@ pub(super) fn eval_multi_axis_families<
     recurrence_geometry: &[(usize, usize, usize, usize)],
     work: &mut usize,
 ) -> Result<F, AkitaError> {
-    #[cfg(feature = "carry-graph")]
     if let Some(value) = super::carry_graph::try_evaluate::<F, LEFT_MONOMIAL, RIGHT_MONOMIAL>(
         left_challenges,
         right_challenges,

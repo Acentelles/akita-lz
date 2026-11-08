@@ -40,7 +40,6 @@ pub mod planner_support {
     };
 }
 
-#[cfg(feature = "prevalidated-catalog")]
 pub use artifact::{
     embedded_prevalidated_verifier_view, PrevalidatedVerifierRecord, PrevalidatedVerifierView,
 };

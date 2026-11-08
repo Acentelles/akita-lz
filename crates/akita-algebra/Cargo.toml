@@ -34,7 +34,6 @@ name = "offset_eq_window"
 harness = false
 
 [features]
-carry-graph = []
 ntt-inline = ["dep:jolt-inlines-ntt"]
 default = []
 parallel = ["dep:rayon", "jolt-field/parallel"]
