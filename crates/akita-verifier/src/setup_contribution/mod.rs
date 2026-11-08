@@ -72,8 +72,7 @@ use akita_types::{
 #[cfg(test)]
 use kernels::evaluate_weighted_setup_row;
 use kernels::{
-    base_ring_segment_inner_sum_typed, dispatch_segment_roles,
-    for_each_base_ring_segment_weight_typed, role_projection, GroupSetupSegment, RoleProjection,
+    role_projection, GroupSetupSegment, RoleProjection,
 };
 use segments::scan_partition;
 

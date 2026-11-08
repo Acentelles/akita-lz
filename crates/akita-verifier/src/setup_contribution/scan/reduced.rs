@@ -20,9 +20,10 @@ impl<'a, E> ReducedFunctionalClass<'a, E> {
         let end = start.checked_add(D).ok_or_else(|| {
             AkitaError::InvalidSetup("coefficient functional extent overflow".into())
         })?;
-        self.functional
-            .get(start..end)
-            .ok_or_else(|| AkitaError::InvalidProof)
+        let Some(chunk) = self.functional.get(start..end) else {
+            return Err(AkitaError::InvalidProof);
+        };
+        Ok(chunk)
     }
 }
 
@@ -234,21 +235,52 @@ where
     E: ExtField<F> + MulBaseUnreduced<F>,
     A: ProductSum<E>,
 {
-    let lo = job.checked_mul(job_rings).ok_or_else(|| AkitaError::InvalidProof)?;
-    let hi = lo
-        .checked_add(job_rings)
-        .ok_or_else(|| AkitaError::InvalidProof)?
-        .min(required);
-    let setup = setup_flat.get(lo..hi).ok_or_else(|| AkitaError::InvalidProof)?;
-    let mut shared_rows = Vec::new();
-    let mut shared_weights = Vec::new();
-    if shared_functional.is_some() {
-        shared_rows.try_reserve_exact(setup.len()).map_err(|_| {
+    let Some(lo) = job.checked_mul(job_rings) else {
+        return Err(AkitaError::InvalidProof);
+    };
+    let Some(hi) = lo.checked_add(job_rings) else {
+        return Err(AkitaError::InvalidProof);
+    };
+    let hi = hi.min(required);
+    let Some(setup) = setup_flat.get(lo..hi) else {
+        return Err(AkitaError::InvalidProof);
+    };
+    if let Some(functional) = shared_functional {
+        let mut row_weights = vec![E::zero(); setup.len()];
+        for (partition, direct) in partitions.iter().zip(scan_groups) {
+            let first = partition.segments.partition_point(|segment| segment.hi <= lo);
+            for segment in partition.segments.iter().skip(first) {
+                if segment.lo >= hi {
+                    break;
+                }
+                let overlap = segment.lo.max(lo)..segment.hi.min(hi);
+                let Some(weight_start) = overlap.start.checked_sub(lo) else {
+                    return Err(AkitaError::InvalidProof);
+                };
+                segment.accumulate_lane_streams(
+                    overlap,
+                    &mut row_weights,
+                    weight_start,
+                    [direct.z, direct.t, direct.e],
+                    [&RoleProjection::Identity, &RoleProjection::Identity, &RoleProjection::Identity],
+                )?;
+            }
+        }
+        let mut rows = Vec::new();
+        let mut weights = Vec::new();
+        rows.try_reserve_exact(setup.len()).map_err(|_| {
             AkitaError::InvalidSetup("reduced scan row allocation failed".into())
         })?;
-        shared_weights.try_reserve_exact(setup.len()).map_err(|_| {
+        weights.try_reserve_exact(setup.len()).map_err(|_| {
             AkitaError::InvalidSetup("reduced scan weight allocation failed".into())
         })?;
+        for (ring, weight) in setup.iter().zip(row_weights) {
+            if !weight.is_zero() {
+                rows.push(ring.coefficients().as_slice());
+                weights.push(weight);
+            }
+        }
+        return Ok(acc + E::weighted_dot_base_rows(&rows, &weights, functional));
     }
     let mut segment_cursors = partitions
         .iter()
@@ -263,7 +295,9 @@ where
         .collect::<Vec<_>>();
     let mut term = A::zero();
     for (offset, ring) in setup.iter().enumerate() {
-        let base_idx = lo.checked_add(offset).ok_or_else(|| AkitaError::InvalidProof)?;
+        let Some(base_idx) = lo.checked_add(offset) else {
+            return Err(AkitaError::InvalidProof);
+        };
         for ((partition, direct), cursor) in
             partitions.iter().zip(scan_groups).zip(&mut segment_cursors)
         {
@@ -285,25 +319,15 @@ where
         for (class, scalar) in functional_classes.iter().zip(&mut class_scalars) {
             let scalar = std::mem::replace(scalar, A::zero()).finish();
             if !scalar.is_zero() {
-                if shared_functional.is_some() {
-                    shared_rows.push(ring.coefficients().as_slice());
-                    shared_weights.push(scalar);
-                } else {
-                    let functional = class.chunk::<BASE_D>(base_idx)?;
-                    term.add_product(
-                        MulBaseUnreduced::dot_base(functional, ring.coefficients()),
-                        scalar,
-                    );
-                }
+                let functional = class.chunk::<BASE_D>(base_idx)?;
+                term.add_product(
+                    MulBaseUnreduced::dot_base(functional, ring.coefficients()),
+                    scalar,
+                );
             }
         }
     }
-    let contribution = if let Some(functional) = shared_functional {
-        E::weighted_dot_base_rows(&shared_rows, &shared_weights, functional)
-    } else {
-        term.finish()
-    };
-    Ok(acc + contribution)
+    Ok(acc + term.finish())
 }
 
 #[inline(always)]
@@ -321,41 +345,51 @@ where
     let [a_class, b_class, d_class] = group.role_classes;
     if segment.has_d {
         let role_idx = projected_role_index(base_idx, d_ratio)?;
-        let eq_idx = role_idx
-            .checked_sub(segment.d_start_abs)
-            .ok_or_else(|| AkitaError::InvalidProof)?;
-        let equality = *group.e.get(eq_idx).ok_or_else(|| AkitaError::InvalidProof)?;
-        output
-            .get_mut(d_class)
-            .ok_or_else(|| AkitaError::InvalidProof)?
-            .add_product(segment.d_weight, equality);
+        let Some(eq_idx) = role_idx
+            .checked_sub(segment.d_start_abs) else {
+            return Err(AkitaError::InvalidProof);
+        };
+        let Some(&equality) = group.e.get(eq_idx) else {
+            return Err(AkitaError::InvalidProof);
+        };
+        let Some(output) = output.get_mut(d_class) else {
+            return Err(AkitaError::InvalidProof);
+        };
+        output.add_product(segment.d_weight, equality);
     }
     if segment.has_b {
         let role_idx = projected_role_index(base_idx, b_ratio)?;
-        let local = role_idx
-            .checked_sub(segment.b_start_abs)
-            .ok_or_else(|| AkitaError::InvalidProof)?;
-        let output = output.get_mut(b_class).ok_or_else(|| AkitaError::InvalidProof)?;
+        let Some(local) = role_idx
+            .checked_sub(segment.b_start_abs) else {
+            return Err(AkitaError::InvalidProof);
+        };
+        let Some(output) = output.get_mut(b_class) else {
+            return Err(AkitaError::InvalidProof);
+        };
         for term in segment.b_terms.iter() {
-            let logical = term
+            let Some(logical) = term
                 .logical_start
                 .checked_add(local)
                 .and_then(|index| group.t.get(index))
-                .copied()
-                .ok_or_else(|| AkitaError::InvalidProof)?;
+                .copied() else {
+                return Err(AkitaError::InvalidProof);
+            };
             output.add_product(term.row_weight, logical);
         }
     }
     if segment.has_a {
         let role_idx = projected_role_index(base_idx, a_ratio)?;
-        let eq_idx = role_idx
-            .checked_sub(segment.a_start_abs)
-            .ok_or_else(|| AkitaError::InvalidProof)?;
-        let equality = *group.z.get(eq_idx).ok_or_else(|| AkitaError::InvalidProof)?;
-        output
-            .get_mut(a_class)
-            .ok_or_else(|| AkitaError::InvalidProof)?
-            .add_product(segment.a_row_weight, equality);
+        let Some(eq_idx) = role_idx
+            .checked_sub(segment.a_start_abs) else {
+            return Err(AkitaError::InvalidProof);
+        };
+        let Some(&equality) = group.z.get(eq_idx) else {
+            return Err(AkitaError::InvalidProof);
+        };
+        let Some(output) = output.get_mut(a_class) else {
+            return Err(AkitaError::InvalidProof);
+        };
+        output.add_product(segment.a_row_weight, equality);
     }
     Ok(())
 }

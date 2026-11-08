@@ -1,5 +1,6 @@
 mod group;
 mod reduced;
+mod streams;
 
 use super::*;
 use akita_algebra::cfg_try_fold_reduce;
@@ -103,7 +104,9 @@ where
         alpha_pows_d.len(),
     )?;
     let base_d = geometry.base_ring_dim();
-    let alpha = *alpha_pows_a.get(1).ok_or_else(|| AkitaError::InvalidProof)?;
+    let Some(&alpha) = alpha_pows_a.get(1) else {
+        return Err(AkitaError::InvalidProof);
+    };
     let base_pows_storage;
     let base_pows = if alpha_pows_a.len() == base_d {
         alpha_pows_a
@@ -334,9 +337,13 @@ where
     F: Field,
     E: ExtField<F> + MulBaseUnreduced<F>,
 {
-    let lo = job.checked_mul(job_rings).ok_or_else(|| AkitaError::InvalidProof)?;
+    let Some(lo) = job.checked_mul(job_rings) else {
+        return Err(AkitaError::InvalidProof);
+    };
     let hi = lo.saturating_add(job_rings).min(required);
-    let setup = setup_flat.get(lo..hi).ok_or_else(|| AkitaError::InvalidProof)?;
+    let Some(setup) = setup_flat.get(lo..hi) else {
+        return Err(AkitaError::InvalidProof);
+    };
     let mut weights = vec![E::zero(); setup.len()];
     for ((projection, direct), partition) in
         projections.iter().zip(direct_weights).zip(partitions)
@@ -350,30 +357,18 @@ where
                 break;
             }
             let overlap = segment.lo.max(lo)..segment.hi.min(hi);
-            let weight_start = overlap
+            let Some(weight_start) = overlap
                 .start
-                .checked_sub(lo)
-                .ok_or_else(|| AkitaError::InvalidProof)?;
-            dispatch_segment_roles!(segment, Ok(()), |HAS_D, HAS_B, HAS_A| {
-                for_each_base_ring_segment_weight_typed::<E, HAS_D, HAS_B, HAS_A>(
-                    overlap,
-                    segment,
-                    e_eq_slice,
-                    t_eq_slice,
-                    z_eq_slice,
-                    &projection[2],
-                    &projection[1],
-                    &projection[0],
-                    |offset, weight| {
-                        let slot = weight_start
-                            .checked_add(offset)
-                            .and_then(|index| weights.get_mut(index))
-                            .ok_or_else(|| AkitaError::InvalidProof)?;
-                        *slot += weight;
-                        Ok(())
-                    },
-                )
-            })?;
+                .checked_sub(lo) else {
+                return Err(AkitaError::InvalidProof);
+            };
+            segment.accumulate_lane_streams(
+                overlap,
+                &mut weights,
+                weight_start,
+                [z_eq_slice, t_eq_slice, e_eq_slice],
+                [&projection[0], &projection[1], &projection[2]],
+            )?;
         }
     }
     // Rows with a zero weight contribute nothing; the rest go

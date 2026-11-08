@@ -1,5 +1,6 @@
 use super::super::*;
 use akita_algebra::cfg_try_fold_reduce;
+use akita_algebra::row_batch::WeightedRowBatch;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn evaluate_base_ring_direct<F, E, const BASE_D: usize>(
@@ -39,21 +40,27 @@ where
         partition.segments.as_slice(),
         E::zero,
         |acc, segment| {
-            dispatch_segment_roles!(segment, Ok(acc), |HAS_D, HAS_B, HAS_A| {
-                base_ring_segment_inner_sum_typed::<F, E, BASE_D, HAS_D, HAS_B, HAS_A>(
-                    segment.lo..segment.hi,
-                    setup_flat,
-                    base_pows,
-                    segment,
-                    e_eq_slice,
-                    t_eq_slice,
-                    z_eq_slice,
-                    d_projection,
-                    b_projection,
-                    a_projection,
-                )
-                .map(|term| acc + term)
-            })
+            if !(segment.has_a || segment.has_b || segment.has_d) {
+                return Ok(acc);
+            }
+            let Some(setup) = setup_flat.get(segment.lo..segment.hi) else {
+                return Err(AkitaError::InvalidProof);
+            };
+            let mut row_weights = vec![E::zero(); setup.len()];
+            segment.accumulate_lane_streams(
+                segment.lo..segment.hi,
+                &mut row_weights,
+                0,
+                [z_eq_slice, t_eq_slice, e_eq_slice],
+                [a_projection, b_projection, d_projection],
+            )?;
+            let mut batch = WeightedRowBatch::new(base_pows);
+            for (ring, weight) in setup.iter().zip(row_weights) {
+                if !weight.is_zero() {
+                    batch.push(ring.coefficients(), weight);
+                }
+            }
+            Ok(acc + batch.finish())
         },
         |lhs, rhs| Ok(lhs + rhs)
     )
