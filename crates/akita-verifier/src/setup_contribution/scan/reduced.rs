@@ -207,79 +207,103 @@ where
         0..num_jobs,
         E::zero,
         |acc, job| {
-            let lo = job.checked_mul(job_rings).ok_or(AkitaError::InvalidProof)?;
-            let hi = lo
-                .checked_add(job_rings)
-                .ok_or(AkitaError::InvalidProof)?
-                .min(required);
-            let setup = setup_flat.get(lo..hi).ok_or(AkitaError::InvalidProof)?;
-            let mut shared_rows = Vec::new();
-            let mut shared_weights = Vec::new();
-            if shared_functional.is_some() {
-                shared_rows.try_reserve_exact(setup.len()).map_err(|_| {
-                    AkitaError::InvalidSetup("reduced scan row allocation failed".into())
-                })?;
-                shared_weights.try_reserve_exact(setup.len()).map_err(|_| {
-                    AkitaError::InvalidSetup("reduced scan weight allocation failed".into())
-                })?;
-            }
-            let mut segment_cursors = partitions
-                .iter()
-                .map(|partition| {
-                    partition
-                        .segments
-                        .partition_point(|segment| segment.hi <= lo)
-                })
-                .collect::<Vec<_>>();
-            let mut class_scalars = (0..functional_classes.len())
-                .map(|_| A::zero())
-                .collect::<Vec<_>>();
-            let mut term = A::zero();
-            for (offset, ring) in setup.iter().enumerate() {
-                let base_idx = lo.checked_add(offset).ok_or(AkitaError::InvalidProof)?;
-                for ((partition, direct), cursor) in
-                    partitions.iter().zip(scan_groups).zip(&mut segment_cursors)
-                {
-                    while partition
-                        .segments
-                        .get(*cursor)
-                        .is_some_and(|segment| segment.hi <= base_idx)
-                    {
-                        *cursor += 1;
-                    }
-                    let Some(segment) = partition.segments.get(*cursor) else {
-                        continue;
-                    };
-                    if base_idx < segment.lo || base_idx >= segment.hi {
-                        continue;
-                    }
-                    add_reduced_functional_products(base_idx, segment, direct, &mut class_scalars)?;
-                }
-                for (class, scalar) in functional_classes.iter().zip(&mut class_scalars) {
-                    let scalar = std::mem::replace(scalar, A::zero()).finish();
-                    if !scalar.is_zero() {
-                        if shared_functional.is_some() {
-                            shared_rows.push(ring.coefficients().as_slice());
-                            shared_weights.push(scalar);
-                        } else {
-                            let functional = class.chunk::<BASE_D>(base_idx)?;
-                            term.add_product(
-                                MulBaseUnreduced::dot_base(functional, ring.coefficients()),
-                                scalar,
-                            );
-                        }
-                    }
-                }
-            }
-            let contribution = if let Some(functional) = shared_functional {
-                E::weighted_dot_base_rows(&shared_rows, &shared_weights, functional)
-            } else {
-                term.finish()
-            };
-            Ok(acc + contribution)
+            evaluate_reduced_job::<F, E, BASE_D, A>(
+                acc, job, job_rings, required, setup_flat, functional_classes,
+                scan_groups, partitions, shared_functional,
+            )
         },
         |lhs, rhs| Ok(lhs + rhs)
     )
+}
+
+#[inline(always)]
+#[expect(clippy::too_many_arguments, reason = "one reduced scan job borrows its validated scan inputs")]
+fn evaluate_reduced_job<F, E, const BASE_D: usize, A>(
+    acc: E,
+    job: usize,
+    job_rings: usize,
+    required: usize,
+    setup_flat: &[CyclotomicRing<F, BASE_D>],
+    functional_classes: &[ReducedFunctionalClass<'_, E>],
+    scan_groups: &[ReducedScanGroup<'_, E>],
+    partitions: &[GroupScanPartition<E>],
+    shared_functional: Option<&[E]>,
+) -> Result<E, AkitaError>
+where
+    F: Field,
+    E: ExtField<F> + MulBaseUnreduced<F>,
+    A: ProductSum<E>,
+{
+    let lo = job.checked_mul(job_rings).ok_or(AkitaError::InvalidProof)?;
+    let hi = lo
+        .checked_add(job_rings)
+        .ok_or(AkitaError::InvalidProof)?
+        .min(required);
+    let setup = setup_flat.get(lo..hi).ok_or(AkitaError::InvalidProof)?;
+    let mut shared_rows = Vec::new();
+    let mut shared_weights = Vec::new();
+    if shared_functional.is_some() {
+        shared_rows.try_reserve_exact(setup.len()).map_err(|_| {
+            AkitaError::InvalidSetup("reduced scan row allocation failed".into())
+        })?;
+        shared_weights.try_reserve_exact(setup.len()).map_err(|_| {
+            AkitaError::InvalidSetup("reduced scan weight allocation failed".into())
+        })?;
+    }
+    let mut segment_cursors = partitions
+        .iter()
+        .map(|partition| {
+            partition
+                .segments
+                .partition_point(|segment| segment.hi <= lo)
+        })
+        .collect::<Vec<_>>();
+    let mut class_scalars = (0..functional_classes.len())
+        .map(|_| A::zero())
+        .collect::<Vec<_>>();
+    let mut term = A::zero();
+    for (offset, ring) in setup.iter().enumerate() {
+        let base_idx = lo.checked_add(offset).ok_or(AkitaError::InvalidProof)?;
+        for ((partition, direct), cursor) in
+            partitions.iter().zip(scan_groups).zip(&mut segment_cursors)
+        {
+            while partition
+                .segments
+                .get(*cursor)
+                .is_some_and(|segment| segment.hi <= base_idx)
+            {
+                *cursor += 1;
+            }
+            let Some(segment) = partition.segments.get(*cursor) else {
+                continue;
+            };
+            if base_idx < segment.lo || base_idx >= segment.hi {
+                continue;
+            }
+            add_reduced_functional_products(base_idx, segment, direct, &mut class_scalars)?;
+        }
+        for (class, scalar) in functional_classes.iter().zip(&mut class_scalars) {
+            let scalar = std::mem::replace(scalar, A::zero()).finish();
+            if !scalar.is_zero() {
+                if shared_functional.is_some() {
+                    shared_rows.push(ring.coefficients().as_slice());
+                    shared_weights.push(scalar);
+                } else {
+                    let functional = class.chunk::<BASE_D>(base_idx)?;
+                    term.add_product(
+                        MulBaseUnreduced::dot_base(functional, ring.coefficients()),
+                        scalar,
+                    );
+                }
+            }
+        }
+    }
+    let contribution = if let Some(functional) = shared_functional {
+        E::weighted_dot_base_rows(&shared_rows, &shared_weights, functional)
+    } else {
+        term.finish()
+    };
+    Ok(acc + contribution)
 }
 
 #[inline(always)]
