@@ -74,7 +74,7 @@ pub(crate) struct LastBlockDigests {
 /// the fold relation that the block completes.
 struct LastBlockRecovery<'a, F: Field, const D: usize> {
     challenge: &'a SparseChallenge,
-    inverse: CyclotomicRing<F, D>,
+    inverse_windows: Vec<F>,
 }
 
 impl<'a, F, const D: usize> LastBlockRecovery<'a, F, D>
@@ -84,12 +84,25 @@ where
     /// Invert the last block's fold challenge, rejecting a challenge that is
     /// not a unit.
     fn new(challenge: &'a SparseChallenge) -> Result<Self, AkitaError> {
-        let dense = sparse_challenge_dot(
-            std::slice::from_ref(challenge),
-            [&CyclotomicRing::one()].into_iter(),
-        )?;
+        challenge.validate::<D>()?;
+        let mut dense = CyclotomicRing::<F, D>::zero();
+        for (&position, &coefficient) in challenge.positions.iter().zip(&challenge.coeffs) {
+            dense.coeffs[position as usize] = F::from_i64(i64::from(coefficient));
+        }
         let inverse = dense.inverse().ok_or(AkitaError::InvalidProof)?;
-        Ok(Self { challenge, inverse })
+        // Window D - 1 - k contains the inverse's negacyclic convolution
+        // weights for coefficient k, shared by every recovered block.
+        let inverse_windows = inverse
+            .coefficients()
+            .iter()
+            .rev()
+            .copied()
+            .chain(inverse.coefficients().iter().skip(1).rev().map(|&c| -c))
+            .collect();
+        Ok(Self {
+            challenge,
+            inverse_windows,
+        })
     }
 
     /// Solve `partial + challenge * block == target` for `block`.
@@ -102,7 +115,13 @@ where
         partial: CyclotomicRing<F, D>,
         target: &CyclotomicRing<F, D>,
     ) -> Result<CyclotomicRing<F, D>, AkitaError> {
-        let block = self.inverse * (*target - partial);
+        let residual = *target - partial;
+        let block = CyclotomicRing::from_coefficients(std::array::from_fn(|k| {
+            F::dot_product(
+                &self.inverse_windows[D - 1 - k..][..D],
+                residual.coefficients(),
+            )
+        }));
         let folded = partial
             + sparse_challenge_dot(std::slice::from_ref(self.challenge), [&block].into_iter())?;
         if folded != *target {
@@ -697,10 +716,11 @@ mod tests {
         assert_eq!(recovery.solve(partial, &target), Ok(block));
 
         // The relation, not the inversion, decides acceptance.
-        let wrong_inverse = LastBlockRecovery {
+        let mut wrong_inverse = LastBlockRecovery {
             challenge: &challenge,
-            inverse: recovery.inverse + CyclotomicRing::one(),
+            inverse_windows: recovery.inverse_windows.clone(),
         };
+        wrong_inverse.inverse_windows[D - 1] += F::one();
         assert_eq!(
             wrong_inverse.solve(partial, &target),
             Err(AkitaError::InvalidProof)
