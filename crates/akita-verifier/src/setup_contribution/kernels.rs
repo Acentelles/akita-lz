@@ -147,7 +147,7 @@ where
 {
     let setup = setup_flat
         .get(range.clone())
-        .ok_or(AkitaError::InvalidProof)?;
+        .ok_or_else(|| AkitaError::InvalidProof)?;
     // Rows with a zero weight contribute nothing; the rest go through the
     // shared-powers kernel in bounded batches.
     let mut batch = WeightedRowBatch::new(base_pows);
@@ -162,7 +162,7 @@ where
         a_projection,
         |offset, weight| {
             if !weight.is_zero() {
-                let ring = setup.get(offset).ok_or(AkitaError::InvalidProof)?;
+                let ring = setup.get(offset).ok_or_else(|| AkitaError::InvalidProof)?;
                 batch.push(ring.coefficients(), weight);
             }
             Ok(())
@@ -195,7 +195,7 @@ where
     let len = range
         .end
         .checked_sub(range.start)
-        .ok_or(AkitaError::InvalidProof)?;
+        .ok_or_else(|| AkitaError::InvalidProof)?;
     let identity =
         d_projection.is_identity() && b_projection.is_identity() && a_projection.is_identity();
     if identity {
@@ -206,14 +206,14 @@ where
         for offset in 0..len {
             let mut weight = E::zero();
             if HAS_D {
-                weight += segment.d_weight * *d_eq.next().ok_or(AkitaError::InvalidProof)?;
+                weight += segment.d_weight * *d_eq.next().ok_or_else(|| AkitaError::InvalidProof)?;
             }
             if HAS_B {
                 weight +=
                     projected_b_role_weight_at(range.start + offset, segment, t_eq, b_projection)?;
             }
             if HAS_A {
-                weight += segment.a_row_weight * *a_eq.next().ok_or(AkitaError::InvalidProof)?;
+                weight += segment.a_row_weight * *a_eq.next().ok_or_else(|| AkitaError::InvalidProof)?;
             }
             visit(offset, weight)?;
         }
@@ -224,7 +224,7 @@ where
         let base_idx = range
             .start
             .checked_add(offset)
-            .ok_or(AkitaError::InvalidProof)?;
+            .ok_or_else(|| AkitaError::InvalidProof)?;
         let weight = base_ring_segment_weight_at::<E, HAS_D, HAS_B, HAS_A>(
             base_idx,
             segment,
@@ -251,9 +251,9 @@ fn checked_role_eq_slice<E, const ACTIVE: bool>(
     }
     let start = base_start
         .checked_sub(role_start)
-        .ok_or(AkitaError::InvalidProof)?;
-    let end = start.checked_add(len).ok_or(AkitaError::InvalidProof)?;
-    eq.get(start..end).ok_or(AkitaError::InvalidProof)
+        .ok_or_else(|| AkitaError::InvalidProof)?;
+    let end = start.checked_add(len).ok_or_else(|| AkitaError::InvalidProof)?;
+    eq.get(start..end).ok_or_else(|| AkitaError::InvalidProof)
 }
 
 #[inline(always)]
@@ -306,7 +306,7 @@ fn projected_b_role_weight_at<E: Field>(
     let (role_idx, scale) = projected_role_index_and_scale(base_idx, projection)?;
     let local = role_idx
         .checked_sub(segment.b_start_abs)
-        .ok_or(AkitaError::InvalidProof)?;
+        .ok_or_else(|| AkitaError::InvalidProof)?;
     let mut weight = E::zero();
     for term in segment.b_terms.iter() {
         let logical = term
@@ -314,7 +314,7 @@ fn projected_b_role_weight_at<E: Field>(
             .checked_add(local)
             .and_then(|index| weights.get(index))
             .copied()
-            .ok_or(AkitaError::InvalidProof)?;
+            .ok_or_else(|| AkitaError::InvalidProof)?;
         weight += term.row_weight * logical;
     }
     Ok(scale.map_or(weight, |scale| weight * scale))
@@ -331,8 +331,8 @@ fn projected_role_weight_at<E: Field>(
     let (role_idx, scale) = projected_role_index_and_scale(base_idx, projection)?;
     let eq_idx = role_idx
         .checked_sub(start_abs)
-        .ok_or(AkitaError::InvalidProof)?;
-    let weight = row_weight * *eq_slice.get(eq_idx).ok_or(AkitaError::InvalidProof)?;
+        .ok_or_else(|| AkitaError::InvalidProof)?;
+    let weight = row_weight * *eq_slice.get(eq_idx).ok_or_else(|| AkitaError::InvalidProof)?;
     Ok(scale.map_or(weight, |scale| weight * scale))
 }
 
@@ -352,7 +352,7 @@ fn projected_role_index_and_scale<E: Field>(
             Some(
                 *scales
                     .get(base_idx & mask)
-                    .ok_or(AkitaError::InvalidProof)?,
+                    .ok_or_else(|| AkitaError::InvalidProof)?,
             ),
         ),
     })

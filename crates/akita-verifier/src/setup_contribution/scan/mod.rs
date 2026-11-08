@@ -103,7 +103,7 @@ where
         alpha_pows_d.len(),
     )?;
     let base_d = geometry.base_ring_dim();
-    let alpha = *alpha_pows_a.get(1).ok_or(AkitaError::InvalidProof)?;
+    let alpha = *alpha_pows_a.get(1).ok_or_else(|| AkitaError::InvalidProof)?;
     let base_pows_storage;
     let base_pows = if alpha_pows_a.len() == base_d {
         alpha_pows_a
@@ -334,9 +334,9 @@ where
     F: Field,
     E: ExtField<F> + MulBaseUnreduced<F>,
 {
-    let lo = job.checked_mul(job_rings).ok_or(AkitaError::InvalidProof)?;
+    let lo = job.checked_mul(job_rings).ok_or_else(|| AkitaError::InvalidProof)?;
     let hi = lo.saturating_add(job_rings).min(required);
-    let setup = setup_flat.get(lo..hi).ok_or(AkitaError::InvalidProof)?;
+    let setup = setup_flat.get(lo..hi).ok_or_else(|| AkitaError::InvalidProof)?;
     let mut weights = vec![E::zero(); setup.len()];
     for ((projection, direct), partition) in
         projections.iter().zip(direct_weights).zip(partitions)
@@ -353,7 +353,7 @@ where
             let weight_start = overlap
                 .start
                 .checked_sub(lo)
-                .ok_or(AkitaError::InvalidProof)?;
+                .ok_or_else(|| AkitaError::InvalidProof)?;
             dispatch_segment_roles!(segment, Ok(()), |HAS_D, HAS_B, HAS_A| {
                 for_each_base_ring_segment_weight_typed::<E, HAS_D, HAS_B, HAS_A>(
                     overlap,
@@ -368,7 +368,7 @@ where
                         let slot = weight_start
                             .checked_add(offset)
                             .and_then(|index| weights.get_mut(index))
-                            .ok_or(AkitaError::InvalidProof)?;
+                            .ok_or_else(|| AkitaError::InvalidProof)?;
                         *slot += weight;
                         Ok(())
                     },

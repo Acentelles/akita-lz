@@ -22,7 +22,7 @@ impl<'a, E> ReducedFunctionalClass<'a, E> {
         })?;
         self.functional
             .get(start..end)
-            .ok_or(AkitaError::InvalidProof)
+            .ok_or_else(|| AkitaError::InvalidProof)
     }
 }
 
@@ -234,12 +234,12 @@ where
     E: ExtField<F> + MulBaseUnreduced<F>,
     A: ProductSum<E>,
 {
-    let lo = job.checked_mul(job_rings).ok_or(AkitaError::InvalidProof)?;
+    let lo = job.checked_mul(job_rings).ok_or_else(|| AkitaError::InvalidProof)?;
     let hi = lo
         .checked_add(job_rings)
-        .ok_or(AkitaError::InvalidProof)?
+        .ok_or_else(|| AkitaError::InvalidProof)?
         .min(required);
-    let setup = setup_flat.get(lo..hi).ok_or(AkitaError::InvalidProof)?;
+    let setup = setup_flat.get(lo..hi).ok_or_else(|| AkitaError::InvalidProof)?;
     let mut shared_rows = Vec::new();
     let mut shared_weights = Vec::new();
     if shared_functional.is_some() {
@@ -263,7 +263,7 @@ where
         .collect::<Vec<_>>();
     let mut term = A::zero();
     for (offset, ring) in setup.iter().enumerate() {
-        let base_idx = lo.checked_add(offset).ok_or(AkitaError::InvalidProof)?;
+        let base_idx = lo.checked_add(offset).ok_or_else(|| AkitaError::InvalidProof)?;
         for ((partition, direct), cursor) in
             partitions.iter().zip(scan_groups).zip(&mut segment_cursors)
         {
@@ -323,26 +323,26 @@ where
         let role_idx = projected_role_index(base_idx, d_ratio)?;
         let eq_idx = role_idx
             .checked_sub(segment.d_start_abs)
-            .ok_or(AkitaError::InvalidProof)?;
-        let equality = *group.e.get(eq_idx).ok_or(AkitaError::InvalidProof)?;
+            .ok_or_else(|| AkitaError::InvalidProof)?;
+        let equality = *group.e.get(eq_idx).ok_or_else(|| AkitaError::InvalidProof)?;
         output
             .get_mut(d_class)
-            .ok_or(AkitaError::InvalidProof)?
+            .ok_or_else(|| AkitaError::InvalidProof)?
             .add_product(segment.d_weight, equality);
     }
     if segment.has_b {
         let role_idx = projected_role_index(base_idx, b_ratio)?;
         let local = role_idx
             .checked_sub(segment.b_start_abs)
-            .ok_or(AkitaError::InvalidProof)?;
-        let output = output.get_mut(b_class).ok_or(AkitaError::InvalidProof)?;
+            .ok_or_else(|| AkitaError::InvalidProof)?;
+        let output = output.get_mut(b_class).ok_or_else(|| AkitaError::InvalidProof)?;
         for term in segment.b_terms.iter() {
             let logical = term
                 .logical_start
                 .checked_add(local)
                 .and_then(|index| group.t.get(index))
                 .copied()
-                .ok_or(AkitaError::InvalidProof)?;
+                .ok_or_else(|| AkitaError::InvalidProof)?;
             output.add_product(term.row_weight, logical);
         }
     }
@@ -350,11 +350,11 @@ where
         let role_idx = projected_role_index(base_idx, a_ratio)?;
         let eq_idx = role_idx
             .checked_sub(segment.a_start_abs)
-            .ok_or(AkitaError::InvalidProof)?;
-        let equality = *group.z.get(eq_idx).ok_or(AkitaError::InvalidProof)?;
+            .ok_or_else(|| AkitaError::InvalidProof)?;
+        let equality = *group.z.get(eq_idx).ok_or_else(|| AkitaError::InvalidProof)?;
         output
             .get_mut(a_class)
-            .ok_or(AkitaError::InvalidProof)?
+            .ok_or_else(|| AkitaError::InvalidProof)?
             .add_product(segment.a_row_weight, equality);
     }
     Ok(())
