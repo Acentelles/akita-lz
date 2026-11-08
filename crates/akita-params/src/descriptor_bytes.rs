@@ -33,10 +33,11 @@ pub fn sis_modulus_profile_tag(family: SisModulusProfileId) -> u8 {
 /// Hash canonical descriptor bytes with Jolt's digest hash
 /// ([`jolt_transcript::DIGEST_HASH`]).
 ///
-/// SHA3-256 by default. An application whose recursion guest checks digests
-/// with Jolt's `jolt-inlines-keccak256` inline selects Keccak-256 (pad byte
-/// `0x01`) with the `keccak256-digests` feature; `PROTOCOL_TAG` names the
-/// selection. The transcript sponge feature does not change it. Domain
+/// SHA3-256 by default. Inline acceleration of the Keccak-f permutation
+/// preserves the selected digest's padding and output bytes. The
+/// `keccak256-digests` feature instead selects Keccak-256 (pad byte `0x01`);
+/// `PROTOCOL_TAG` names that protocol choice. The transcript sponge feature
+/// does not change it. Domain
 /// separation and version bytes are owned by the caller's canonical
 /// descriptor. This shared primitive prevents catalog and transcript identity
 /// code from implementing divergent hash truncation rules.
