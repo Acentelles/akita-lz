@@ -312,8 +312,15 @@ where
         E::zero,
         |acc, job| {
             evaluate_fused_job::<F, E, BASE_D>(
-                acc, job, job_rings, required, setup_flat, base_pows, projections,
-                direct_weights, partitions,
+                acc,
+                job,
+                job_rings,
+                required,
+                setup_flat,
+                base_pows,
+                projections,
+                direct_weights,
+                partitions,
             )
         },
         |lhs, rhs| Ok(lhs + rhs)
@@ -321,7 +328,10 @@ where
 }
 
 #[inline(always)]
-#[expect(clippy::too_many_arguments, reason = "one fused scan job borrows its validated scan inputs")]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one fused scan job borrows its validated scan inputs"
+)]
 fn evaluate_fused_job<F, E, const BASE_D: usize>(
     acc: E,
     job: usize,
@@ -345,11 +355,9 @@ where
         return Err(AkitaError::InvalidProof);
     };
     let mut weights = vec![E::zero(); setup.len()];
-    for ((projection, direct), partition) in
-        projections.iter().zip(direct_weights).zip(partitions)
+    for ((projection, direct), partition) in projections.iter().zip(direct_weights).zip(partitions)
     {
-        let (e_eq_slice, t_eq_slice, z_eq_slice) =
-            (&direct.e[..], &direct.t[..], &direct.z[..]);
+        let (e_eq_slice, t_eq_slice, z_eq_slice) = (&direct.e[..], &direct.t[..], &direct.z[..]);
         let segments = &partition.segments;
         let first = segments.partition_point(|segment| segment.hi <= lo);
         for segment in segments.iter().skip(first) {
@@ -357,9 +365,7 @@ where
                 break;
             }
             let overlap = segment.lo.max(lo)..segment.hi.min(hi);
-            let Some(weight_start) = overlap
-                .start
-                .checked_sub(lo) else {
+            let Some(weight_start) = overlap.start.checked_sub(lo) else {
                 return Err(AkitaError::InvalidProof);
             };
             segment.accumulate_lane_streams(

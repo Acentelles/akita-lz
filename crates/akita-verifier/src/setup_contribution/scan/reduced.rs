@@ -209,8 +209,15 @@ where
         E::zero,
         |acc, job| {
             evaluate_reduced_job::<F, E, BASE_D, A>(
-                acc, job, job_rings, required, setup_flat, functional_classes,
-                scan_groups, partitions, shared_functional,
+                acc,
+                job,
+                job_rings,
+                required,
+                setup_flat,
+                functional_classes,
+                scan_groups,
+                partitions,
+                shared_functional,
             )
         },
         |lhs, rhs| Ok(lhs + rhs)
@@ -218,7 +225,10 @@ where
 }
 
 #[inline(always)]
-#[expect(clippy::too_many_arguments, reason = "one reduced scan job borrows its validated scan inputs")]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one reduced scan job borrows its validated scan inputs"
+)]
 fn evaluate_reduced_job<F, E, const BASE_D: usize, A>(
     acc: E,
     job: usize,
@@ -248,7 +258,9 @@ where
     if let Some(functional) = shared_functional {
         let mut row_weights = vec![E::zero(); setup.len()];
         for (partition, direct) in partitions.iter().zip(scan_groups) {
-            let first = partition.segments.partition_point(|segment| segment.hi <= lo);
+            let first = partition
+                .segments
+                .partition_point(|segment| segment.hi <= lo);
             for segment in partition.segments.iter().skip(first) {
                 if segment.lo >= hi {
                     break;
@@ -262,15 +274,18 @@ where
                     &mut row_weights,
                     weight_start,
                     [direct.z, direct.t, direct.e],
-                    [&RoleProjection::Identity, &RoleProjection::Identity, &RoleProjection::Identity],
+                    [
+                        &RoleProjection::Identity,
+                        &RoleProjection::Identity,
+                        &RoleProjection::Identity,
+                    ],
                 )?;
             }
         }
         let mut rows = Vec::new();
         let mut weights = Vec::new();
-        rows.try_reserve_exact(setup.len()).map_err(|_| {
-            AkitaError::InvalidSetup("reduced scan row allocation failed".into())
-        })?;
+        rows.try_reserve_exact(setup.len())
+            .map_err(|_| AkitaError::InvalidSetup("reduced scan row allocation failed".into()))?;
         weights.try_reserve_exact(setup.len()).map_err(|_| {
             AkitaError::InvalidSetup("reduced scan weight allocation failed".into())
         })?;
@@ -345,8 +360,7 @@ where
     let [a_class, b_class, d_class] = group.role_classes;
     if segment.has_d {
         let role_idx = projected_role_index(base_idx, d_ratio)?;
-        let Some(eq_idx) = role_idx
-            .checked_sub(segment.d_start_abs) else {
+        let Some(eq_idx) = role_idx.checked_sub(segment.d_start_abs) else {
             return Err(AkitaError::InvalidProof);
         };
         let Some(&equality) = group.e.get(eq_idx) else {
@@ -359,8 +373,7 @@ where
     }
     if segment.has_b {
         let role_idx = projected_role_index(base_idx, b_ratio)?;
-        let Some(local) = role_idx
-            .checked_sub(segment.b_start_abs) else {
+        let Some(local) = role_idx.checked_sub(segment.b_start_abs) else {
             return Err(AkitaError::InvalidProof);
         };
         let Some(output) = output.get_mut(b_class) else {
@@ -371,7 +384,8 @@ where
                 .logical_start
                 .checked_add(local)
                 .and_then(|index| group.t.get(index))
-                .copied() else {
+                .copied()
+            else {
                 return Err(AkitaError::InvalidProof);
             };
             output.add_product(term.row_weight, logical);
@@ -379,8 +393,7 @@ where
     }
     if segment.has_a {
         let role_idx = projected_role_index(base_idx, a_ratio)?;
-        let Some(eq_idx) = role_idx
-            .checked_sub(segment.a_start_abs) else {
+        let Some(eq_idx) = role_idx.checked_sub(segment.a_start_abs) else {
             return Err(AkitaError::InvalidProof);
         };
         let Some(&equality) = group.z.get(eq_idx) else {

@@ -71,9 +71,7 @@ use akita_types::{
 };
 #[cfg(test)]
 use kernels::evaluate_weighted_setup_row;
-use kernels::{
-    role_projection, GroupSetupSegment, RoleProjection,
-};
+use kernels::{role_projection, GroupSetupSegment, RoleProjection};
 use segments::scan_partition;
 
 pub(crate) use direct_scan::materialize_reduced_direct_scan_weights;

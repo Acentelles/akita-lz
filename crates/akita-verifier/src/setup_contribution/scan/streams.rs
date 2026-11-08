@@ -35,7 +35,13 @@ impl<E: Field> GroupSetupSegment<E> {
                 let Some(values) = t.get(term.logical_start..) else {
                     return Err(AkitaError::InvalidProof);
                 };
-                b.accumulate_role(output, range.start, self.b_start_abs, term.row_weight, values)?;
+                b.accumulate_role(
+                    output,
+                    range.start,
+                    self.b_start_abs,
+                    term.row_weight,
+                    values,
+                )?;
             }
         }
         if self.has_a {
@@ -75,7 +81,11 @@ impl<E: Field> RoleProjection<E> {
                     *slot += row_weight * *value;
                 }
             }
-            Self::Projected { scales, shift, mask } => {
+            Self::Projected {
+                scales,
+                shift,
+                mask,
+            } => {
                 let ratio = scales.len();
                 if !ratio.is_power_of_two()
                     || *shift != ratio.trailing_zeros() as usize
@@ -114,8 +124,8 @@ impl<E: Field> RoleProjection<E> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::super::{role_projection, DirectScanWeights, PhysicalBWeightTerm};
+    use super::*;
     use akita_algebra::ring::scalar_powers;
     use jolt_field::{One, Prime128OffsetA7F7, Ring, Zero};
     use std::sync::Arc;
@@ -136,33 +146,55 @@ mod tests {
                     z: (0..16).map(|i| F::from_u64(71 + i)).collect(),
                 };
                 let segment = GroupSetupSegment {
-                    lo: ratio, hi: 9 * ratio,
-                    has_d: active & 1 != 0, d_start_abs: 1, d_weight: F::from_u64(3),
-                    has_b: active & 2 != 0, b_start_abs: 1,
+                    lo: ratio,
+                    hi: 9 * ratio,
+                    has_d: active & 1 != 0,
+                    d_start_abs: 1,
+                    d_weight: F::from_u64(3),
+                    has_b: active & 2 != 0,
+                    b_start_abs: 1,
                     b_terms: Arc::from([
-                        PhysicalBWeightTerm { logical_start: 0, row_weight: F::from_u64(5) },
-                        PhysicalBWeightTerm { logical_start: 8, row_weight: F::from_u64(13) },
+                        PhysicalBWeightTerm {
+                            logical_start: 0,
+                            row_weight: F::from_u64(5),
+                        },
+                        PhysicalBWeightTerm {
+                            logical_start: 8,
+                            row_weight: F::from_u64(13),
+                        },
                     ]),
-                    has_a: active & 4 != 0, a_start_abs: 1, a_row_weight: F::from_u64(17),
+                    has_a: active & 4 != 0,
+                    a_start_abs: 1,
+                    a_row_weight: F::from_u64(17),
                 };
                 for begin in ratio..2 * ratio + 1 {
                     for end in 7 * ratio..9 * ratio + 1 {
                         let mut got = vec![F::from_u64(19); end - begin + 2];
-                        segment.accumulate_lane_streams(begin..end, &mut got, 1,
-                            [&direct.z, &direct.t, &direct.e],
-                            [&projection(), &projection(), &projection()]).unwrap();
+                        segment
+                            .accumulate_lane_streams(
+                                begin..end,
+                                &mut got,
+                                1,
+                                [&direct.z, &direct.t, &direct.e],
+                                [&projection(), &projection(), &projection()],
+                            )
+                            .unwrap();
                         assert_eq!(got[0], F::from_u64(19));
                         assert_eq!(*got.last().unwrap(), F::from_u64(19));
-                        for (offset, actual) in got[1..got.len()-1].iter().enumerate() {
+                        for (offset, actual) in got[1..got.len() - 1].iter().enumerate() {
                             let physical = begin + offset;
                             let logical = physical / ratio - 1;
                             let mut expected = F::zero();
-                            if active & 1 != 0 { expected += F::from_u64(3) * direct.e[logical]; }
+                            if active & 1 != 0 {
+                                expected += F::from_u64(3) * direct.e[logical];
+                            }
                             if active & 2 != 0 {
                                 expected += F::from_u64(5) * direct.t[logical]
                                     + F::from_u64(13) * direct.t[8 + logical];
                             }
-                            if active & 4 != 0 { expected += F::from_u64(17) * direct.z[logical]; }
+                            if active & 4 != 0 {
+                                expected += F::from_u64(17) * direct.z[logical];
+                            }
                             expected *= powers[64 * (physical % ratio)];
                             assert_eq!(*actual, F::from_u64(19) + expected);
                         }
@@ -177,17 +209,47 @@ mod tests {
         let values = vec![F::one(); 4];
         let mut output = vec![F::zero(); 8];
         for projection in [
-            RoleProjection::Projected { scales: vec![], shift: 0, mask: 0 },
-            RoleProjection::Projected { scales: vec![F::one(); 3], shift: 1, mask: 2 },
-            RoleProjection::Projected { scales: vec![F::one(); 2], shift: 0, mask: 1 },
-            RoleProjection::Projected { scales: vec![F::one(); 2], shift: 1, mask: 0 },
+            RoleProjection::Projected {
+                scales: vec![],
+                shift: 0,
+                mask: 0,
+            },
+            RoleProjection::Projected {
+                scales: vec![F::one(); 3],
+                shift: 1,
+                mask: 2,
+            },
+            RoleProjection::Projected {
+                scales: vec![F::one(); 2],
+                shift: 0,
+                mask: 1,
+            },
+            RoleProjection::Projected {
+                scales: vec![F::one(); 2],
+                shift: 1,
+                mask: 0,
+            },
         ] {
-            assert!(projection.accumulate_role(&mut output, 0, 0, F::one(), &values).is_err());
+            assert!(projection
+                .accumulate_role(&mut output, 0, 0, F::one(), &values)
+                .is_err());
         }
-        assert!(RoleProjection::Identity.accumulate_role(&mut output, 0, 0, F::zero(), &values).is_err());
-        assert!(RoleProjection::Identity.accumulate_role(&mut output, 0, 1, F::one(), &values).is_err());
-        let projection = RoleProjection::Projected { scales: vec![F::one(); 2], shift: 1, mask: 1 };
-        assert!(projection.accumulate_role(&mut output, 1, 0, F::one(), &values).is_err());
-        assert!(projection.accumulate_role(&mut output, usize::MAX, 0, F::one(), &values).is_err());
+        assert!(RoleProjection::Identity
+            .accumulate_role(&mut output, 0, 0, F::zero(), &values)
+            .is_err());
+        assert!(RoleProjection::Identity
+            .accumulate_role(&mut output, 0, 1, F::one(), &values)
+            .is_err());
+        let projection = RoleProjection::Projected {
+            scales: vec![F::one(); 2],
+            shift: 1,
+            mask: 1,
+        };
+        assert!(projection
+            .accumulate_role(&mut output, 1, 0, F::one(), &values)
+            .is_err());
+        assert!(projection
+            .accumulate_role(&mut output, usize::MAX, 0, F::one(), &values)
+            .is_err());
     }
 }
