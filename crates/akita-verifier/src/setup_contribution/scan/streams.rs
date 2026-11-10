@@ -78,7 +78,7 @@ impl<E: Field> RoleProjection<E> {
                     return Err(AkitaError::InvalidProof);
                 };
                 for (slot, value) in output.iter_mut().zip(values) {
-                    *slot += row_weight * *value;
+                    *slot = row_weight.mul_add(*value, *slot);
                 }
             }
             Self::Projected {
@@ -113,7 +113,7 @@ impl<E: Field> RoleProjection<E> {
                     };
                     let scaled_row = row_weight * *scale;
                     for (slot, value) in output.iter_mut().skip(offset).step_by(ratio).zip(values) {
-                        *slot += scaled_row * *value;
+                        *slot = scaled_row.mul_add(*value, *slot);
                     }
                 }
             }
