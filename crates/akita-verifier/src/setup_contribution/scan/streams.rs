@@ -127,10 +127,10 @@ mod tests {
     use super::super::super::{role_projection, DirectScanWeights, PhysicalBWeightTerm};
     use super::*;
     use akita_algebra::ring::scalar_powers;
-    use jolt_field::{One, Prime128OffsetA7F7, Ring, Zero};
+    use jolt_field::{One, Prime128Offset6A23801F, Ring, Zero};
     use std::sync::Arc;
 
-    type F = Prime128OffsetA7F7;
+    type F = Prime128Offset6A23801F;
 
     #[test]
     fn lane_streams_cover_partial_blocks_and_overlapping_roles() {

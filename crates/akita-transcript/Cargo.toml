@@ -2,7 +2,7 @@
 name = "akita-transcript"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.95"
+rust-version.workspace = true
 license = "Apache-2.0 OR MIT"
 description = "Fiat-Shamir transcripts for the Akita polynomial commitment scheme"
 repository = "https://github.com/LayerZero-Labs/akita"
@@ -10,11 +10,11 @@ readme = "../../README.md"
 
 [dependencies]
 akita-error = { version = "0.1.0", path = "../akita-error" }
-jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "978292af57bc0767d7b0479d980c956bf9ebf2a9", default-features = false, features = [
+jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "99a82af510e01fe4085a7d64f970a6c333ebd4c2", default-features = false, features = [
   "asm",
   "solinas",
 ] }
-jolt-transcript = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "978292af57bc0767d7b0479d980c956bf9ebf2a9", default-features = false, features = [
+jolt-transcript = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "99a82af510e01fe4085a7d64f970a6c333ebd4c2", default-features = false, features = [
   "solinas",
 ] }
 sha3 = "0.12.0"

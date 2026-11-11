@@ -5,7 +5,7 @@ use crate::offset_eq::{
     eq_eval_at_index, EqPairTensorAxis, EqPairTensorFamily, MAX_COMPACT_STRIDE_TERMS,
 };
 use crate::{Field, One, Ring, Zero};
-use jolt_field::solinas::Prime128OffsetA7F7 as F;
+use jolt_field::solinas::Prime128Offset6A23801F as F;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 

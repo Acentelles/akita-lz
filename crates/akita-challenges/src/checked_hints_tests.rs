@@ -1,6 +1,6 @@
 use crate::{FoldChallengeDrawDomain, FoldChallengeFamily, FoldDraw, SparseChallengeConfig};
 use akita_error::AkitaError;
-use jolt_field::{Prime128OffsetA7F7 as F, Ring};
+use jolt_field::{Prime128Offset6A23801F as F, Ring};
 struct Message(Vec<u8>);
 impl FoldDraw for Message {
     fn draw_message<T>(
