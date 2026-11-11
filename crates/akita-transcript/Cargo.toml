@@ -45,3 +45,7 @@ workspace = true
 akita-transcript = { path = ".", default-features = false, features = [
   "prover",
 ] }
+
+# The self dev-dependency enables the prover role for unit tests.
+[package.metadata.cargo-machete]
+ignored = ["akita-transcript"]
