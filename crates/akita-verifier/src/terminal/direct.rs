@@ -21,8 +21,8 @@ use crate::prepared_cache::TerminalNttCache;
 ///
 /// `X^position · v` contributes `v[k − position]` at coefficient `k ≥ position`
 /// and `−v[k + D − position]` below it. A challenge coefficient `c` enters as
-/// `|c|` unit terms with the sign of `c`. Each batch is expanded once and
-/// reused across all output coefficients, with no heap allocation.
+/// `|c|` unit terms. Windows into `[-v, v, -v]` incorporate both the wrap
+/// sign and the sign of `c` before visiting output coefficients.
 fn sparse_challenge_dot<'a, F, const D: usize>(
     challenges: &[SparseChallenge],
     values: impl Iterator<Item = &'a CyclotomicRing<F, D>> + Clone,
@@ -36,46 +36,47 @@ where
     for challenge in challenges {
         challenge.validate::<D>()?;
     }
-    let mut terms = challenges
-        .iter()
-        .zip(values)
-        .flat_map(|(challenge, value)| {
-            challenge.positions.iter().zip(&challenge.coeffs).flat_map(
-                move |(&position, &coefficient)| {
-                    repeat_n(
-                        (value.coefficients(), position as usize, coefficient < 0),
-                        usize::from(coefficient.unsigned_abs()),
-                    )
-                },
-            )
-        });
-    let zero = CyclotomicRing::<F, D>::zero();
-    let mut batch = [(zero.coefficients(), 0, false); ROW_BATCH];
     let mut sums = [F::zero(); D];
-    loop {
-        let mut len = 0;
-        for (slot, term) in batch.iter_mut().zip(terms.by_ref()) {
-            *slot = term;
-            len += 1;
+    for (challenge, value) in challenges.iter().zip(values) {
+        if challenge.positions.is_empty() {
+            continue;
         }
-        if len == 0 {
-            return Ok(CyclotomicRing::from_coefficients(sums));
-        }
-        for (k, sum) in sums.iter_mut().enumerate() {
-            *sum = F::signed_sum(
-                std::iter::once((&*sum, false)).chain(batch[..len].iter().map(
-                    |&(value, position, negative)| {
-                        // Challenge validation pins `position < D`.
-                        if k >= position {
-                            (&value[k - position], negative)
-                        } else {
-                            (&value[D - (position - k)], !negative)
-                        }
-                    },
-                )),
-            );
+        let negative = value.coefficients().map(|coefficient| -coefficient);
+        let extended = [negative, *value.coefficients(), negative];
+        let extended = extended.as_flattened();
+        let mut terms = challenge.positions.iter().zip(&challenge.coeffs).flat_map(
+            |(&position, &coefficient)| {
+                let signed = if coefficient < 0 {
+                    &extended[D..]
+                } else {
+                    extended
+                };
+                // Validation pins `position < D`; each suffix contains a full ring.
+                let window = signed
+                    .get(D - position as usize..)
+                    .and_then(|suffix| suffix.first_chunk::<D>());
+                repeat_n(window, usize::from(coefficient.unsigned_abs()))
+            },
+        );
+        let mut batch = [value.coefficients(); ROW_BATCH];
+        loop {
+            let mut len = 0;
+            for (slot, term) in batch.iter_mut().zip(terms.by_ref()) {
+                *slot = term.ok_or(AkitaError::InvalidProof)?;
+                len += 1;
+            }
+            if len == 0 {
+                break;
+            }
+            for (k, sum) in sums.iter_mut().enumerate() {
+                *sum = F::signed_sum(
+                    std::iter::once((&*sum, false))
+                        .chain(batch[..len].iter().map(|window| (&window[k], false))),
+                );
+            }
         }
     }
+    Ok(CyclotomicRing::from_coefficients(sums))
 }
 
 /// Digests of the last live `e` and `t` block, which the prover sends in
@@ -537,6 +538,10 @@ where
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "direct/sparse_windows_tests.rs"]
+mod sparse_windows_tests;
 
 #[cfg(test)]
 mod tests {
