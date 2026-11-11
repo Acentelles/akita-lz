@@ -27,3 +27,6 @@ parallel = ["akita-algebra/parallel", "jolt-field/parallel"]
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+akita-transcript = { path = "../akita-transcript", default-features = false, features = ["prover"] }
