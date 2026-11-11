@@ -13,7 +13,7 @@
 //! padding, and alignment handling.
 
 use jolt_inlines_ntt::{
-    forward_ntt64, pointwise_dot64, PreparedForwardNtt64, DEGREE, DOT_PRODUCTS,
+    forward_ntt64, pointwise_dot64, CenteredI16NttInput, PreparedForwardNtt64, DEGREE, DOT_PRODUCTS,
 };
 
 use super::butterfly::NttTwiddles;
@@ -114,29 +114,20 @@ pub(crate) fn forward_ntt<W: PrimeWidth, const D: usize>(
     );
 }
 
-/// Centered `i16` digits prepared once for [`forward_ntt_centered_i16`]
-/// across every CRT limb.
-pub(crate) struct CenteredI16Digits<'a, const D: usize> {
-    digits: &'a [i16; D],
-    /// Sign-extended `i32` residues, two per little-endian doubleword. A Jolt
-    /// guest expands each 32-bit store into a multi-row sequence, so aligned
-    /// limbs take doubleword stores.
-    words: [u64; DEGREE / 2],
-}
-
-impl<'a, const D: usize> CenteredI16Digits<'a, D> {
-    /// # Panics
-    ///
-    /// Panics unless `D = 64`.
-    #[inline(always)]
-    pub(crate) fn new(digits: &'a [i16; D]) -> Self {
-        assert!(D == DEGREE, "Jolt NTT inline serves only 64 coefficients");
-        let residue = |value: i16| u64::from(i32::from(value) as u32);
-        let words = std::array::from_fn(|index| {
-            residue(digits[2 * index]) | (residue(digits[2 * index + 1]) << 32)
-        });
-        Self { digits, words }
-    }
+/// Prepare typed signed digits once for every CRT limb.
+///
+/// # Panics
+///
+/// Panics unless `D = 64`.
+#[inline(always)]
+pub(crate) fn prepare_centered_i16_digits<const D: usize>(
+    digits: &[i16; D],
+) -> CenteredI16NttInput {
+    assert!(D == DEGREE, "Jolt NTT inline serves only 64 coefficients");
+    // SAFETY: the release check establishes the exact array length; the
+    // element type, alignment and immutable borrow are unchanged.
+    let digits = unsafe { &*digits.as_ptr().cast::<[i16; DEGREE]>() };
+    CenteredI16NttInput::new(digits)
 }
 
 /// Overwrite `out` with the CRT+NTT image of centered digits for one prime.
@@ -151,27 +142,16 @@ impl<'a, const D: usize> CenteredI16Digits<'a, D> {
 #[inline(always)]
 pub(crate) fn forward_ntt_centered_i16<W: PrimeWidth, const D: usize>(
     out: &mut [MontCoeff<W>; D],
-    digits: &CenteredI16Digits<'_, D>,
+    digits: &CenteredI16NttInput,
     prime: NttPrime<W>,
     tw: &NttTwiddles<W, D>,
     prepared: Option<&PreparedForwardNtt64<'_>>,
 ) {
     let state = residues_mut(out);
-    let words = state.as_mut_ptr().cast::<u64>();
-    // The packed words assume little-endian order; big-endian test hosts and
-    // limbs off a doubleword boundary take the element-wise stores.
-    if cfg!(target_endian = "little") && (words as usize).is_multiple_of(8) {
-        // SAFETY: `state` is 64 `i32`s, 256 bytes, the size of `[u64; 32]`,
-        // and the check above makes the address doubleword aligned.
-        unsafe { words.cast::<[u64; DEGREE / 2]>().write(digits.words) };
-    } else {
-        for (slot, &value) in state.iter_mut().zip(digits.digits) {
-            *slot = i32::from(value);
-        }
-    }
     if let Some(prepared) = prepared {
-        prepared.transform(state);
+        prepared.transform_i16(digits, state);
     } else {
+        digits.write_to(state);
         let (p, pinv) = modulus(prime);
         forward_ntt64(
             state,
