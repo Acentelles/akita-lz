@@ -29,7 +29,7 @@ disk-persistence = ["akita-cpu-backend/disk-persistence"]
 akita-error = { version = "0.1.0", path = "../akita-error" }
 akita-config = { version = "0.1.0", path = "../akita-config", default-features = false }
 akita-cpu-backend = { version = "0.1.0", path = "../akita-cpu-backend", default-features = false }
-jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "1c534fe28eb26124db72753ef5bf38ac67acaebb", default-features = false, features = [
+jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "6944f90b2bab91ecac3633926beb951ebc1b0aaf", default-features = false, features = [
   "asm",
   "solinas",
 ] }
