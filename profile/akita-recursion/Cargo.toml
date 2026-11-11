@@ -51,7 +51,7 @@ ark-serialize = { git = "https://github.com/a16z/arkworks-algebra", branch = "de
 
 # Jolt's `jolt-akita` pins Akita by git rev; build it against this checkout so the
 # profile graph carries one Akita and one `jolt-field` identity.
-[patch."https://github.com/LayerZero-Labs/akita.git"]
+[patch."https://github.com/Acentelles/akita-lz.git"]
 akita-algebra = { path = "../../crates/akita-algebra" }
 akita-challenges = { path = "../../crates/akita-challenges" }
 akita-config = { path = "../../crates/akita-config" }
