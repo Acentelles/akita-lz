@@ -13,11 +13,17 @@ use crate::ntt::prime::{MontCoeff, PrimeWidth};
 #[cfg(any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64"))]
 use crate::ntt::{prime::NttPrime, NttTwiddles};
 use crate::ring::cyclotomic::CyclotomicRing;
+#[cfg(all(feature = "ntt-inline", any(target_arch = "riscv64", test)))]
+use jolt_inlines_ntt::PreparedForwardNtt64;
 
 use super::lut::{balanced_limbs, CenteredMontReducer};
 use super::{
     CenteredMontLut, CrtNttConvertibleField, CrtNttParamSet, CyclotomicCrtNtt, DigitMontLut,
 };
+
+#[cfg(all(test, feature = "ntt-inline"))]
+#[path = "convert_inline_tests.rs"]
+mod inline_tests;
 
 enum CenteredI16NttStrategy<W: PrimeWidth, const K: usize> {
     Lut(CenteredMontLut<W, K>),
@@ -27,7 +33,7 @@ enum CenteredI16NttStrategy<W: PrimeWidth, const K: usize> {
     NeonI16,
     #[cfg(target_arch = "aarch64")]
     NeonI32,
-    #[cfg(all(feature = "ntt-inline", target_arch = "riscv64"))]
+    #[cfg(all(feature = "ntt-inline", any(target_arch = "riscv64", test)))]
     Inline,
 }
 
@@ -35,22 +41,23 @@ enum CenteredI16NttStrategy<W: PrimeWidth, const K: usize> {
 pub(super) struct CenteredI16NttConverter<'a, W: PrimeWidth, const K: usize, const D: usize> {
     params: &'a CrtNttParamSet<W, K, D>,
     strategy: CenteredI16NttStrategy<W, K>,
+    #[cfg(all(feature = "ntt-inline", any(target_arch = "riscv64", test)))]
+    prepared: Option<Vec<PreparedForwardNtt64<'a>>>,
 }
 
 impl<'a, W: PrimeWidth, const K: usize, const D: usize> CenteredI16NttConverter<'a, W, K, D> {
     pub(super) fn new(params: &'a CrtNttParamSet<W, K, D>, rhs: &[[i16; D]]) -> Self {
         #[cfg(all(feature = "ntt-inline", target_arch = "riscv64"))]
         if jolt::selected::<W, D>(params.kernel_plan) {
-            return Self {
-                params,
-                strategy: CenteredI16NttStrategy::Inline,
-            };
+            return Self::new_inline(params);
         }
         #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
         if crate::ntt::butterfly::use_x86_transform_ntt::<D>(params.kernel_plan) {
             return Self {
                 params,
                 strategy: CenteredI16NttStrategy::X86,
+                #[cfg(all(feature = "ntt-inline", test))]
+                prepared: None,
             };
         }
         #[cfg(target_arch = "aarch64")]
@@ -59,12 +66,16 @@ impl<'a, W: PrimeWidth, const K: usize, const D: usize> CenteredI16NttConverter<
                 return Self {
                     params,
                     strategy: CenteredI16NttStrategy::NeonI16,
+                    #[cfg(all(feature = "ntt-inline", test))]
+                    prepared: None,
                 };
             }
             if size_of::<W>() == size_of::<i32>() {
                 return Self {
                     params,
                     strategy: CenteredI16NttStrategy::NeonI32,
+                    #[cfg(all(feature = "ntt-inline", test))]
+                    prepared: None,
                 };
             }
         }
@@ -78,6 +89,23 @@ impl<'a, W: PrimeWidth, const K: usize, const D: usize> CenteredI16NttConverter<
         Self {
             params,
             strategy: CenteredI16NttStrategy::Lut(CenteredMontLut::new(params, rhs_abs_bound)),
+            #[cfg(all(feature = "ntt-inline", any(target_arch = "riscv64", test)))]
+            prepared: None,
+        }
+    }
+
+    #[cfg(all(feature = "ntt-inline", any(target_arch = "riscv64", test)))]
+    pub(super) fn new_inline(params: &'a CrtNttParamSet<W, K, D>) -> Self {
+        let prepared = params
+            .primes
+            .iter()
+            .zip(params.twiddles.iter())
+            .map(|(&prime, twiddles)| jolt::prepare_forward_ntt_centered_i16(prime, twiddles))
+            .collect();
+        Self {
+            params,
+            strategy: CenteredI16NttStrategy::Inline,
+            prepared,
         }
     }
 
@@ -101,7 +129,7 @@ impl<'a, W: PrimeWidth, const K: usize, const D: usize> CenteredI16NttConverter<
             CenteredI16NttStrategy::NeonI16 => self.transform_neon_i16(coefficients, out),
             #[cfg(target_arch = "aarch64")]
             CenteredI16NttStrategy::NeonI32 => self.transform_neon_i32(coefficients, out),
-            #[cfg(all(feature = "ntt-inline", target_arch = "riscv64"))]
+            #[cfg(all(feature = "ntt-inline", any(target_arch = "riscv64", test)))]
             CenteredI16NttStrategy::Inline => self.transform_inline(coefficients, out),
         }
     }
@@ -147,13 +175,15 @@ impl<'a, W: PrimeWidth, const K: usize, const D: usize> CenteredI16NttConverter<
         out: &mut CyclotomicCrtNtt<W, K, D>,
     ) {
         let digits = jolt::CenteredI16Digits::new(coefficients);
-        for ((limb, &prime), twiddles) in out
+        for (index, ((limb, &prime), twiddles)) in out
             .limbs
             .iter_mut()
             .zip(self.params.primes.iter())
             .zip(self.params.twiddles.iter())
+            .enumerate()
         {
-            jolt::forward_ntt_centered_i16(limb, &digits, prime, twiddles);
+            let prepared = self.prepared.as_ref().and_then(|tables| tables.get(index));
+            jolt::forward_ntt_centered_i16(limb, &digits, prime, twiddles, prepared);
         }
     }
 

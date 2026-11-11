@@ -12,7 +12,9 @@
 //! runs its portable fallbacks, so host tests pin the table layout, packing,
 //! padding, and alignment handling.
 
-use jolt_inlines_ntt::{forward_ntt64, pointwise_dot64, DEGREE, DOT_PRODUCTS};
+use jolt_inlines_ntt::{
+    forward_ntt64, pointwise_dot64, PreparedForwardNtt64, DEGREE, DOT_PRODUCTS,
+};
 
 use super::butterfly::NttTwiddles;
 use super::prime::{MontCoeff, NttPrime, PrimeWidth, I32_LAZY_DOT_BATCH};
@@ -152,6 +154,7 @@ pub(crate) fn forward_ntt_centered_i16<W: PrimeWidth, const D: usize>(
     digits: &CenteredI16Digits<'_, D>,
     prime: NttPrime<W>,
     tw: &NttTwiddles<W, D>,
+    prepared: Option<&PreparedForwardNtt64<'_>>,
 ) {
     let state = residues_mut(out);
     let words = state.as_mut_ptr().cast::<u64>();
@@ -166,14 +169,34 @@ pub(crate) fn forward_ntt_centered_i16<W: PrimeWidth, const D: usize>(
             *slot = i32::from(value);
         }
     }
+    if let Some(prepared) = prepared {
+        prepared.transform(state);
+    } else {
+        let (p, pinv) = modulus(prime);
+        forward_ntt64(
+            state,
+            raw_table(&tw.psi_pows_r2),
+            residues(&tw.fwd_twiddles),
+            p,
+            pinv,
+        );
+    }
+}
+
+pub(crate) fn prepare_forward_ntt_centered_i16<W: PrimeWidth, const D: usize>(
+    prime: NttPrime<W>,
+    tw: &NttTwiddles<W, D>,
+) -> Option<PreparedForwardNtt64<'_>> {
+    if !serves::<W, D>() {
+        return None;
+    }
     let (p, pinv) = modulus(prime);
-    forward_ntt64(
-        state,
+    PreparedForwardNtt64::new(
         raw_table(&tw.psi_pows_r2),
         residues(&tw.fwd_twiddles),
         p,
         pinv,
-    );
+    )
 }
 
 /// `acc[i] += Σ_{j < count} lhs(j)[i] · rhs(j)[i] · 2^-32 mod p`, the lazy
