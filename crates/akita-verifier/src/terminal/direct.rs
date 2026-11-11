@@ -17,12 +17,12 @@ use std::iter::repeat_n;
 use crate::prepared_cache::TerminalNttCache;
 
 /// `Σ_b challenges[b] · values[b]` in `Z_q[X]/(X^D + 1)`, one signed sum of
-/// ring coefficients per output coefficient.
+/// ring coefficients per output coefficient and bounded batch.
 ///
 /// `X^position · v` contributes `v[k − position]` at coefficient `k ≥ position`
 /// and `−v[k + D − position]` below it. A challenge coefficient `c` enters as
-/// `|c|` unit terms with the sign of `c`. The terms are generated lazily from
-/// the validated challenges, so no per-term storage is allocated.
+/// `|c|` unit terms with the sign of `c`. Each batch is expanded once and
+/// reused across all output coefficients, with no heap allocation.
 fn sparse_challenge_dot<'a, F, const D: usize>(
     challenges: &[SparseChallenge],
     values: impl Iterator<Item = &'a CyclotomicRing<F, D>> + Clone,
@@ -36,31 +36,46 @@ where
     for challenge in challenges {
         challenge.validate::<D>()?;
     }
-    Ok(CyclotomicRing::from_coefficients(std::array::from_fn(
-        |k| {
-            F::signed_sum(
-                challenges
-                    .iter()
-                    .zip(values.clone())
-                    .flat_map(|(challenge, value)| {
-                        let value = value.coefficients();
-                        challenge.positions.iter().zip(&challenge.coeffs).flat_map(
-                            move |(&position, &coefficient)| {
-                                // `validate` pinned `position < D`.
-                                let position = position as usize;
-                                let negative = coefficient < 0;
-                                let term = if k >= position {
-                                    (&value[k - position], negative)
-                                } else {
-                                    (&value[k + D - position], !negative)
-                                };
-                                repeat_n(term, usize::from(coefficient.unsigned_abs()))
-                            },
-                        )
-                    }),
+    let mut terms = challenges
+        .iter()
+        .zip(values)
+        .flat_map(|(challenge, value)| {
+            challenge.positions.iter().zip(&challenge.coeffs).flat_map(
+                move |(&position, &coefficient)| {
+                    repeat_n(
+                        (value.coefficients(), position as usize, coefficient < 0),
+                        usize::from(coefficient.unsigned_abs()),
+                    )
+                },
             )
-        },
-    )))
+        });
+    let zero = CyclotomicRing::<F, D>::zero();
+    let mut batch = [(zero.coefficients(), 0, false); ROW_BATCH];
+    let mut sums = [F::zero(); D];
+    loop {
+        let mut len = 0;
+        for (slot, term) in batch.iter_mut().zip(terms.by_ref()) {
+            *slot = term;
+            len += 1;
+        }
+        if len == 0 {
+            return Ok(CyclotomicRing::from_coefficients(sums));
+        }
+        for (k, sum) in sums.iter_mut().enumerate() {
+            *sum = F::signed_sum(
+                std::iter::once((&*sum, false)).chain(batch[..len].iter().map(
+                    |&(value, position, negative)| {
+                        // Challenge validation pins `position < D`.
+                        if k >= position {
+                            (&value[k - position], negative)
+                        } else {
+                            (&value[D - (position - k)], !negative)
+                        }
+                    },
+                )),
+            );
+        }
+    }
 }
 
 /// Digests of the last live `e` and `t` block, which the prover sends in
@@ -695,6 +710,72 @@ mod tests {
     fn sparse_challenge_product_matches_schoolbook() {
         assert_sparse_challenge_product::<64>();
         assert_sparse_challenge_product::<128>();
+    }
+
+    #[test]
+    fn sparse_challenge_batches_preserve_boundaries_and_signed_extremes() {
+        fn check<const D: usize>() {
+            let value = CyclotomicRing::<F, D>::from_coefficients(std::array::from_fn(|k| {
+                if k.is_multiple_of(2) {
+                    -F::one()
+                } else {
+                    F::from_u64(k as u64)
+                }
+            }));
+            for coefficient in [1, 31, 32, 33, 63, 64, 65, i8::MAX, i8::MIN] {
+                for position in [0, D - 1] {
+                    let challenge = SparseChallenge {
+                        positions: vec![position as u32].into(),
+                        coeffs: vec![coefficient].into(),
+                    };
+                    let mut dense = CyclotomicRing::<F, D>::zero();
+                    dense.coeffs[position] = F::from_i64(i64::from(coefficient));
+                    let actual = sparse_challenge_dot(
+                        &[challenge.clone(), challenge],
+                        [&value, &value].into_iter(),
+                    )
+                    .unwrap();
+                    assert_eq!(actual, (dense * value).scale(&F::from_u64(2)));
+                }
+            }
+            let empty = SparseChallenge {
+                positions: Default::default(),
+                coeffs: Default::default(),
+            };
+            assert_eq!(
+                sparse_challenge_dot::<F, D>(&[], std::iter::empty()).unwrap(),
+                CyclotomicRing::zero()
+            );
+            assert_eq!(
+                sparse_challenge_dot(&[empty], [&value].into_iter()).unwrap(),
+                CyclotomicRing::zero()
+            );
+        }
+        check::<64>();
+        check::<128>();
+    }
+
+    #[test]
+    fn sparse_challenge_batches_reject_malformed_support() {
+        let value = CyclotomicRing::<F, 64>::zero();
+        for (positions, coeffs) in [
+            (vec![0], vec![]),
+            (vec![], vec![1]),
+            (vec![0], vec![0]),
+            (vec![3, 3], vec![1, -1]),
+            (vec![64], vec![1]),
+            (vec![u32::MAX], vec![i8::MIN]),
+        ] {
+            let challenge = SparseChallenge {
+                positions: positions.into(),
+                coeffs: coeffs.into(),
+            };
+            let expected = challenge.validate::<64>().unwrap_err();
+            assert_eq!(
+                sparse_challenge_dot(&[challenge], [&value].into_iter()),
+                Err(expected)
+            );
+        }
     }
 
     fn assert_last_block_recovery<const D: usize>() {
