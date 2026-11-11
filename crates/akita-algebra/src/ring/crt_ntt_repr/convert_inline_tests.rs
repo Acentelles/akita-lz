@@ -64,3 +64,32 @@ fn prepared_converter_rejection_keeps_each_raw_wrapping_fallback() {
         assert_eq!(actual.limbs[0].map(MontCoeff::raw), expected, "case {case}");
     }
 }
+
+#[test]
+fn prepared_converter_keeps_raw_fallback_for_nonroot_tables() {
+    let original = CrtNttParamSet::<i32, 1, 64>::new([NttPrime::compute(I32_RAW_PRIMES[0])]);
+    let digits = core::array::from_fn(|i| if i & 1 == 0 { i16::MIN } else { i16::MAX });
+    for case in 0..3 {
+        let mut params = original.clone();
+        match case {
+            0 => params.twiddles[0].psi_pows_r2[0] = 0,
+            1 => params.twiddles[0].psi_pows_r2[63] = 0,
+            _ => params.twiddles[0].fwd_twiddles[62] = MontCoeff::from_raw(0),
+        }
+        let converter = CenteredI16NttConverter::new_inline(&params);
+        assert!(converter.prepared.is_none());
+        let mut actual = CyclotomicCrtNtt::zero();
+        converter.transform_into(&digits, &mut actual);
+        let mut expected = digits.map(i32::from);
+        let prime = params.primes[0];
+        let tw = &params.twiddles[0];
+        forward_ntt64(
+            &mut expected,
+            &tw.psi_pows_r2,
+            &tw.fwd_twiddles.map(MontCoeff::raw),
+            prime.p,
+            prime.pinv,
+        );
+        assert_eq!(actual.limbs[0].map(MontCoeff::raw), expected, "case {case}");
+    }
+}

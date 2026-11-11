@@ -174,7 +174,7 @@ impl<'a, W: PrimeWidth, const K: usize, const D: usize> CenteredI16NttConverter<
         coefficients: &[i16; D],
         out: &mut CyclotomicCrtNtt<W, K, D>,
     ) {
-        let digits = jolt::CenteredI16Digits::new(coefficients);
+        let digits = jolt::prepare_centered_i16_digits(coefficients);
         for (index, ((limb, &prime), twiddles)) in out
             .limbs
             .iter_mut()
