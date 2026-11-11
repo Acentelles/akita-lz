@@ -57,7 +57,9 @@ logging-transcript = [
 compression-weights-crosscheck = []
 
 [dev-dependencies]
-akita-transcript = { path = "../akita-transcript", default-features = false, features = ["prover"] }
+akita-transcript = { path = "../akita-transcript", default-features = false, features = [
+  "prover",
+] }
 akita-params = { version = "0.1.0", path = "../akita-params", default-features = false, features = [
   "test-support",
 ] }

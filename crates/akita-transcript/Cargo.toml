@@ -32,10 +32,16 @@ keccak256-digests = ["jolt-transcript/keccak256-digests"]
 # The prover's proof-of-work and fold-response searches copy the public sponge
 # state, which spongefish 0.8.0 exposes only under `yolocrypto`. Verifier
 # builds leave this feature off.
-prover = ["jolt-transcript/prover-grinding", "jolt-transcript/prover-entropy", "spongefish/yolocrypto"]
+prover = [
+  "jolt-transcript/prover-grinding",
+  "jolt-transcript/prover-entropy",
+  "spongefish/yolocrypto",
+]
 
 [lints]
 workspace = true
 
 [dev-dependencies]
-akita-transcript = { path = ".", default-features = false, features = ["prover"] }
+akita-transcript = { path = ".", default-features = false, features = [
+  "prover",
+] }
