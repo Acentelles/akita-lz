@@ -358,6 +358,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2f6c7dbe95a6ed67ad9f18e57daf93a2f034c524b99fd2b76d18fdfeb6660aa"
 dependencies = [
  "hybrid-array",
+ "zeroize",
 ]
 
 [[package]]
@@ -535,6 +536,7 @@ dependencies = [
  "block-buffer 0.12.1",
  "const-oid",
  "crypto-common 0.2.2",
+ "zeroize",
 ]
 
 [[package]]
@@ -688,7 +690,7 @@ dependencies = [
 [[package]]
 name = "jolt-algebra"
 version = "0.1.0"
-source = "git+https://github.com/a16z/jolt?rev=1f676972efb9a8b7b1b2804b54c88787ebe3fd13#1f676972efb9a8b7b1b2804b54c88787ebe3fd13"
+source = "git+https://github.com/a16z/jolt?rev=e6d14ecb0b6a18e4794b1f89044e088271d2913c#e6d14ecb0b6a18e4794b1f89044e088271d2913c"
 dependencies = [
  "cc",
  "jolt-utils",
@@ -703,7 +705,7 @@ dependencies = [
 [[package]]
 name = "jolt-field"
 version = "0.1.0"
-source = "git+https://github.com/a16z/jolt?rev=1f676972efb9a8b7b1b2804b54c88787ebe3fd13#1f676972efb9a8b7b1b2804b54c88787ebe3fd13"
+source = "git+https://github.com/a16z/jolt?rev=e6d14ecb0b6a18e4794b1f89044e088271d2913c#e6d14ecb0b6a18e4794b1f89044e088271d2913c"
 dependencies = [
  "jolt-algebra",
 ]
@@ -711,12 +713,12 @@ dependencies = [
 [[package]]
 name = "jolt-inlines-keccak256"
 version = "0.1.0"
-source = "git+https://github.com/a16z/jolt?rev=1f676972efb9a8b7b1b2804b54c88787ebe3fd13#1f676972efb9a8b7b1b2804b54c88787ebe3fd13"
+source = "git+https://github.com/a16z/jolt?rev=e6d14ecb0b6a18e4794b1f89044e088271d2913c#e6d14ecb0b6a18e4794b1f89044e088271d2913c"
 
 [[package]]
 name = "jolt-poly"
 version = "0.1.0"
-source = "git+https://github.com/a16z/jolt?rev=1f676972efb9a8b7b1b2804b54c88787ebe3fd13#1f676972efb9a8b7b1b2804b54c88787ebe3fd13"
+source = "git+https://github.com/a16z/jolt?rev=e6d14ecb0b6a18e4794b1f89044e088271d2913c#e6d14ecb0b6a18e4794b1f89044e088271d2913c"
 dependencies = [
  "jolt-field",
  "jolt-utils",
@@ -730,7 +732,7 @@ dependencies = [
 [[package]]
 name = "jolt-transcript"
 version = "0.1.0"
-source = "git+https://github.com/a16z/jolt?rev=1f676972efb9a8b7b1b2804b54c88787ebe3fd13#1f676972efb9a8b7b1b2804b54c88787ebe3fd13"
+source = "git+https://github.com/a16z/jolt?rev=e6d14ecb0b6a18e4794b1f89044e088271d2913c#e6d14ecb0b6a18e4794b1f89044e088271d2913c"
 dependencies = [
  "getrandom 0.4.3",
  "jolt-field",
@@ -745,7 +747,7 @@ dependencies = [
 [[package]]
 name = "jolt-utils"
 version = "0.1.0"
-source = "git+https://github.com/a16z/jolt?rev=1f676972efb9a8b7b1b2804b54c88787ebe3fd13#1f676972efb9a8b7b1b2804b54c88787ebe3fd13"
+source = "git+https://github.com/a16z/jolt?rev=e6d14ecb0b6a18e4794b1f89044e088271d2913c#e6d14ecb0b6a18e4794b1f89044e088271d2913c"
 dependencies = [
  "num-traits",
 ]
@@ -1068,6 +1070,9 @@ name = "sponge-cursor"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a0219bd7d979d58245a4f41f695e1ac9f8befdffadd7f61f1bae9e39abc6620"
+dependencies = [
+ "zeroize",
+]
 
 [[package]]
 name = "spongefish"
