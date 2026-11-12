@@ -370,6 +370,17 @@ impl GroupOpenPhaseParams {
 
     /// Validate role ownership and exact A/B widths for serialized group params.
     pub fn validate(&self) -> Result<(), AkitaError> {
+        // Only complete values that passed every check enter this bounded cache.
+        // Cache access failure repeats validation; it never grants admission.
+        static VALIDATED: std::sync::Mutex<[Option<GroupOpenPhaseParams>; 8]> =
+            std::sync::Mutex::new([None; 8]);
+        if VALIDATED
+            .try_lock()
+            .ok()
+            .is_some_and(|entries| entries.iter().flatten().any(|entry| entry == self))
+        {
+            return Ok(());
+        }
         let field_bits = self.profile.inner.matrix.sis_modulus_profile().field_bits();
         self.profile.validate(field_bits)?;
         if let Some(natural_len) = self.setup_natural_len {
@@ -431,6 +442,11 @@ impl GroupOpenPhaseParams {
                 "precommitted A/B keys do not match frozen ranks, bounds, or digit depths"
                     .to_string(),
             ));
+        }
+        if let Ok(mut entries) = VALIDATED.try_lock() {
+            if let Some(slot) = entries.iter_mut().find(|slot| slot.is_none()) {
+                *slot = Some(*self);
+            }
         }
         Ok(())
     }

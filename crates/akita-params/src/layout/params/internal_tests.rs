@@ -53,6 +53,131 @@ fn relation_geometry_revalidates_frozen_precommitted_profiles() {
 }
 
 #[test]
+fn opening_validation_rejects_changed_policy_after_valid_input() {
+    let (lp, _) = sample_multi_group_root_params();
+    let params = *lp.preceding_group_params(0).unwrap();
+    params.validate().unwrap();
+
+    let mut changed = params;
+    changed.profile.version = 0;
+    assert!(matches!(
+        changed.validate(),
+        Err(AkitaError::InvalidSetup(message))
+            if message == "unsupported committed-group profile version 0"
+    ));
+
+    let mut changed = params;
+    changed.setup_natural_len = Some(0);
+    assert!(matches!(
+        changed.validate(),
+        Err(AkitaError::InvalidSetup(message))
+            if message == "setup-prefix inner digit depth 2 does not cover the full field width (43 digits)"
+    ));
+
+    let mut changed = params;
+    changed.opening.log_basis_open = 0;
+    assert!(matches!(
+        changed.validate(),
+        Err(AkitaError::InvalidSetup(message))
+            if message == "precommitted exact fold plan is missing or inconsistent"
+    ));
+
+    changed.profile.version = 0;
+    assert!(matches!(
+        changed.validate(),
+        Err(AkitaError::InvalidSetup(message))
+            if message == "unsupported committed-group profile version 0"
+    ));
+}
+
+#[test]
+fn opening_validation_is_consistent_across_threads() {
+    use crate::{
+        BlockGeometry, CommitmentSliceCount, GadgetDigits, GroupCommitPhaseParams,
+        GroupOpenPhaseParams, GroupOpeningPlan, InnerCommitMatrixParams, OpeningMethod,
+        OuterCommitMatrixParams, RoleParams, SisModulusProfileId, SisTableDigest,
+        DEFAULT_SIS_SECURITY_POLICY,
+    };
+    use akita_challenges::SparseChallengeConfig;
+    use std::sync::Barrier;
+
+    let modulus_profile = SisModulusProfileId::Q128OffsetA7F7;
+    let values = [
+        (1024, 16, 2, 5, 26, 52, 688, 128, 0, 4),
+        (512, 32, 4, 7, 10, 40, 344, 64, 10, 5),
+    ]
+    .map(
+        |(ring, live, positions, basis, digits, a_width, b_width, subring, pm2, fold)| {
+            GroupOpenPhaseParams {
+                profile: GroupCommitPhaseParams {
+                    version: 4,
+                    group: PolynomialGroupLayout::new(14, 1),
+                    blocks: BlockGeometry::new(live, positions, 8),
+                    outer_slice_count: CommitmentSliceCount::EIGHT,
+                    inner: RoleParams::new(
+                        GadgetDigits::new(basis, digits),
+                        InnerCommitMatrixParams::new_unchecked(
+                            DEFAULT_SIS_SECURITY_POLICY,
+                            SisTableDigest::CURRENT,
+                            modulus_profile,
+                            1,
+                            a_width,
+                            53_477_172,
+                            ring,
+                        ),
+                    ),
+                    outer: RoleParams::new(
+                        GadgetDigits::new(3, 43),
+                        OuterCommitMatrixParams::new_unchecked(
+                            DEFAULT_SIS_SECURITY_POLICY,
+                            SisTableDigest::CURRENT,
+                            modulus_profile,
+                            1,
+                            b_width,
+                            7,
+                            64,
+                        ),
+                    ),
+                },
+                opening: GroupOpeningPlan {
+                    opening_method: OpeningMethod::SubringCoefficientPacking {
+                        challenge_subring_dimension: subring,
+                    },
+                    fold_challenge_config: SparseChallengeConfig {
+                        count_pm1: 31,
+                        count_pm2: pm2,
+                    },
+                    log_basis_open: 3,
+                    num_digits_open: 43,
+                    num_digits_fold: fold,
+                },
+                setup_natural_len: None,
+            }
+        },
+    );
+    let mut invalid = values[0];
+    invalid.profile.version = 0;
+    let start = Barrier::new(4);
+    std::thread::scope(|scope| {
+        for _ in 0..4 {
+            scope.spawn(|| {
+                start.wait();
+                for _ in 0..32 {
+                    for params in &values {
+                        params.validate().unwrap();
+                    }
+                    assert!(matches!(
+                        invalid.validate(),
+                        Err(AkitaError::InvalidSetup(message))
+                            if message == "unsupported committed-group profile version 0"
+                    ));
+                }
+            });
+        }
+    });
+}
+
+#[test]
 fn opening_batch_validation_checks_every_distinct_group_in_a_repeated_run() {
     let repeated_fixture = || {
         let mut lp = address_oracle_group_params(64, 64, 64, 8);
