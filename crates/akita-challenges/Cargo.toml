@@ -11,7 +11,7 @@ readme = "../../README.md"
 [dependencies]
 akita-error = { version = "0.1.0", path = "../akita-error" }
 serde = { version = "1", features = ["derive"] }
-jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "85d2836c2b543858a5d275fd0b785b11fc11a940", default-features = false, features = [
+jolt-field = { version = "=0.1.0", git = "https://github.com/a16z/jolt", rev = "1f676972efb9a8b7b1b2804b54c88787ebe3fd13", default-features = false, features = [
   "asm",
   "solinas",
 ] }
